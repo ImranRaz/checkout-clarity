@@ -162,8 +162,8 @@ function Home() {
                   </div>
                   {report.status === "partial" ? (
                     <>
-                      <p className="mt-4 font-display text-4xl leading-none text-muted-foreground">
-                        —
+                      <p className="mt-5 font-mono text-2xl leading-none text-muted-foreground">
+                        n/a
                       </p>
                       <p className="mt-1 text-sm text-foreground">Not scored</p>
                     </>

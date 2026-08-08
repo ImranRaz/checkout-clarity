@@ -118,8 +118,8 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
             <h2 className="label-caps">Forensic score</h2>
             {partial ? (
               <>
-                <p className="mt-2 font-display text-6xl leading-none tracking-tight text-muted-foreground">
-                  —
+                <p className="mt-3 font-mono text-3xl leading-none tracking-tight text-muted-foreground">
+                  n/a
                 </p>
                 <p className="mt-1 text-sm font-medium text-sev-medium">Not scored</p>
               </>
