@@ -58,9 +58,12 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     onLog?.({ actor, text, tone });
   };
 
+  const projectId = await resolveProjectId();
+
   const stagehand = new Stagehand({
     env: "BROWSERBASE",
     apiKey: process.env.BROWSERBASE_API_KEY,
+    projectId,
     modelName: process.env.STAGEHAND_MODEL || "gpt-4.1-mini",
     modelClientOptions: {
       apiKey: process.env.OPENAI_API_KEY,
@@ -69,6 +72,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
       baseURL: process.env.OPENAI_BASE_URL,
     },
     browserbaseSessionCreateParams: {
+      projectId,
       // Residential proxies + stealth are what get us past mainstream retail
       // bot walls. Neither is a guarantee; the run degrades to "partial".
       proxies: true,
@@ -79,6 +83,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
       },
     },
   });
+
 
   let status = "complete";
   let blockedReason = null;
