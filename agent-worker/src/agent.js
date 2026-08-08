@@ -15,6 +15,27 @@ import { VITALS_INIT, VITALS_READ } from "./vitals.js";
 
 const MAX_STEPS = 8;
 
+/**
+ * The API key alone identifies the account, so the project id is looked up
+ * rather than asked for. Cached for the life of the process.
+ */
+let cachedProjectId = null;
+async function resolveProjectId() {
+  if (process.env.BROWSERBASE_PROJECT_ID) return process.env.BROWSERBASE_PROJECT_ID;
+  if (cachedProjectId) return cachedProjectId;
+  const response = await fetch("https://api.browserbase.com/v1/projects", {
+    headers: { "X-BB-API-Key": process.env.BROWSERBASE_API_KEY || "" },
+  });
+  if (!response.ok) {
+    throw new Error(`Could not resolve a Browserbase project (HTTP ${response.status}).`);
+  }
+  const projects = await response.json();
+  const id = Array.isArray(projects) ? projects[0]?.id : projects?.id;
+  if (!id) throw new Error("The Browserbase account has no projects.");
+  cachedProjectId = id;
+  return id;
+}
+
 const stageKind = z.enum(["category", "product", "variant", "mini-cart", "cart"]);
 
 function log(steps, actor, text, tone = "normal") {
@@ -58,9 +79,12 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     onLog?.({ actor, text, tone });
   };
 
+  const projectId = await resolveProjectId();
+
   const stagehand = new Stagehand({
     env: "BROWSERBASE",
     apiKey: process.env.BROWSERBASE_API_KEY,
+    projectId,
     modelName: process.env.STAGEHAND_MODEL || "gpt-4.1-mini",
     modelClientOptions: {
       apiKey: process.env.OPENAI_API_KEY,
@@ -69,6 +93,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
       baseURL: process.env.OPENAI_BASE_URL,
     },
     browserbaseSessionCreateParams: {
+      projectId,
       // Residential proxies + stealth are what get us past mainstream retail
       // bot walls. Neither is a guarantee; the run degrades to "partial".
       proxies: true,
@@ -79,6 +104,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
       },
     },
   });
+
 
   let status = "complete";
   let blockedReason = null;
