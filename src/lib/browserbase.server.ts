@@ -49,7 +49,7 @@ async function callBrowserbase<T>(path: string, body: unknown): Promise<T> {
 }
 
 const BLOCK_PATTERNS =
-  /just a moment|checking your browser|access denied|are you a (human|robot)|captcha|unusual traffic|request blocked/i;
+  /just a moment|checking your browser|access denied|robot or human|are you a (human|robot)|verify (you are|that you)|captcha|unusual traffic|request blocked/i;
 
 function detectPlatform(headers: Record<string, string>, content: string): string | null {
   const headerBlob = Object.entries(headers)
