@@ -1,4 +1,5 @@
-import { Stagehand } from "@browserbasehq/stagehand";
+import { AISdkClient, Stagehand } from "@browserbasehq/stagehand";
+import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
 
 import { FRICTION_SCRIPT } from "./friction.js";
