@@ -62,7 +62,12 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     env: "BROWSERBASE",
     apiKey: process.env.BROWSERBASE_API_KEY,
     modelName: process.env.STAGEHAND_MODEL || "gpt-4.1-mini",
-    modelClientOptions: { apiKey: process.env.OPENAI_API_KEY },
+    modelClientOptions: {
+      apiKey: process.env.OPENAI_API_KEY,
+      // Use OpenRouter (or any other OpenAI-compatible provider) by setting
+      // OPENAI_BASE_URL, e.g. https://openrouter.ai/api/v1
+      baseURL: process.env.OPENAI_BASE_URL,
+    },
     browserbaseSessionCreateParams: {
       // Residential proxies + stealth are what get us past mainstream retail
       // bot walls. Neither is a guarantee; the run degrades to "partial".
