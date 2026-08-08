@@ -1,22 +1,27 @@
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowLeft } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { ReportDashboard } from "@/components/audit/ReportDashboard";
 import { TerminalPanel } from "@/components/audit/TerminalPanel";
 import { getReportById } from "@/lib/audit-runner";
+import { isLiveId, loadLiveReport } from "@/lib/live-store";
+import type { ForensicAuditReport } from "@/lib/audit-schema";
 
 export const Route = createFileRoute("/audit/$runId")({
   loader: ({ params }) => {
     const report = getReportById(params.runId);
-    if (!report) throw notFound();
+    if (!report) {
+      if (isLiveId(params.runId)) return { report: null };
+      throw notFound();
+    }
     return { report };
   },
   head: ({ loaderData }) => {
-    if (!loaderData) {
+    if (!loaderData?.report) {
       return {
-        meta: [{ title: "Run unavailable — Checkout Forensic" }, { name: "robots", content: "noindex" }],
+        meta: [{ title: "Live run — Checkout Forensic — Checkout Forensic" }, { name: "robots", content: "noindex" }],
       };
     }
     const title = `Auditing ${loaderData.report.domain} — Checkout Forensic`;
@@ -36,9 +41,38 @@ export const Route = createFileRoute("/audit/$runId")({
 });
 
 function AuditRun() {
-  const { report } = Route.useLoaderData();
+  const { runId } = Route.useParams();
+  const { report: fixtureReport } = Route.useLoaderData();
+  const [liveReport, setLiveReport] = useState<ForensicAuditReport | null>(null);
+  const [restored, setRestored] = useState(false);
   const [phase, setPhase] = useState<"running" | "done">("running");
   const finish = useCallback(() => setPhase("done"), []);
+
+  useEffect(() => {
+    if (fixtureReport) return;
+    setLiveReport(loadLiveReport(runId));
+    setRestored(true);
+  }, [fixtureReport, runId]);
+
+  const report = fixtureReport ?? liveReport;
+
+  if (!report) {
+    return (
+      <main className="min-h-screen">
+        <div className="mx-auto w-full max-w-6xl px-6 py-20">
+          <Link to="/" className="label-caps inline-flex items-center gap-1.5">
+            <ArrowLeft className="size-3" aria-hidden />
+            New audit
+          </Link>
+          <p className="mt-6 font-mono text-sm text-muted-foreground">
+            {restored
+              ? "This live run is no longer in this browser session. Run the audit again."
+              : "Restoring run…"}
+          </p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen">
