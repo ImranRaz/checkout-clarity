@@ -1,12 +1,16 @@
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { motion } from "motion/react";
-import { ArrowRight, ScanSearch, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Loader2, Minus, ScanSearch, ShieldAlert, Sparkles } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { allFrictionPoints, totalConsoleErrors } from "@/lib/audit-schema";
-import { fixtureReports, isPlausibleUrl, resolveReportForUrl } from "@/lib/audit-runner";
+import { fixtureReports, isPlausibleUrl, normalizeUrl, resolveReportForUrl } from "@/lib/audit-runner";
+import { preflightTarget } from "@/lib/browserbase.functions";
+import type { PreflightResult } from "@/lib/preflight-types";
 import { scoreReport } from "@/lib/scoring";
 import { cn } from "@/lib/utils";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -32,18 +36,47 @@ export const Route = createFileRoute("/")({
 
 function Home() {
   const navigate = useNavigate();
+  const runPreflight = useServerFn(preflightTarget);
   const [url, setUrl] = useState("");
   const [touched, setTouched] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [preflight, setPreflight] = useState<PreflightResult | null>(null);
 
   const valid = isPlausibleUrl(url);
 
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
     setTouched(true);
-    if (!valid) return;
+    if (!valid || checking) return;
+
+    setChecking(true);
+    setPreflight(null);
+    try {
+      const result = await runPreflight({ data: { url: normalizeUrl(url) } });
+      setPreflight(result);
+    } catch (error) {
+      setPreflight({
+        url: normalizeUrl(url),
+        ok: false,
+        statusCode: null,
+        blocked: false,
+        title: null,
+        platform: null,
+        contentChars: 0,
+        elapsedMs: 0,
+        signals: [],
+        error: error instanceof Error ? error.message : "Preflight failed.",
+      });
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  function continueToAudit() {
     const report = resolveReportForUrl(url);
     void navigate({ to: "/audit/$runId", params: { runId: report.id } });
   }
+
 
   return (
     <main className="min-h-screen">
@@ -83,7 +116,7 @@ function Home() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.18 }}
-            onSubmit={submit}
+            onSubmit={(event) => void submit(event)}
             className="mt-10"
           >
             <label htmlFor="target-url" className="label-caps">
@@ -106,16 +139,23 @@ function Home() {
               />
               <button
                 type="submit"
+                disabled={checking}
                 className={cn(
                   "inline-flex shrink-0 items-center justify-center gap-2 rounded-md bg-primary px-6 py-3.5 text-sm font-medium text-primary-foreground",
                   "shadow-tile transition-all duration-200 hover:-translate-y-0.5 hover:shadow-tile-hover",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+                  "disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0",
                 )}
               >
-                <Sparkles className="size-4" aria-hidden />
-                Run forensic audit
+                {checking ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : (
+                  <Sparkles className="size-4" aria-hidden />
+                )}
+                {checking ? "Preflighting target…" : "Run forensic audit"}
               </button>
             </div>
+
             <p
               className={cn(
                 "mt-2 font-mono text-[11px]",
@@ -124,9 +164,12 @@ function Home() {
             >
               {touched && !valid && url.length > 0
                 ? "That doesn't parse as a URL — include the domain, e.g. store.com/p/item"
-                : "Demo build — runs replay recorded audits. Live browsing arrives with a hosted browser session."}
+                : "Preflight is live — the target is fetched through a real cloud request before the run."}
             </p>
+
+            {preflight ? <PreflightPanel result={preflight} onContinue={continueToAudit} /> : null}
           </motion.form>
+
         </div>
       </div>
 
@@ -206,3 +249,81 @@ function Home() {
     </main>
   );
 }
+
+function PreflightPanel({
+  result,
+  onContinue,
+}: {
+  result: PreflightResult;
+  onContinue: () => void;
+}) {
+  const failed = !result.ok;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="tile mt-6 p-5"
+    >
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <p className="label-caps flex items-center gap-2">
+          {failed ? (
+            <ShieldAlert className="size-3.5 text-sev-high" aria-hidden />
+          ) : (
+            <Check className="size-3.5 text-primary" aria-hidden />
+          )}
+          Preflight
+        </p>
+        <p className="font-mono text-[11px] text-muted-foreground">
+          {result.statusCode !== null ? `HTTP ${result.statusCode}` : "no response"} ·{" "}
+          {result.elapsedMs}ms · {result.contentChars.toLocaleString()} chars
+          {result.platform ? ` · ${result.platform}` : ""}
+        </p>
+      </div>
+
+      {result.title ? (
+        <p className="mt-3 truncate text-sm text-foreground">{result.title}</p>
+      ) : null}
+
+      {result.error ? (
+        <p className="mt-3 text-sm text-sev-high">{result.error}</p>
+      ) : (
+        <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+          {result.signals.map((signal) => (
+            <li key={signal.key} className="flex items-start gap-2">
+              {signal.present ? (
+                <Check className="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden />
+              ) : (
+                <Minus className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+              )}
+              <span className="text-sm">
+                <span className={signal.present ? "text-foreground" : "text-muted-foreground"}>
+                  {signal.label}
+                </span>
+                <span className="block font-mono text-[11px] text-muted-foreground">
+                  {signal.present ? "detected" : "not found in initial HTML"}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="mt-5 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={onContinue}
+          className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-tile transition-all duration-200 hover:-translate-y-0.5 hover:shadow-tile-hover"
+        >
+          Continue to audit
+          <ArrowRight className="size-3.5" aria-hidden />
+        </button>
+        <p className="font-mono text-[11px] text-muted-foreground">
+          Live fetch of the target. Stage captures still replay recorded runs.
+        </p>
+      </div>
+    </motion.div>
+  );
+}
+
