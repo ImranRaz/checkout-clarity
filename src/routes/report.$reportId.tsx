@@ -1,19 +1,25 @@
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { ReportDashboard } from "@/components/audit/ReportDashboard";
 import { allFrictionPoints, reachedStep, totalConsoleErrors } from "@/lib/audit-schema";
 import { getReportById } from "@/lib/audit-runner";
+import { isLiveId, loadLiveReport } from "@/lib/live-store";
+import type { ForensicAuditReport } from "@/lib/audit-schema";
 import { scoreReport } from "@/lib/scoring";
 
 export const Route = createFileRoute("/report/$reportId")({
   loader: ({ params }) => {
     const report = getReportById(params.reportId);
-    if (!report) throw notFound();
+    if (!report) {
+      if (isLiveId(params.reportId)) return { report: null };
+      throw notFound();
+    }
     return { report };
   },
   head: ({ loaderData }) => {
-    if (!loaderData) {
+    if (!loaderData?.report) {
       return {
         meta: [
           { title: "Report unavailable — Checkout Forensic" },
@@ -40,7 +46,37 @@ export const Route = createFileRoute("/report/$reportId")({
 });
 
 function ReportPage() {
-  const { report } = Route.useLoaderData();
+  const { reportId } = Route.useParams();
+  const { report: fixtureReport } = Route.useLoaderData();
+  const [liveReport, setLiveReport] = useState<ForensicAuditReport | null>(null);
+  const [restored, setRestored] = useState(false);
+
+  useEffect(() => {
+    if (fixtureReport) return;
+    setLiveReport(loadLiveReport(reportId));
+    setRestored(true);
+  }, [fixtureReport, reportId]);
+
+  const report = fixtureReport ?? liveReport;
+
+  if (!report) {
+    return (
+      <main className="min-h-screen">
+        <div className="mx-auto w-full max-w-6xl px-6 py-20">
+          <Link to="/" className="label-caps inline-flex items-center gap-1.5">
+            <ArrowLeft className="size-3" aria-hidden />
+            New audit
+          </Link>
+          <p className="mt-6 font-mono text-sm text-muted-foreground">
+            {restored
+              ? "This live report is no longer in this browser session. Run the audit again."
+              : "Restoring report…"}
+          </p>
+        </div>
+      </main>
+    );
+  }
+
   const captured = new Date(report.captured_at);
 
   return (

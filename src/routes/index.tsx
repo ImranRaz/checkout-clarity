@@ -7,6 +7,8 @@ import { useState, type FormEvent } from "react";
 import { allFrictionPoints, totalConsoleErrors } from "@/lib/audit-schema";
 import { fixtureReports, isPlausibleUrl, normalizeUrl, resolveReportForUrl } from "@/lib/audit-runner";
 import { preflightTarget } from "@/lib/browserbase.functions";
+import { runLiveAudit } from "@/lib/audit.functions";
+import { saveLiveReport } from "@/lib/live-store";
 import type { PreflightResult } from "@/lib/preflight-types";
 import { scoreReport } from "@/lib/scoring";
 import { cn } from "@/lib/utils";
@@ -37,10 +39,13 @@ export const Route = createFileRoute("/")({
 function Home() {
   const navigate = useNavigate();
   const runPreflight = useServerFn(preflightTarget);
+  const runLive = useServerFn(runLiveAudit);
   const [url, setUrl] = useState("");
   const [touched, setTouched] = useState(false);
   const [checking, setChecking] = useState(false);
   const [preflight, setPreflight] = useState<PreflightResult | null>(null);
+  const [liveRunning, setLiveRunning] = useState(false);
+  const [liveError, setLiveError] = useState<string | null>(null);
 
   const valid = isPlausibleUrl(url);
 
@@ -69,6 +74,25 @@ function Home() {
       });
     } finally {
       setChecking(false);
+    }
+  }
+
+  async function runRealAgent() {
+    if (liveRunning) return;
+    setLiveRunning(true);
+    setLiveError(null);
+    try {
+      const result = await runLive({ data: { url: normalizeUrl(url) } });
+      if (!result.ok) {
+        setLiveError(result.error);
+        return;
+      }
+      saveLiveReport(result.report);
+      void navigate({ to: "/audit/$runId", params: { runId: result.report.id } });
+    } catch (error) {
+      setLiveError(error instanceof Error ? error.message : "The agent run failed.");
+    } finally {
+      setLiveRunning(false);
     }
   }
 
@@ -167,7 +191,15 @@ function Home() {
                 : "Preflight is live — the target is fetched through a real cloud request before the run."}
             </p>
 
-            {preflight ? <PreflightPanel result={preflight} onContinue={continueToAudit} /> : null}
+            {preflight ? (
+              <PreflightPanel
+                result={preflight}
+                onContinue={continueToAudit}
+                onRunLive={() => void runRealAgent()}
+                liveRunning={liveRunning}
+                liveError={liveError}
+              />
+            ) : null}
           </motion.form>
 
         </div>
@@ -253,9 +285,15 @@ function Home() {
 function PreflightPanel({
   result,
   onContinue,
+  onRunLive,
+  liveRunning,
+  liveError,
 }: {
   result: PreflightResult;
   onContinue: () => void;
+  onRunLive: () => void;
+  liveRunning: boolean;
+  liveError: string | null;
 }) {
   const failed = !result.ok;
 
@@ -313,16 +351,33 @@ function PreflightPanel({
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <button
           type="button"
-          onClick={onContinue}
-          className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-tile transition-all duration-200 hover:-translate-y-0.5 hover:shadow-tile-hover"
+          onClick={onRunLive}
+          disabled={liveRunning}
+          className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-tile transition-all duration-200 hover:-translate-y-0.5 hover:shadow-tile-hover disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0"
         >
-          Continue to audit
+          {liveRunning ? (
+            <Loader2 className="size-3.5 animate-spin" aria-hidden />
+          ) : (
+            <Sparkles className="size-3.5" aria-hidden />
+          )}
+          {liveRunning ? "Agent is walking the store…" : "Run the real agent"}
+        </button>
+        <button
+          type="button"
+          onClick={onContinue}
+          disabled={liveRunning}
+          className="inline-flex items-center gap-2 rounded-md border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-60"
+        >
+          Open recorded run
           <ArrowRight className="size-3.5" aria-hidden />
         </button>
-        <p className="font-mono text-[11px] text-muted-foreground">
-          Live fetch of the target. Stage captures still replay recorded runs.
-        </p>
       </div>
+      <p className="mt-3 font-mono text-[11px] text-muted-foreground">
+        {liveRunning
+          ? "A real cloud browser is navigating to the cart. First run can take a few minutes while the worker wakes up."
+          : "The real agent drives a cloud browser to the cart. The recorded run replays a stored capture."}
+      </p>
+      {liveError ? <p className="mt-2 font-mono text-[11px] text-sev-high">{liveError}</p> : null}
     </motion.div>
   );
 }
