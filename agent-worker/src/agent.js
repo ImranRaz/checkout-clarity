@@ -83,6 +83,9 @@ export async function runJourney(entryUrl, { onLog } = {}) {
 
   const stagehand = new Stagehand({
     env: "BROWSERBASE",
+    // Run the agent loop in this process against the remote browser; the
+    // hosted Stagehand API does not accept a custom LLM provider.
+    useAPI: false,
     apiKey: process.env.BROWSERBASE_API_KEY,
     projectId,
     modelName: process.env.STAGEHAND_MODEL || "gpt-4.1-mini",
