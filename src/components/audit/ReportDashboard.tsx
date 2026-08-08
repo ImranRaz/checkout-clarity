@@ -148,30 +148,41 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
           </div>
         </div>
 
-        <ul className="mt-5 space-y-3 border-t border-border pt-4">
-          {score.components.map((c) => (
-            <li key={c.key}>
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="text-sm text-foreground">{c.label}</span>
-                <span className="font-mono text-xs tabular-nums text-muted-foreground">
-                  {c.earned}/{c.weight}
-                </span>
-              </div>
-              <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-secondary">
-                <motion.div
-                  className="h-full rounded-full bg-primary"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${(c.earned / c.weight) * 100}%` }}
-                  transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
-                />
-              </div>
-              <p className="mt-1 font-mono text-[11px] text-muted-foreground">{c.detail}</p>
-            </li>
-          ))}
-        </ul>
-        <p className="mt-4 border-t border-border pt-3 text-xs text-muted-foreground">
-          Computed from measured signals by a fixed rubric — the same page always scores the same.
-        </p>
+        {partial ? (
+          <p className="mt-5 border-t border-border pt-4 text-sm leading-relaxed text-muted-foreground">
+            The agent never reached a cart, so the signals a score depends on were never measured.
+            Scoring the interlock page instead would produce a flattering, meaningless number.
+          </p>
+        ) : (
+          <>
+            <ul className="mt-5 space-y-3 border-t border-border pt-4">
+              {score.components.map((c) => (
+                <li key={c.key}>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="text-sm text-foreground">{c.label}</span>
+                    <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                      {c.earned}/{c.weight}
+                    </span>
+                  </div>
+                  <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-secondary">
+                    <motion.div
+                      className="h-full rounded-full bg-primary"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(c.earned / c.weight) * 100}%` }}
+                      transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
+                    />
+                  </div>
+                  <p className="mt-1 font-mono text-[11px] text-muted-foreground">{c.detail}</p>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-4 border-t border-border pt-3 text-xs text-muted-foreground">
+              Computed from measured signals by a fixed rubric — the same page always scores the
+              same.
+            </p>
+          </>
+        )}
+
       </motion.section>
 
       {/* Technical health */}
