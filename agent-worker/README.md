@@ -11,7 +11,8 @@ exact shape the dashboard already renders.
 cd agent-worker
 npm install
 export BROWSERBASE_API_KEY=...     # your Browserbase key
-export OPENAI_API_KEY=...          # Stagehand's reasoning model
+export OPENAI_API_KEY=...          # OpenAI key, or an OpenRouter key
+export OPENAI_BASE_URL=            # optional: set to https://openrouter.ai/api/v1 for OpenRouter
 node src/cli.js "https://store.com/products/thing"
 ```
 
