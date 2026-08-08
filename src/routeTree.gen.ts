@@ -10,33 +10,53 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuditRunIdRouteImport } from './routes/audit.$runId'
+import { Route as ReportReportIdRouteImport } from './routes/report.$reportId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuditRunIdRoute = AuditRunIdRouteImport.update({
+  id: '/audit/$runId',
+  path: '/audit/$runId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportReportIdRoute = ReportReportIdRouteImport.update({
+  id: '/report/$reportId',
+  path: '/report/$reportId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/audit/$runId': typeof AuditRunIdRoute
+  '/report/$reportId': typeof ReportReportIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/audit/$runId': typeof AuditRunIdRoute
+  '/report/$reportId': typeof ReportReportIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/audit/$runId': typeof AuditRunIdRoute
+  '/report/$reportId': typeof ReportReportIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/audit/$runId' | '/report/$reportId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/audit/$runId' | '/report/$reportId'
+  id: '__root__' | '/' | '/audit/$runId' | '/report/$reportId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuditRunIdRoute: typeof AuditRunIdRoute
+  ReportReportIdRoute: typeof ReportReportIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,22 +68,28 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/audit/$runId': {
+      id: '/audit/$runId'
+      path: '/audit/$runId'
+      fullPath: '/audit/$runId'
+      preLoaderRoute: typeof AuditRunIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/report/$reportId': {
+      id: '/report/$reportId'
+      path: '/report/$reportId'
+      fullPath: '/report/$reportId'
+      preLoaderRoute: typeof ReportReportIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuditRunIdRoute: AuditRunIdRoute,
+  ReportReportIdRoute: ReportReportIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
