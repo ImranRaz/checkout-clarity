@@ -1,4 +1,10 @@
-import type { ForensicAuditReport, FrictionPoint, TechnicalMetrics } from "./audit-schema";
+import type {
+  AuditStage,
+  ForensicAuditReport,
+  FrictionPoint,
+  StageKind,
+  TechnicalMetrics,
+} from "./audit-schema";
 
 /**
  * The score is computed here, in code, from measured signals — never invented
@@ -87,6 +93,56 @@ export function computeScore(
   };
 }
 
+export function scoreStage(stage: AuditStage): ScoreBreakdown {
+  return computeScore(stage.technical_metrics, stage.friction_points);
+}
+
+/**
+ * Stage weights for the roll-up. The cart is where money is lost, the product
+ * page is where the decision is made; browse steps matter least.
+ */
+const STAGE_WEIGHT: Record<StageKind, number> = {
+  cart: 1,
+  product: 0.9,
+  "mini-cart": 0.6,
+  variant: 0.5,
+  category: 0.4,
+};
+
+function gradeFor(total: number): ScoreBreakdown["grade"] {
+  return total >= 80 ? "Strong" : total >= 60 ? "Workable" : total >= 40 ? "Leaking" : "Critical";
+}
+
+/** Weighted roll-up across every stage the run reached. */
 export function scoreReport(report: ForensicAuditReport): ScoreBreakdown {
-  return computeScore(report.technical_metrics, report.ux_friction_points);
+  const scored = report.stages.map((stage) => ({
+    stage,
+    weight: STAGE_WEIGHT[stage.kind],
+    score: scoreStage(stage),
+  }));
+  const totalWeight = scored.reduce((sum, s) => sum + s.weight, 0) || 1;
+
+  const total = Math.round(
+    scored.reduce((sum, s) => sum + s.score.total * s.weight, 0) / totalWeight,
+  );
+
+  const keys = scored[0]!.score.components.map((c) => c.key);
+  const components: ScoreComponent[] = keys.map((key, index) => {
+    const base = scored[0]!.score.components[index]!;
+    const earned = Math.round(
+      scored.reduce(
+        (sum, s) => sum + (s.score.components.find((c) => c.key === key)?.earned ?? 0) * s.weight,
+        0,
+      ) / totalWeight,
+    );
+    return {
+      key,
+      label: base.label,
+      weight: base.weight,
+      earned,
+      detail: `averaged across ${scored.length} stage${scored.length === 1 ? "" : "s"}`,
+    };
+  });
+
+  return { total, grade: gradeFor(total), components };
 }

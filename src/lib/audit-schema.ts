@@ -63,6 +63,35 @@ export const logLineSchema = z.object({
 });
 export type LogLine = z.infer<typeof logLineSchema>;
 
+export const stageKindSchema = z.enum(["category", "product", "variant", "mini-cart", "cart"]);
+export type StageKind = z.infer<typeof stageKindSchema>;
+
+/**
+ * A stage is one page the agent actually landed on. A run records only the
+ * stages it reached, so a two-step site has two stages and a four-step site
+ * has four.
+ */
+export const stageSchema = z.object({
+  id: z.string(),
+  kind: stageKindSchema,
+  label: z.string(),
+  url: z.string(),
+  /** How the agent got here from the previous stage. Null for the entry stage. */
+  transition_in: z
+    .object({ action: z.string(), duration_ms: z.number() })
+    .nullable()
+    .default(null),
+  screenshot: z.object({
+    src: z.string(),
+    width: z.number(),
+    height: z.number(),
+    caption: z.string(),
+  }),
+  technical_metrics: technicalMetricsSchema,
+  friction_points: z.array(frictionPointSchema),
+});
+export type AuditStage = z.infer<typeof stageSchema>;
+
 export const auditReportSchema = z.object({
   id: z.string(),
   url: z.string(),
@@ -72,18 +101,31 @@ export const auditReportSchema = z.object({
   blocked_reason: z.string().nullable(),
   captured_at: z.string(),
   run_duration_ms: z.number(),
-  reached_step: z.string(),
-  screenshot: z.object({
-    src: z.string(),
-    width: z.number(),
-    height: z.number(),
-    caption: z.string(),
-  }),
   steps: z.array(logLineSchema),
-  technical_metrics: technicalMetricsSchema,
-  ux_friction_points: z.array(frictionPointSchema),
+  stages: z.array(stageSchema).min(1),
 });
 export type ForensicAuditReport = z.infer<typeof auditReportSchema>;
+
+export const stageKindLabel: Record<StageKind, string> = {
+  category: "Category",
+  product: "Product page",
+  variant: "Variant picker",
+  "mini-cart": "Mini-cart",
+  cart: "Cart",
+};
+
+/** The last stage the run actually reached. */
+export function reachedStep(report: ForensicAuditReport): string {
+  return report.stages[report.stages.length - 1]!.label;
+}
+
+export function allFrictionPoints(report: ForensicAuditReport): FrictionPoint[] {
+  return report.stages.flatMap((s) => s.friction_points);
+}
+
+export function totalConsoleErrors(report: ForensicAuditReport): number {
+  return report.stages.reduce((n, s) => n + s.technical_metrics.console_errors.length, 0);
+}
 
 export const severityLabel: Record<Severity, string> = {
   high: "High",
