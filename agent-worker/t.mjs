@@ -5,7 +5,7 @@ const r = await fetch("https://api.browserbase.com/v1/projects",{headers:{"X-BB-
 const projectId = (await r.json())[0].id;
 const sh = new Stagehand({ env:"BROWSERBASE", useAPI:false, apiKey:process.env.BROWSERBASE_API_KEY, projectId,
   modelName: process.env.STAGEHAND_MODEL, modelClientOptions:{apiKey:process.env.OPENAI_API_KEY, baseURL:process.env.OPENAI_BASE_URL}});
-const step = async (name, fn) => { try { const v = await fn(); console.log("OK", name); return v; } catch(e){ console.log("FAIL", name, (e?.message||e).toString().slice(0,300)); throw e; } };
+const step = async (name, fn) => { try { const v = await fn(); console.log("OK", name); return v; } catch(e){ console.log("FAIL", name, JSON.stringify({m:(e?.message||"").slice(0,400),name:e?.name,cause:String(e?.cause).slice(0,300),url:e?.url,status:e?.statusCode||e?.status})); throw e; } };
 try {
   await step("init", ()=>sh.init());
   const page = sh.page;
