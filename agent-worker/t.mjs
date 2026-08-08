@@ -1,18 +1,17 @@
-import { Stagehand } from "@browserbasehq/stagehand";
-import { VITALS_INIT, VITALS_READ } from "./src/vitals.js";
-import { FRICTION_SCRIPT } from "./src/friction.js";
+import { Stagehand, AISdkClient } from "@browserbasehq/stagehand";
+import { createOpenAI } from "@ai-sdk/openai";
+import { z } from "zod";
 const r = await fetch("https://api.browserbase.com/v1/projects",{headers:{"X-BB-API-Key":process.env.BROWSERBASE_API_KEY}});
 const projectId = (await r.json())[0].id;
+const provider = createOpenAI({ apiKey: process.env.OPENAI_API_KEY, baseURL: process.env.OPENAI_BASE_URL, compatibility: "compatible" });
 const sh = new Stagehand({ env:"BROWSERBASE", useAPI:false, apiKey:process.env.BROWSERBASE_API_KEY, projectId,
-  modelName: process.env.STAGEHAND_MODEL, modelClientOptions:{apiKey:process.env.OPENAI_API_KEY, baseURL:process.env.OPENAI_BASE_URL}});
-const step = async (name, fn) => { try { const v = await fn(); console.log("OK", name); return v; } catch(e){ console.log("FAIL", name, JSON.stringify({m:(e?.message||"").slice(0,400),name:e?.name,cause:String(e?.cause).slice(0,300),url:e?.url,status:e?.statusCode||e?.status})); throw e; } };
+  llmClient: new AISdkClient({ model: provider(process.env.STAGEHAND_MODEL) }) });
 try {
-  await step("init", ()=>sh.init());
-  const page = sh.page;
-  await step("initscript", ()=>page.addInitScript(VITALS_INIT));
-  await step("goto", ()=>page.goto("https://www.allbirds.com/products/mens-tree-runners",{waitUntil:"domcontentloaded",timeout:45000}));
-  await step("vitals", ()=>page.evaluate(VITALS_READ));
-  await step("friction", ()=>page.evaluate(FRICTION_SCRIPT));
-  await step("shot", ()=>page.screenshot({fullPage:true,type:"jpeg",quality:70}));
-  await step("extract", ()=>sh.page.extract("Classify this page: category, product, variant, mini-cart or cart"));
-} catch {} finally { await sh.close().catch(()=>{}); }
+  await sh.init();
+  await sh.page.goto("https://www.allbirds.com/products/mens-tree-runners",{waitUntil:"domcontentloaded",timeout:45000});
+  const out = await sh.page.extract({ instruction:"Classify this page as one of: category, product, variant, mini-cart, cart", schema: z.object({ kind: z.enum(["category","product","variant","mini-cart","cart"]) }) });
+  console.log("EXTRACT", JSON.stringify(out));
+  await sh.page.act("click the add to cart button");
+  console.log("ACT ok", sh.page.url());
+} catch(e){ console.log("ERR", (e?.message||String(e)).slice(0,400)); }
+finally { await sh.close().catch(()=>{}); }
