@@ -58,7 +58,7 @@ function ReportPage() {
         </h1>
         <p className="mt-1 font-mono text-xs text-muted-foreground">
           captured {captured.toISOString().replace("T", " ").slice(0, 16)} UTC · reached{" "}
-          {report.reached_step}
+          {reachedStep(report)}
         </p>
 
         <div className="mt-8">
