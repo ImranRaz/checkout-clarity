@@ -23,7 +23,7 @@ export const Route = createFileRoute("/report/$reportId")({
     const { report } = loaderData;
     const score = scoreReport(report);
     const title = `${report.domain} scored ${score.total}/100 — Checkout Forensic`;
-    const description = `${report.ux_friction_points.length} conversion friction points and ${report.technical_metrics.console_errors.length} console errors found on the ${report.reached_step.toLowerCase()} flow of ${report.domain}.`;
+    const description = `${allFrictionPoints(report).length} conversion friction points and ${totalConsoleErrors(report)} console errors found across ${report.stages.length} stages of the ${report.domain} purchase journey.`;
     return {
       meta: [
         { title },

@@ -180,8 +180,8 @@ function Home() {
                   )}
 
                   <p className="mt-4 flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
-                    {report.ux_friction_points.length} friction ·{" "}
-                    {report.technical_metrics.console_errors.length} console
+                    {report.stages.length} stages · {allFrictionPoints(report).length} friction ·{" "}
+                    {totalConsoleErrors(report)} console
                     <ArrowRight
                       className="size-3 transition-transform duration-200 group-hover:translate-x-0.5"
                       aria-hidden
