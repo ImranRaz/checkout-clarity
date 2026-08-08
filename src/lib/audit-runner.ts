@@ -57,9 +57,10 @@ export function resolveReportForUrl(input: string): ForensicAuditReport {
   if (exact) return exact;
 
   const eligible = fixtureReports.filter((r) => r.status === "complete");
-  const picked = eligible[hashToIndex(hostname, eligible.length)];
-  return picked ?? fixtureReports[0];
+  const pool = eligible.length > 0 ? eligible : fixtureReports;
+  return pool[hashToIndex(hostname, pool.length)]!;
 }
+
 
 export function runAudit(input: string): ForensicAuditReport {
   return resolveReportForUrl(input);
