@@ -165,10 +165,16 @@ export async function runJourney(entryUrl, { onLog } = {}) {
 
     // Goal loop: keep taking the single next action that moves toward a cart
     // containing an item, stopping when we get there or run out of moves.
+    // The action history is fed back in, otherwise the model happily retries
+    // the same variant click forever on stores with sticky size pickers.
+    const history = [];
     for (let step = 0; !wall && step < MAX_STEPS; step += 1) {
       const decision = await stagehand.page.extract({
         instruction:
           "You are walking this store from a product page to a cart containing one item. What is the single next action? " +
+          (history.length
+            ? `Actions already tried (do NOT repeat them; if one appears to have had no effect, try a different route such as opening the cart directly): ${history.map((h) => `"${h}"`).join(", ")}. `
+            : "") +
           "Reply done=true only if the current page is a cart page that already contains at least one item.",
         schema: z.object({
           done: z.boolean(),
@@ -183,7 +189,9 @@ export async function runJourney(entryUrl, { onLog } = {}) {
         break;
       }
 
+      history.push(decision.action);
       emit("vision", decision.action);
+
       const tAct = Date.now();
       try {
         await stagehand.page.act(decision.action);
