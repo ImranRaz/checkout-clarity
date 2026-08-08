@@ -27,6 +27,9 @@ const grade = {
 export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
   const [active, setActive] = useState<number | null>(null);
   const score = scoreReport(report);
+  // A run that never reached the cart has not measured enough to be scored.
+  const partial = report.status === "partial";
+
 
   return (
     <motion.div
