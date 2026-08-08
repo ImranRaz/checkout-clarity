@@ -160,13 +160,25 @@ function Home() {
                       {report.status}
                     </span>
                   </div>
-                  <p className="mt-4 flex items-baseline gap-1.5">
-                    <span className="font-display text-4xl leading-none tabular-nums">
-                      {score.total}
-                    </span>
-                    <span className="font-mono text-xs text-muted-foreground">/100</span>
-                  </p>
-                  <p className="mt-1 text-sm text-foreground">{score.grade}</p>
+                  {report.status === "partial" ? (
+                    <>
+                      <p className="mt-4 font-display text-4xl leading-none text-muted-foreground">
+                        —
+                      </p>
+                      <p className="mt-1 text-sm text-foreground">Not scored</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="mt-4 flex items-baseline gap-1.5">
+                        <span className="font-display text-4xl leading-none tabular-nums">
+                          {score.total}
+                        </span>
+                        <span className="font-mono text-xs text-muted-foreground">/100</span>
+                      </p>
+                      <p className="mt-1 text-sm text-foreground">{score.grade}</p>
+                    </>
+                  )}
+
                   <p className="mt-4 flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
                     {report.ux_friction_points.length} friction ·{" "}
                     {report.technical_metrics.console_errors.length} console
