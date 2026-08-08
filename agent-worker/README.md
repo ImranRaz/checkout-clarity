@@ -23,6 +23,9 @@ node src/cli.js "https://store.com/products/thing"
 - Build: `npm install`
 - Start: `npm start`
 - Env vars: `BROWSERBASE_API_KEY`, `OPENAI_API_KEY`, `AGENT_SHARED_SECRET`
+- Optional: `BROWSERBASE_PROXIES=true` (paid plan) and `BROWSERBASE_STEALTH=true`
+  (Enterprise "Verified mode"). Leave both unset on the free plan — requesting
+  them there makes session creation fail with 402/403.
 
 Then `POST /run` with `{ "url": "..." }` and an
 `Authorization: Bearer <AGENT_SHARED_SECRET>` header.

@@ -94,15 +94,17 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     },
     browserbaseSessionCreateParams: {
       projectId,
-      // Residential proxies + stealth are what get us past mainstream retail
-      // bot walls. Neither is a guarantee; the run degrades to "partial".
-      proxies: true,
+      // Residential proxies and Verified (advanced stealth) mode are paid /
+      // enterprise features: requesting them on a free plan makes session
+      // creation fail outright, so both are opt-in via env.
+      ...(process.env.BROWSERBASE_PROXIES === "true" ? { proxies: true } : {}),
       browserSettings: {
-        advancedStealth: true,
+        ...(process.env.BROWSERBASE_STEALTH === "true" ? { advancedStealth: true } : {}),
         viewport: { width: 1280, height: 900 },
         solveCaptchas: true,
       },
     },
+
   });
 
 
