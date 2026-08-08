@@ -1,4 +1,5 @@
-import { Stagehand } from "@browserbasehq/stagehand";
+import { AISdkClient, Stagehand } from "@browserbasehq/stagehand";
+import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
 
 import { FRICTION_SCRIPT } from "./friction.js";
@@ -81,17 +82,26 @@ export async function runJourney(entryUrl, { onLog } = {}) {
 
   const projectId = await resolveProjectId();
 
+  // Stagehand's built-in model routing only knows a fixed list of providers
+  // and ignores a custom base URL, so the LLM is wired explicitly through the
+  // AI SDK. Any OpenAI-compatible endpoint works: OpenAI, OpenRouter, etc.
+  const provider = createOpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+    baseURL: process.env.OPENAI_BASE_URL || undefined,
+    compatibility: process.env.OPENAI_BASE_URL ? "compatible" : "strict",
+  });
+
   const stagehand = new Stagehand({
     env: "BROWSERBASE",
+    // Run the agent loop in this process against the remote browser; the
+    // hosted Stagehand API does not accept a custom LLM provider.
+    useAPI: false,
     apiKey: process.env.BROWSERBASE_API_KEY,
     projectId,
-    modelName: process.env.STAGEHAND_MODEL || "gpt-4.1-mini",
-    modelClientOptions: {
-      apiKey: process.env.OPENAI_API_KEY,
-      // Use OpenRouter (or any other OpenAI-compatible provider) by setting
-      // OPENAI_BASE_URL, e.g. https://openrouter.ai/api/v1
-      baseURL: process.env.OPENAI_BASE_URL,
-    },
+    llmClient: new AISdkClient({
+      model: provider(process.env.STAGEHAND_MODEL || "gpt-4.1-mini"),
+    }),
+
     browserbaseSessionCreateParams: {
       projectId,
       // Residential proxies and Verified (advanced stealth) mode are paid /
@@ -155,10 +165,16 @@ export async function runJourney(entryUrl, { onLog } = {}) {
 
     // Goal loop: keep taking the single next action that moves toward a cart
     // containing an item, stopping when we get there or run out of moves.
+    // The action history is fed back in, otherwise the model happily retries
+    // the same variant click forever on stores with sticky size pickers.
+    const history = [];
     for (let step = 0; !wall && step < MAX_STEPS; step += 1) {
       const decision = await stagehand.page.extract({
         instruction:
           "You are walking this store from a product page to a cart containing one item. What is the single next action? " +
+          (history.length
+            ? `Actions already tried (do NOT repeat them; if one appears to have had no effect, try a different route such as opening the cart directly): ${history.map((h) => `"${h}"`).join(", ")}. `
+            : "") +
           "Reply done=true only if the current page is a cart page that already contains at least one item.",
         schema: z.object({
           done: z.boolean(),
@@ -173,7 +189,9 @@ export async function runJourney(entryUrl, { onLog } = {}) {
         break;
       }
 
+      history.push(decision.action);
       emit("vision", decision.action);
+
       const tAct = Date.now();
       try {
         await stagehand.page.act(decision.action);
