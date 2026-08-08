@@ -2,6 +2,7 @@ import { Link, createFileRoute, notFound } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 
 import { ReportDashboard } from "@/components/audit/ReportDashboard";
+import { allFrictionPoints, reachedStep, totalConsoleErrors } from "@/lib/audit-schema";
 import { getReportById } from "@/lib/audit-runner";
 import { scoreReport } from "@/lib/scoring";
 

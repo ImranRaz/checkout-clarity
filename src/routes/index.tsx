@@ -3,6 +3,7 @@ import { motion } from "motion/react";
 import { ArrowRight, ScanSearch, Sparkles } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
+import { allFrictionPoints, totalConsoleErrors } from "@/lib/audit-schema";
 import { fixtureReports, isPlausibleUrl, resolveReportForUrl } from "@/lib/audit-runner";
 import { scoreReport } from "@/lib/scoring";
 import { cn } from "@/lib/utils";
