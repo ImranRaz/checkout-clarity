@@ -82,6 +82,15 @@ export async function runJourney(entryUrl, { onLog } = {}) {
 
   const projectId = await resolveProjectId();
 
+  // Stagehand's built-in model routing only knows a fixed list of providers
+  // and ignores a custom base URL, so the LLM is wired explicitly through the
+  // AI SDK. Any OpenAI-compatible endpoint works: OpenAI, OpenRouter, etc.
+  const provider = createOpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+    baseURL: process.env.OPENAI_BASE_URL || undefined,
+    compatibility: process.env.OPENAI_BASE_URL ? "compatible" : "strict",
+  });
+
   const stagehand = new Stagehand({
     env: "BROWSERBASE",
     // Run the agent loop in this process against the remote browser; the
@@ -89,13 +98,10 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     useAPI: false,
     apiKey: process.env.BROWSERBASE_API_KEY,
     projectId,
-    modelName: process.env.STAGEHAND_MODEL || "gpt-4.1-mini",
-    modelClientOptions: {
-      apiKey: process.env.OPENAI_API_KEY,
-      // Use OpenRouter (or any other OpenAI-compatible provider) by setting
-      // OPENAI_BASE_URL, e.g. https://openrouter.ai/api/v1
-      baseURL: process.env.OPENAI_BASE_URL,
-    },
+    llmClient: new AISdkClient({
+      model: provider(process.env.STAGEHAND_MODEL || "gpt-4.1-mini"),
+    }),
+
     browserbaseSessionCreateParams: {
       projectId,
       // Residential proxies and Verified (advanced stealth) mode are paid /
