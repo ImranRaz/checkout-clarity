@@ -113,14 +113,26 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="label-caps">Forensic score</h2>
-            <p className="mt-2 flex items-baseline gap-2">
-              <span className="font-display text-6xl leading-none tracking-tight tabular-nums">
-                {score.total}
-              </span>
-              <span className="font-mono text-sm text-muted-foreground">/100</span>
-            </p>
-            <p className={cn("mt-1 text-sm font-medium", grade[score.grade])}>{score.grade}</p>
+            {partial ? (
+              <>
+                <p className="mt-2 font-display text-6xl leading-none tracking-tight text-muted-foreground">
+                  —
+                </p>
+                <p className="mt-1 text-sm font-medium text-sev-medium">Not scored</p>
+              </>
+            ) : (
+              <>
+                <p className="mt-2 flex items-baseline gap-2">
+                  <span className="font-display text-6xl leading-none tracking-tight tabular-nums">
+                    {score.total}
+                  </span>
+                  <span className="font-mono text-sm text-muted-foreground">/100</span>
+                </p>
+                <p className={cn("mt-1 text-sm font-medium", grade[score.grade])}>{score.grade}</p>
+              </>
+            )}
           </div>
+
           <div className="text-right">
             <p className="label-caps">Run</p>
             <p className="mt-2 flex items-center justify-end gap-1.5 font-mono text-sm tabular-nums">
