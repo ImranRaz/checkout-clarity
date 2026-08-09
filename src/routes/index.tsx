@@ -1,12 +1,12 @@
-import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "motion/react";
-import { ArrowRight, Check, Loader2, ScanSearch, ShieldAlert, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Loader2, ScanSearch, ShieldAlert, Sparkles, X } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { allFrictionPoints, totalConsoleErrors } from "@/lib/audit-schema";
 import { fixtureReports, isPlausibleUrl, normalizeUrl, resolveReportForUrl } from "@/lib/audit-runner";
-import { listRecentAudits, type RecentAudit } from "@/lib/reports.functions";
+import { deleteAuditRun, listRecentAudits, type RecentAudit } from "@/lib/reports.functions";
 import { preflightTarget } from "@/lib/browserbase.functions";
 import { saveLiveReport } from "@/lib/live-store";
 import type { PreflightResult } from "@/lib/preflight-types";
