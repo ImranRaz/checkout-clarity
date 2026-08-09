@@ -52,15 +52,29 @@ export const Route = createFileRoute("/")({
 
 function Home() {
   const navigate = useNavigate();
+  const router = useRouter();
   const { recent } = Route.useLoaderData() as { recent: RecentAudit[] };
   const runPreflight = useServerFn(preflightTarget);
+  const removeRun = useServerFn(deleteAuditRun);
   const [url, setUrl] = useState("");
   const [touched, setTouched] = useState(false);
   const [checking, setChecking] = useState(false);
   const [preflight, setPreflight] = useState<PreflightResult | null>(null);
+  const [removing, setRemoving] = useState<string[]>([]);
   const busy = checking;
 
   const valid = isPlausibleUrl(url);
+
+  async function handleDelete(id: string) {
+    setRemoving((ids) => [...ids, id]);
+    try {
+      await removeRun({ data: { id } });
+      await router.invalidate();
+    } finally {
+      setRemoving((ids) => ids.filter((x) => x !== id));
+    }
+  }
+
 
   async function submit(event: FormEvent) {
     event.preventDefault();
