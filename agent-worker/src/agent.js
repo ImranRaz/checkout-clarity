@@ -342,6 +342,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
           (history.length
             ? `Already attempted (never repeat one marked no effect — pick a different control or route): ${history.map((h) => `"${h}"`).join(", ")}. `
             : "") +
+          "If a cookie banner, newsletter modal, region picker or any other pop-up is covering the page, your first move must close or accept it. " +
           "Return the next 1-3 moves that belong together (for example: open the size dropdown, then choose an available size). " +
           "Set done=true only when the current page already shows the item in a cart or booking summary.",
         schema: z.object({
