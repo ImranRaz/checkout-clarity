@@ -184,10 +184,10 @@ async function visibleControls(page) {
   }
 }
 
-/** Heuristic backstop for "is there something in the basket yet". */
+/** Heuristic backstop for "is something reserved / in the basket yet". */
 const CART_CHECK = `(() => {
   const text = (document.body ? document.body.innerText : "").toLowerCase();
-  const cartish = /(subtotal|order summary|booking summary|your (cart|bag|basket)|proceed to checkout|checkout now)/.test(text);
+  const cartish = /(subtotal|order summary|booking summary|your (cart|bag|basket)|proceed to checkout|checkout now|review your (booking|cruise|trip|reservation)|guest details|passenger details|total (price|due|fare)|price summary|continue to payment|your (booking|reservation|itinerary) so far)/.test(text);
   const empty = /(cart is empty|bag is empty|basket is empty|no items in your)/.test(text);
   return cartish && !empty;
 })()`;
