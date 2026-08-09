@@ -192,7 +192,13 @@ const CART_CHECK = `(() => {
   return cartish && !empty;
 })()`;
 
-async function captureStage(page, { kind, label: rawLabel, transition }) {
+/**
+ * Set once per run. The measured audit always runs; the LLM judgement pass is
+ * additive, and a failure there degrades the report rather than failing it.
+ */
+let reviewer = null;
+
+async function captureStage(page, { kind, label: rawLabel, transition, emit }) {
   const label = cleanLabel(rawLabel, kind);
   const [metrics, friction, shot, size] = await Promise.all([
     page.evaluate(VITALS_READ),
@@ -202,6 +208,26 @@ async function captureStage(page, { kind, label: rawLabel, transition }) {
       `({ width: window.innerWidth, height: Math.max(document.documentElement.scrollHeight, window.innerHeight) })`,
     ),
   ]);
+
+  // Judgement pass: experience problems a DOM rule cannot see. Pins still come
+  // from real element geometry, so a hallucinated location cannot survive.
+  let judged = [];
+  if (reviewer) {
+    try {
+      const digest = await page.evaluate(PAGE_DIGEST_SCRIPT);
+      judged = await reviewer(page, { kind, label, screenshot: shot, digest });
+      if (judged.length > 0) {
+        emit?.("vision", `Reviewed ${label}: ${judged.length} experience issue${judged.length === 1 ? "" : "s"}`);
+      }
+    } catch (error) {
+      emit?.("vision", `Experience review skipped on ${label} (${error.message})`, "warn");
+    }
+  }
+
+  const friction_points = [...friction, ...judged].map((point, index) => ({
+    ...point,
+    id: index + 1,
+  }));
 
   return {
     id: `${kind}-${Date.now()}`,
@@ -217,9 +243,10 @@ async function captureStage(page, { kind, label: rawLabel, transition }) {
     },
 
     technical_metrics: metrics,
-    friction_points: friction,
+    friction_points,
   };
 }
+
 
 export async function runJourney(entryUrl, { onLog } = {}) {
   const startedAt = Date.now();
