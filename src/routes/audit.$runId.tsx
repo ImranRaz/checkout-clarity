@@ -45,7 +45,10 @@ function AuditRun() {
   const { report: fixtureReport } = Route.useLoaderData();
   const [liveReport, setLiveReport] = useState<ForensicAuditReport | null>(null);
   const [restored, setRestored] = useState(false);
-  const [phase, setPhase] = useState<"running" | "done">("running");
+  // A live run already streamed its log on the home page, so it opens straight
+  // on the dashboard; fixture runs replay their terminal first.
+  const [phase, setPhase] = useState<"running" | "done">(fixtureReport ? "running" : "done");
+
   const finish = useCallback(() => setPhase("done"), []);
 
   useEffect(() => {
