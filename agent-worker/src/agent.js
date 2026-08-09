@@ -299,6 +299,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     await page.evaluate(OVERLAY_SCRIPT).catch(() => {});
 
     let kind = "other";
+    let entryLabel = "";
     if (!wall) {
       const classified = await stagehand.page.extract({
         instruction:
@@ -306,7 +307,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
         schema: z.object({ kind: stageKind, label: z.string() }),
       });
       kind = classified.kind;
-      var entryLabel = classified.label;
+      entryLabel = classified.label;
     }
 
     stages.push(
