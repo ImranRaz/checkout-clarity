@@ -126,11 +126,19 @@ export type ForensicAuditReport = z.infer<typeof auditReportSchema>;
 
 export const stageKindLabel: Record<StageKind, string> = {
   category: "Category",
+  listing: "Listing",
   product: "Product page",
+  detail: "Detail page",
   variant: "Variant picker",
+  options: "Options",
+  form: "Details form",
   "mini-cart": "Mini-cart",
+  summary: "Summary",
   cart: "Cart",
+  checkout: "Checkout",
+  other: "Step",
 };
+
 
 /** The last stage the run actually reached. */
 export function reachedStep(report: ForensicAuditReport): string {
