@@ -1,12 +1,12 @@
-import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "motion/react";
-import { ArrowRight, Check, Loader2, ScanSearch, ShieldAlert, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Loader2, ScanSearch, ShieldAlert, Sparkles, X } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { allFrictionPoints, totalConsoleErrors } from "@/lib/audit-schema";
 import { fixtureReports, isPlausibleUrl, normalizeUrl, resolveReportForUrl } from "@/lib/audit-runner";
-import { listRecentAudits, type RecentAudit } from "@/lib/reports.functions";
+import { deleteAuditRun, listRecentAudits, type RecentAudit } from "@/lib/reports.functions";
 import { preflightTarget } from "@/lib/browserbase.functions";
 import { saveLiveReport } from "@/lib/live-store";
 import type { PreflightResult } from "@/lib/preflight-types";
@@ -52,15 +52,29 @@ export const Route = createFileRoute("/")({
 
 function Home() {
   const navigate = useNavigate();
+  const router = useRouter();
   const { recent } = Route.useLoaderData() as { recent: RecentAudit[] };
   const runPreflight = useServerFn(preflightTarget);
+  const removeRun = useServerFn(deleteAuditRun);
   const [url, setUrl] = useState("");
   const [touched, setTouched] = useState(false);
   const [checking, setChecking] = useState(false);
   const [preflight, setPreflight] = useState<PreflightResult | null>(null);
+  const [removing, setRemoving] = useState<string[]>([]);
   const busy = checking;
 
   const valid = isPlausibleUrl(url);
+
+  async function handleDelete(id: string) {
+    setRemoving((ids) => [...ids, id]);
+    try {
+      await removeRun({ data: { id } });
+      await router.invalidate();
+    } finally {
+      setRemoving((ids) => ids.filter((x) => x !== id));
+    }
+  }
+
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -228,7 +242,14 @@ function Home() {
           <ul className="mt-4 flex snap-x gap-4 overflow-x-auto pb-3">
             {recent.map((run) => (
               <li key={run.id} className="w-72 shrink-0 snap-start">
-                <RecentCard run={run} live />
+                <RecentCard
+                  run={run}
+                  live
+                  {...(run.score === null || run.status !== "complete"
+                    ? { onDelete: () => void handleDelete(run.id), deleting: removing.includes(run.id) }
+                    : {})}
+                />
+
               </li>
             ))}
           </ul>
@@ -359,8 +380,34 @@ function TargetSummary({
 
 
 /** One card in the Recent audits rail — saved live runs and fixtures alike. */
-function RecentCard({ run, live = false }: { run: RecentAudit; live?: boolean }) {
+function RecentCard({
+  run,
+  live = false,
+  onDelete,
+  deleting = false,
+}: {
+  run: RecentAudit;
+  live?: boolean;
+  onDelete?: () => void;
+  deleting?: boolean;
+}) {
   return (
+    <div className="relative h-full">
+      {onDelete ? (
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={deleting}
+          aria-label={`Delete audit for ${run.domain}`}
+          className="absolute right-2 top-2 z-10 inline-flex size-6 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+        >
+          {deleting ? (
+            <Loader2 className="size-3 animate-spin" aria-hidden />
+          ) : (
+            <X className="size-3" aria-hidden />
+          )}
+        </button>
+      ) : null}
     <Link
       to="/report/$reportId"
       params={{ reportId: run.id }}
@@ -401,6 +448,7 @@ function RecentCard({ run, live = false }: { run: RecentAudit; live?: boolean })
         />
       </p>
     </Link>
+    </div>
   );
 }
 
