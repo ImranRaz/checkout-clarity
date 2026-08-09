@@ -347,103 +347,86 @@ function Home() {
   );
 }
 
-function PreflightPanel({
+/**
+ * A compact, plain-language read on the target: is it reachable, what is it
+ * built on, and what did we spot on the page. No jargon, no big grey slab.
+ */
+function TargetSummary({
   result,
   onContinue,
   onRunLive,
-  liveRunning,
   liveError,
 }: {
   result: PreflightResult;
   onContinue: () => void;
   onRunLive: () => void;
-  liveRunning: boolean;
   liveError: string | null;
 }) {
   const failed = !result.ok;
+  const found = result.signals.filter((s) => s.present);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="tile mt-6 p-5"
+      className="mt-6"
     >
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <p className="label-caps flex items-center gap-2">
-          {failed ? (
-            <ShieldAlert className="size-3.5 text-sev-high" aria-hidden />
-          ) : (
-            <Check className="size-3.5 text-primary" aria-hidden />
-          )}
-          Preflight
-        </p>
-        <p className="font-mono text-[11px] text-muted-foreground">
-          {result.statusCode !== null ? `HTTP ${result.statusCode}` : "no response"} ·{" "}
-          {result.elapsedMs}ms · {result.contentChars.toLocaleString()} chars
-          {result.platform ? ` · ${result.platform}` : ""}
-        </p>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+        {failed ? (
+          <ShieldAlert className="size-4 shrink-0 text-sev-high" aria-hidden />
+        ) : (
+          <Check className="size-4 shrink-0 text-primary" aria-hidden />
+        )}
+        <span className="font-medium text-foreground">
+          {failed
+            ? "We couldn't open that page"
+            : `Page opens fine${result.platform ? ` — ${result.platform} store` : ""}`}
+        </span>
+        {result.title && !failed ? (
+          <span className="truncate text-muted-foreground">· {result.title}</span>
+        ) : null}
       </div>
 
-      {result.title ? (
-        <p className="mt-3 truncate text-sm text-foreground">{result.title}</p>
-      ) : null}
-
       {result.error ? (
-        <p className="mt-3 text-sm text-sev-high">{result.error}</p>
-      ) : (
-        <ul className="mt-4 grid gap-2 sm:grid-cols-2">
-          {result.signals.map((signal) => (
-            <li key={signal.key} className="flex items-start gap-2">
-              {signal.present ? (
-                <Check className="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden />
-              ) : (
-                <Minus className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" aria-hidden />
-              )}
-              <span className="text-sm">
-                <span className={signal.present ? "text-foreground" : "text-muted-foreground"}>
-                  {signal.label}
-                </span>
-                <span className="block font-mono text-[11px] text-muted-foreground">
-                  {signal.present ? "detected" : "not found in initial HTML"}
-                </span>
-              </span>
+        <p className="mt-2 text-[13px] text-sev-high">{result.error}</p>
+      ) : found.length > 0 ? (
+        <ul className="mt-2.5 flex flex-wrap gap-1.5">
+          {found.map((signal) => (
+            <li
+              key={signal.key}
+              className="rounded-full border border-border bg-muted/60 px-2.5 py-1 text-[12px] text-muted-foreground"
+            >
+              {signal.label}
             </li>
           ))}
         </ul>
-      )}
+      ) : null}
 
-      <div className="mt-5 flex flex-wrap items-center gap-3">
+      <div className="mt-4 flex flex-wrap items-center gap-3">
         <button
           type="button"
           onClick={onRunLive}
-          disabled={liveRunning}
-          className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-tile transition-all duration-200 hover:-translate-y-0.5 hover:shadow-tile-hover disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0"
+          className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-tile transition-all duration-200 hover:-translate-y-0.5 hover:shadow-tile-hover"
         >
-          {liveRunning ? (
-            <Loader2 className="size-3.5 animate-spin" aria-hidden />
-          ) : (
-            <Sparkles className="size-3.5" aria-hidden />
-          )}
-          {liveRunning ? "Agent is walking the store…" : "Run the real agent"}
+          <Sparkles className="size-3.5" aria-hidden />
+          Send in the agent
         </button>
         <button
           type="button"
           onClick={onContinue}
-          disabled={liveRunning}
-          className="inline-flex items-center gap-2 rounded-md border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-md border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
         >
           Open recorded run
           <ArrowRight className="size-3.5" aria-hidden />
         </button>
       </div>
-      <p className="mt-3 font-mono text-[11px] text-muted-foreground">
-        {liveRunning
-          ? "A real cloud browser is navigating to the cart. First run can take a few minutes while the worker wakes up."
-          : "The real agent drives a cloud browser to the cart. The recorded run replays a stored capture."}
+      <p className="mt-3 text-[13px] text-muted-foreground">
+        The agent drives a real browser to the cart — a run takes a couple of minutes.
       </p>
-      {liveError ? <p className="mt-2 font-mono text-[11px] text-sev-high">{liveError}</p> : null}
+      {liveError ? <p className="mt-2 text-[13px] text-sev-high">{liveError}</p> : null}
     </motion.div>
   );
 }
+
 
