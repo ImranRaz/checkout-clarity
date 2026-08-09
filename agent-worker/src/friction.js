@@ -115,13 +115,13 @@ export const FRICTION_SCRIPT = (kind = "other", device = "desktop") => `(() => {
       selectorFor(el));
   });
 
-  // 4. Quantity control — only meaningful on a buy step that has a buy control.
+  // 4. Quantity / party-size control — only on a buy step that has a buy control.
   const hasQty = [...document.querySelectorAll('input,select,button,[role="spinbutton"]')].some((el) =>
-    /qty|quantity/i.test((el.name || '') + (el.id || '') + (el.getAttribute('aria-label') || '')));
+    /qty|quantity|guests?|adults?|travell?ers?|passengers?|rooms?/i.test((el.name || '') + (el.id || '') + (el.getAttribute('aria-label') || '')));
   if (expectsBuy && cta && !hasQty) {
-    push(cta, 'low', 'clarity', 'No quantity control before add-to-cart',
-      'Shoppers who want more than one unit must add-to-cart then edit the cart, adding a round trip.',
-      'No quantity input, stepper, or select found near the buy box.');
+    push(cta, 'low', 'clarity', 'No quantity or party-size control at the decision point',
+      'Buyers who need more than one unit (or more than one guest) must commit first and edit afterwards, adding a round trip.',
+      'No quantity, guest, or party-size input found near the primary control.');
   }
 
   // 5. Trust signals near the decision point (buy steps and cart only).
