@@ -380,8 +380,34 @@ function TargetSummary({
 
 
 /** One card in the Recent audits rail — saved live runs and fixtures alike. */
-function RecentCard({ run, live = false }: { run: RecentAudit; live?: boolean }) {
+function RecentCard({
+  run,
+  live = false,
+  onDelete,
+  deleting = false,
+}: {
+  run: RecentAudit;
+  live?: boolean;
+  onDelete?: () => void;
+  deleting?: boolean;
+}) {
   return (
+    <div className="relative h-full">
+      {onDelete ? (
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={deleting}
+          aria-label={`Delete audit for ${run.domain}`}
+          className="absolute right-2 top-2 z-10 inline-flex size-6 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+        >
+          {deleting ? (
+            <Loader2 className="size-3 animate-spin" aria-hidden />
+          ) : (
+            <X className="size-3" aria-hidden />
+          )}
+        </button>
+      ) : null}
     <Link
       to="/report/$reportId"
       params={{ reportId: run.id }}
