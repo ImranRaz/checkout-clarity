@@ -2,13 +2,11 @@ import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "motion/react";
 import { ArrowRight, Check, Loader2, ScanSearch, ShieldAlert, Sparkles } from "lucide-react";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 
-import { AgentActivity } from "@/components/audit/AgentActivity";
 import { allFrictionPoints, totalConsoleErrors } from "@/lib/audit-schema";
 import { fixtureReports, isPlausibleUrl, normalizeUrl, resolveReportForUrl } from "@/lib/audit-runner";
 import { preflightTarget } from "@/lib/browserbase.functions";
-import { pollLiveAudit, startLiveAudit, type LiveStep } from "@/lib/audit.functions";
 import { saveLiveReport } from "@/lib/live-store";
 import type { PreflightResult } from "@/lib/preflight-types";
 import { scoreReport } from "@/lib/scoring";
@@ -41,24 +39,11 @@ export const Route = createFileRoute("/")({
 function Home() {
   const navigate = useNavigate();
   const runPreflight = useServerFn(preflightTarget);
-  const startLive = useServerFn(startLiveAudit);
-  const pollLive = useServerFn(pollLiveAudit);
   const [url, setUrl] = useState("");
   const [touched, setTouched] = useState(false);
   const [checking, setChecking] = useState(false);
   const [preflight, setPreflight] = useState<PreflightResult | null>(null);
-  const [liveStatus, setLiveStatus] = useState<"idle" | "starting" | "running" | "done" | "error">(
-    "idle",
-  );
-  const [liveSteps, setLiveSteps] = useState<LiveStep[]>([]);
-  const [liveElapsed, setLiveElapsed] = useState(0);
-  const [liveError, setLiveError] = useState<string | null>(null);
-  const cancelled = useRef(false);
-
-  const liveRunning = liveStatus === "starting" || liveStatus === "running";
-  const busy = checking || liveRunning;
-
-  useEffect(() => () => void (cancelled.current = true), []);
+  const busy = checking;
 
   const valid = isPlausibleUrl(url);
 
@@ -182,11 +167,7 @@ function Home() {
                 ) : (
                   <Sparkles className="size-4" aria-hidden />
                 )}
-                {checking
-                  ? "Preflighting target…"
-                  : liveRunning
-                    ? "Agent is running…"
-                    : "Run forensic audit"}
+                {checking ? "Checking the page…" : "Run forensic audit"}
               </button>
             </div>
 
@@ -301,12 +282,10 @@ function TargetSummary({
   result,
   onContinue,
   onRunLive,
-  liveError,
 }: {
   result: PreflightResult;
   onContinue: () => void;
   onRunLive: () => void;
-  liveError: string | null;
 }) {
   const failed = !result.ok;
   const found = result.signals.filter((s) => s.present);
@@ -370,7 +349,6 @@ function TargetSummary({
       <p className="mt-3 text-[13px] text-muted-foreground">
         The agent drives a real browser to the cart — a run takes a couple of minutes.
       </p>
-      {liveError ? <p className="mt-2 text-[13px] text-sev-high">{liveError}</p> : null}
     </motion.div>
   );
 }
