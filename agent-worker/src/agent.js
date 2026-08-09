@@ -15,9 +15,9 @@ import { dismissOverlays } from "./overlays.js";
  * two-step Shopify store and a six-step cruise booking share one code path.
  */
 
-const MAX_STEPS = Number(process.env.AGENT_MAX_STEPS || 16);
+const MAX_STEPS = Number(process.env.AGENT_MAX_STEPS || 22);
 /** Long booking flows need room; the budget stops a runaway from burning credits. */
-const RUN_BUDGET_MS = Number(process.env.AGENT_BUDGET_MS || 6 * 60 * 1000);
+const RUN_BUDGET_MS = Number(process.env.AGENT_BUDGET_MS || 8 * 60 * 1000);
 /**
  * Stop expensive browser calls that can otherwise sit unresolved for minutes.
  * Acting on a heavy retail page (variant pickers, lazy media) routinely takes
