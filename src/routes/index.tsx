@@ -201,23 +201,14 @@ function Home() {
                 : "We check the page loads and what it sells before sending the agent in."}
             </p>
 
-            {preflight && !liveRunning && liveStatus !== "done" ? (
+            {preflight ? (
               <TargetSummary
                 result={preflight}
                 onContinue={continueToAudit}
-                onRunLive={() => void runRealAgent()}
-                liveError={liveStatus === "error" && liveSteps.length === 0 ? liveError : null}
+                onRunLive={runRealAgent}
               />
             ) : null}
 
-            {liveStatus !== "idle" && !(liveStatus === "error" && liveSteps.length === 0) ? (
-              <AgentActivity
-                steps={liveSteps}
-                elapsedMs={liveElapsed}
-                status={liveStatus}
-                error={liveError}
-              />
-            ) : null}
 
 
           </motion.form>
