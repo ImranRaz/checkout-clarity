@@ -250,7 +250,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     for (let step = 0; !wall && step < MAX_STEPS; step += 1) {
       const decision = await stagehand.page.extract({
         instruction:
-          "You are walking this store from a product page to a cart containing one item. What is the single next action? " +
+          "You are walking this store to a cart containing one item. Order of moves: open a single product from any listing grid, then choose any required size/colour option, then add to cart, then open the cart. What is the single next action? " +
           (history.length
             ? `Actions already tried (do NOT repeat them; if one appears to have had no effect, try a different route such as opening the cart directly): ${history.map((h) => `"${h}"`).join(", ")}. `
             : "") +
