@@ -215,10 +215,36 @@ export async function runJourney(entryUrl, { onLog } = {}) {
       if (decision.resulting_kind === "cart") break;
     }
 
+    // Many stores add to cart via a drawer and never navigate, so the loop can
+    // end one hop short. Try the conventional cart URL before giving up.
+    if (!wall && !stages.some((s) => s.kind === "cart")) {
+      try {
+        const cartUrl = new URL("/cart", page.url()).toString();
+        emit("system", `No cart page captured yet — opening ${cartUrl}`);
+        const tCart = Date.now();
+        await page.goto(cartUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
+        await page.waitForTimeout(2000);
+        stages.push(
+          await captureStage(page, {
+            kind: "cart",
+            label: "Cart",
+            transition: { action: "open the cart page directly", duration_ms: Date.now() - tCart },
+          }),
+        );
+        emit("browser", `Cart captured in ${Date.now() - tCart}ms`, "success");
+        blockedReason = null;
+        status = "complete";
+      } catch (error) {
+        status = "partial";
+        blockedReason = `The run stopped before reaching a cart page (${error.message.slice(0, 120)}).`;
+      }
+    }
+
     if (!stages.some((s) => s.kind === "cart") && !blockedReason) {
       status = "partial";
       blockedReason = "The run stopped before reaching a cart page.";
     }
+
   } catch (error) {
     status = "partial";
     blockedReason = error.message.slice(0, 240);
