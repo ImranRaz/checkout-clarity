@@ -237,33 +237,33 @@ function Home() {
 
             <p
               className={cn(
-                "mt-2 font-mono text-[11px]",
+                "mt-2 text-[13px]",
                 touched && !valid && url.length > 0 ? "text-sev-high" : "text-muted-foreground",
               )}
             >
               {touched && !valid && url.length > 0
                 ? "That doesn't parse as a URL — include the domain, e.g. store.com/p/item"
-                : "Preflight is live — the target is fetched through a real cloud request before the run."}
+                : "We check the page loads and what it sells before sending the agent in."}
             </p>
 
-            {preflight ? (
-              <PreflightPanel
+            {preflight && !liveRunning && liveStatus !== "done" ? (
+              <TargetSummary
                 result={preflight}
                 onContinue={continueToAudit}
                 onRunLive={() => void runRealAgent()}
-                liveRunning={liveRunning}
                 liveError={liveStatus === "error" && liveSteps.length === 0 ? liveError : null}
               />
             ) : null}
 
-            {liveStatus !== "idle" ? (
-              <LiveConsole
+            {liveStatus !== "idle" && !(liveStatus === "error" && liveSteps.length === 0) ? (
+              <AgentActivity
                 steps={liveSteps}
                 elapsedMs={liveElapsed}
                 status={liveStatus}
                 error={liveError}
               />
             ) : null}
+
 
           </motion.form>
 
