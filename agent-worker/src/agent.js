@@ -326,7 +326,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     let overlayRetryUsed = false;
 
     for (let step = 0; !wall && step < MAX_STEPS && Date.now() < deadline; step += 1) {
-      await withTimeout(dismissOverlays(page, { emit }), ACTION_TIMEOUT_MS, "Clearing pop-ups").catch(
+      await withTimeout(dismissOverlays(page, { emit }), THINK_TIMEOUT_MS, "Clearing pop-ups").catch(
         () => {},
       );
 
@@ -396,7 +396,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
           failure = error.message.slice(0, 120);
           break;
         }
-        await settle(page, await readSignature(page), 4000);
+        await settle(page, await readSignature(page), 7000);
       }
 
       if (failure) {
@@ -404,7 +404,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
         // action timing out. Clear it and give this turn one free retry.
         const { blocker, cleared } = await withTimeout(
           dismissOverlays(page, { emit, deep: true }),
-          ACTION_TIMEOUT_MS,
+          THINK_TIMEOUT_MS,
           "Clearing pop-ups",
         ).catch(() => ({ blocker: null, cleared: 0 }));
         if ((cleared > 0 || blocker === null) && !overlayRetryUsed) {
@@ -424,7 +424,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
         continue;
       }
 
-      let moved = (await readSignature(page)) !== before || (await settle(page, before, 4000));
+      let moved = (await readSignature(page)) !== before || (await settle(page, before, 7000));
 
       // Recovery ladder — nothing on screen changed, so the clicks landed on
       // nothing. Reveal more of the page, then fall back to a real link.
