@@ -51,7 +51,7 @@ export const OVERLAY_SCRIPT = `(() => {
 
   // Shadow DOM (common for consent SDKs).
   document.querySelectorAll('*').forEach((el) => {
-    if (el.shadowRoot && hits < 6) { try { hits += scan(el.shadowRoot); } catch {} });
+    if (el.shadowRoot && hits < 6) { try { hits += scan(el.shadowRoot); } catch {} }
   });
 
   // Unlock scroll locks left behind by closed modals.
