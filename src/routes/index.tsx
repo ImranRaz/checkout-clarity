@@ -1,7 +1,7 @@
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "motion/react";
-import { ArrowRight, Check, Loader2, Minus, ScanSearch, ShieldAlert, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Loader2, ScanSearch, ShieldAlert, Sparkles } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { AgentActivity } from "@/components/audit/AgentActivity";
