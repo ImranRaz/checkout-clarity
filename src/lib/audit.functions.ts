@@ -106,12 +106,19 @@ export const pollLiveAudit = createServerFn({ method: "POST" })
 
       let report: ForensicAuditReport | null = null;
       if (raw.report) {
-        const parsed = auditReportSchema.safeParse(raw.report);
+        const parsed = auditReportSchema.safeParse(sanitizeReport(raw.report));
         if (!parsed.success) {
-          return { ok: false, error: "The agent returned a report in an unexpected shape." };
+          const issue = parsed.error.issues[0];
+          return {
+            ok: false,
+            error: `The agent's report failed validation${
+              issue ? ` at ${issue.path.join(".") || "root"}: ${issue.message}` : ""
+            }.`,
+          };
         }
         report = parsed.data;
       }
+
 
       return {
         ok: true,
