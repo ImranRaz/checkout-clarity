@@ -2,7 +2,8 @@ import { AISdkClient, Stagehand } from "@browserbasehq/stagehand";
 import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
 
-import { FRICTION_SCRIPT } from "./friction.js";
+import { FRICTION_SCRIPT, PAGE_DIGEST_SCRIPT } from "./friction.js";
+import { createReviewer } from "./ux-review.js";
 import { VITALS_INIT, VITALS_READ } from "./vitals.js";
 import { dismissOverlays } from "./overlays.js";
 
@@ -192,7 +193,13 @@ const CART_CHECK = `(() => {
   return cartish && !empty;
 })()`;
 
-async function captureStage(page, { kind, label: rawLabel, transition }) {
+/**
+ * Set once per run. The measured audit always runs; the LLM judgement pass is
+ * additive, and a failure there degrades the report rather than failing it.
+ */
+let reviewer = null;
+
+async function captureStage(page, { kind, label: rawLabel, transition, emit }) {
   const label = cleanLabel(rawLabel, kind);
   const [metrics, friction, shot, size] = await Promise.all([
     page.evaluate(VITALS_READ),
@@ -202,6 +209,26 @@ async function captureStage(page, { kind, label: rawLabel, transition }) {
       `({ width: window.innerWidth, height: Math.max(document.documentElement.scrollHeight, window.innerHeight) })`,
     ),
   ]);
+
+  // Judgement pass: experience problems a DOM rule cannot see. Pins still come
+  // from real element geometry, so a hallucinated location cannot survive.
+  let judged = [];
+  if (reviewer) {
+    try {
+      const digest = await page.evaluate(PAGE_DIGEST_SCRIPT);
+      judged = await reviewer(page, { kind, label, screenshot: shot, digest });
+      if (judged.length > 0) {
+        emit?.("vision", `Reviewed ${label}: ${judged.length} experience issue${judged.length === 1 ? "" : "s"}`);
+      }
+    } catch (error) {
+      emit?.("vision", `Experience review skipped on ${label} (${error.message})`, "warn");
+    }
+  }
+
+  const friction_points = [...friction, ...judged].map((point, index) => ({
+    ...point,
+    id: index + 1,
+  }));
 
   return {
     id: `${kind}-${Date.now()}`,
@@ -217,9 +244,10 @@ async function captureStage(page, { kind, label: rawLabel, transition }) {
     },
 
     technical_metrics: metrics,
-    friction_points: friction,
+    friction_points,
   };
 }
+
 
 export async function runJourney(entryUrl, { onLog } = {}) {
   const startedAt = Date.now();
@@ -241,6 +269,9 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     baseURL: process.env.OPENAI_BASE_URL || undefined,
     compatibility: process.env.OPENAI_BASE_URL ? "compatible" : "strict",
   });
+
+  // The judgement layer shares the same provider as the navigator.
+  reviewer = createReviewer(provider);
 
   const stagehand = new Stagehand({
     env: "BROWSERBASE",
@@ -311,7 +342,12 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     }
 
     stages.push(
-      await captureStage(page, { kind, label: entryLabel || KIND_LABELS[kind], transition: null }),
+      await captureStage(page, {
+        kind,
+        label: entryLabel || KIND_LABELS[kind],
+        transition: null,
+        emit,
+      }),
     );
     emit("browser", `Landed on ${KIND_LABELS[kind] || kind} in ${Date.now() - t0}ms`, "success");
 
@@ -479,6 +515,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
         kind: decision.resulting_kind,
         label: decision.label,
         transition: { action: moves.join(" then "), duration_ms: Date.now() - tAct },
+        emit,
       });
       stages.push(stage);
       emit("browser", `${stage.label} captured in ${Date.now() - tAct}ms`, "success");
@@ -509,6 +546,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
                 action: "open the cart page directly",
                 duration_ms: Date.now() - tCart,
               },
+              emit,
             }),
           );
           emit("browser", `Cart captured in ${Date.now() - tCart}ms`, "success");
