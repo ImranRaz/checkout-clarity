@@ -332,7 +332,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
 
       const controls = await withTimeout(
         visibleControls(page),
-        ACTION_TIMEOUT_MS,
+        THINK_TIMEOUT_MS,
         "Reading page controls",
       );
 
@@ -343,7 +343,14 @@ export async function runJourney(entryUrl, { onLog } = {}) {
           "(size, colour, date, sailing, cabin, room, guests) using swatches, dropdowns or steppers, filling a short " +
           "required form, then adding to cart or continuing to a summary. Work out the site's own flow — do not assume " +
           "a standard retail checkout. " +
-          `You are on ${page.url()}. ` +
+          "IMPORTANT — where the buy control lives: a category or listing grid almost never has an add-to-cart button. " +
+          "If you are on a grid of several items, do NOT look for add-to-cart; open one in-stock item to reach its " +
+          "detail page first. On a detail page for clothing, footwear or anything with variants, the add-to-cart " +
+          "control is usually disabled until every required option is chosen — pick a size, colour, length or fit " +
+          "(swatch, dropdown or button) before clicking add. Prefer an option that is not marked sold out or " +
+          "unavailable. Quick-add or hover 'add' buttons on a grid tile are a shortcut, not the main flow: use one " +
+          "only if it is plainly visible and does not open a picker you cannot complete. " +
+          `You are on ${page.url()}, driving a ${DEVICE} browser. ` +
           (controls.length
             ? `Controls visible right now: ${controls.map((c) => `"${c}"`).join(", ")}. `
             : "") +
@@ -364,7 +371,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
           resulting_kind: stageKind,
           label: z.string(),
         }),
-      }), ACTION_TIMEOUT_MS, "Planning the next move");
+      }), THINK_TIMEOUT_MS, "Planning the next move");
 
       if (decision.done) {
         reachedGoal = true;
