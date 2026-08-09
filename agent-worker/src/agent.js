@@ -229,14 +229,14 @@ export async function runJourney(entryUrl, { onLog } = {}) {
       }
       await page.waitForTimeout(2200);
 
-      stages.push(
-        await captureStage(page, {
-          kind: decision.resulting_kind,
-          label: decision.label,
-          transition: { action: decision.action, duration_ms: Date.now() - tAct },
-        }),
-      );
-      emit("browser", `${decision.label} captured in ${Date.now() - tAct}ms`, "success");
+      const stage = await captureStage(page, {
+        kind: decision.resulting_kind,
+        label: decision.label,
+        transition: { action: decision.action, duration_ms: Date.now() - tAct },
+      });
+      stages.push(stage);
+      emit("browser", `${stage.label} captured in ${Date.now() - tAct}ms`, "success");
+
 
       if (decision.resulting_kind === "cart") break;
     }
