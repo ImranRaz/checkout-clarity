@@ -14,7 +14,9 @@ import { VITALS_INIT, VITALS_READ } from "./vitals.js";
  * two-step Shopify store and a six-step cruise booking share one code path.
  */
 
-const MAX_STEPS = 10;
+const MAX_STEPS = Number(process.env.AGENT_MAX_STEPS || 16);
+/** Long booking flows need room; the budget stops a runaway from burning credits. */
+const RUN_BUDGET_MS = Number(process.env.AGENT_BUDGET_MS || 6 * 60 * 1000);
 
 /**
  * The API key alone identifies the account, so the project id is looked up
@@ -37,14 +39,37 @@ async function resolveProjectId() {
   return id;
 }
 
-const stageKind = z.enum(["category", "product", "variant", "mini-cart", "cart"]);
+// Deliberately generic. A shoe store's journey is listing -> product -> cart;
+// a cruise line's is listing (sailings) -> detail (itinerary) -> options
+// (cabin) -> form (guests) -> summary -> cart. One vocabulary covers both.
+const stageKind = z.enum([
+  "category",
+  "listing",
+  "product",
+  "detail",
+  "variant",
+  "options",
+  "form",
+  "mini-cart",
+  "summary",
+  "cart",
+  "checkout",
+  "other",
+]);
 
 const KIND_LABELS = {
   category: "Category",
+  listing: "Listing",
   product: "Product page",
+  detail: "Detail page",
   variant: "Variant selected",
+  options: "Options",
+  form: "Details form",
   "mini-cart": "Mini-cart",
+  summary: "Summary",
   cart: "Cart",
+  checkout: "Checkout",
+  other: "Step",
 };
 
 /**
