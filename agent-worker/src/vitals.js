@@ -27,19 +27,22 @@ export const VITALS_READ = `(() => {
   const nav = performance.getEntriesByType('navigation')[0];
   const res = performance.getEntriesByType('resource');
   const cf = window.__cf || { lcp: 0, cls: 0, tbt: 0 };
+  // NaN/Infinity JSON-serialise to null and would fail report validation.
+  const num = (v) => (Number.isFinite(v) ? v : 0);
   return {
-    largest_contentful_paint_ms: Math.round(cf.lcp),
-    cumulative_layout_shift: Number((cf.cls || 0).toFixed(3)),
-    total_blocking_time_ms: Math.round(cf.tbt),
-    dom_content_loaded_ms: Math.round(nav ? nav.domContentLoadedEventEnd : 0),
-    transfer_bytes: res.reduce((n, r) => n + (r.transferSize || 0), 0) + (nav ? nav.transferSize || 0 : 0),
+    largest_contentful_paint_ms: Math.round(num(cf.lcp)),
+    cumulative_layout_shift: Number(num(cf.cls).toFixed(3)),
+    total_blocking_time_ms: Math.round(num(cf.tbt)),
+    dom_content_loaded_ms: Math.round(nav ? num(nav.domContentLoadedEventEnd) : 0),
+    transfer_bytes: Math.round(res.reduce((n, r) => n + num(r.transferSize), 0) + (nav ? num(nav.transferSize) : 0)),
     request_count: res.length + 1,
     console_errors: [],
     slow_resources: res
       .slice()
-      .sort((a, b) => b.duration - a.duration)
+      .sort((a, b) => num(b.duration) - num(a.duration))
       .slice(0, 4)
-      .filter((r) => r.duration > 300)
-      .map((r) => ({ label: r.name.split('/').pop().slice(0, 48) || r.name, duration_ms: Math.round(r.duration) })),
+      .filter((r) => num(r.duration) > 300)
+      .map((r) => ({ label: String(r.name).split('/').pop().slice(0, 48) || String(r.name), duration_ms: Math.round(num(r.duration)) })),
   };
 })()`;
+
