@@ -289,6 +289,15 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     throw new Error(blockedReason || "The run produced no stages.");
   }
 
+  // Journey strips read badly with two "Category" chips in a row; number repeats.
+  const seen = new Map();
+  for (const stage of stages) {
+    const count = (seen.get(stage.label) || 0) + 1;
+    seen.set(stage.label, count);
+    if (count > 1) stage.label = `${stage.label} ${count}`;
+  }
+
+
   const host = new URL(entryUrl).hostname.replace(/^www\./, "");
   return {
     id: `live-${Date.now().toString(36)}`,
