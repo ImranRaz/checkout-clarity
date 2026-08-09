@@ -14,7 +14,7 @@ import { VITALS_INIT, VITALS_READ } from "./vitals.js";
  * two-step Shopify store and a six-step cruise booking share one code path.
  */
 
-const MAX_STEPS = 8;
+const MAX_STEPS = 10;
 
 /**
  * The API key alone identifies the account, so the project id is looked up
