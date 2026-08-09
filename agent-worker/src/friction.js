@@ -62,7 +62,7 @@ export const FRICTION_SCRIPT = (kind = "other", device = "desktop") => `(() => {
   const clickable = [...document.querySelectorAll('a,button,[role="button"],input[type="submit"]')].filter(visible);
 
   // 1. Primary action placement — only judged where a buy control belongs.
-  const cta = clickable.find((el) => /add to (cart|bag|basket)|buy now|checkout|reserve|book now|continue/i.test(el.textContent || el.value || ''));
+  const cta = clickable.find((el) => /add to (cart|bag|basket)|buy now|checkout|reserve|book now|select (cabin|room|fare|stateroom)|continue/i.test(el.textContent || el.value || ''));
   if (cta) {
     const r = cta.getBoundingClientRect();
     if (r.top + window.scrollY > window.innerHeight) {
@@ -72,16 +72,16 @@ export const FRICTION_SCRIPT = (kind = "other", device = "desktop") => `(() => {
     }
   } else if (expectsBuy) {
     const h = document.querySelector('h1');
-    if (h) push(h, 'high', 'clarity', 'No add-to-cart control found',
-      'This step shows a single item but exposes no visible add-to-cart, buy, or continue affordance.',
+    if (h) push(h, 'high', 'clarity', 'No way to proceed from this step',
+      'This step shows a single item but exposes no visible add-to-cart, book, reserve, or continue affordance.',
       'Scanned ' + clickable.length + ' interactive elements.');
   } else if (STAGE === 'listing' || STAGE === 'category') {
     // A listing should at least make its items openable.
-    const productLinks = clickable.filter((el) => /\\/(products?|p|item|dp|shop)\\//i.test(el.getAttribute('href') || ''));
+    const productLinks = clickable.filter((el) => /\\/(products?|p|item|dp|shop|cruise|sailing|itinerar)\\//i.test(el.getAttribute('href') || ''));
     const h = document.querySelector('h1');
     if (h && productLinks.length === 0) {
       push(h, 'medium', 'clarity', 'No obvious product links on this listing',
-        'Nothing on this listing resolves to a recognisable product detail URL, so shoppers (and crawlers) have no clear next step.',
+        'Nothing on this listing resolves to a recognisable detail URL, so shoppers (and crawlers) have no clear next step.',
         'Scanned ' + clickable.length + ' interactive elements.');
     }
   }
@@ -115,13 +115,13 @@ export const FRICTION_SCRIPT = (kind = "other", device = "desktop") => `(() => {
       selectorFor(el));
   });
 
-  // 4. Quantity control — only meaningful on a buy step that has a buy control.
+  // 4. Quantity / party-size control — only on a buy step that has a buy control.
   const hasQty = [...document.querySelectorAll('input,select,button,[role="spinbutton"]')].some((el) =>
-    /qty|quantity/i.test((el.name || '') + (el.id || '') + (el.getAttribute('aria-label') || '')));
+    /qty|quantity|guests?|adults?|travell?ers?|passengers?|rooms?/i.test((el.name || '') + (el.id || '') + (el.getAttribute('aria-label') || '')));
   if (expectsBuy && cta && !hasQty) {
-    push(cta, 'low', 'clarity', 'No quantity control before add-to-cart',
-      'Shoppers who want more than one unit must add-to-cart then edit the cart, adding a round trip.',
-      'No quantity input, stepper, or select found near the buy box.');
+    push(cta, 'low', 'clarity', 'No quantity or party-size control at the decision point',
+      'Buyers who need more than one unit (or more than one guest) must commit first and edit afterwards, adding a round trip.',
+      'No quantity, guest, or party-size input found near the primary control.');
   }
 
   // 5. Trust signals near the decision point (buy steps and cart only).
