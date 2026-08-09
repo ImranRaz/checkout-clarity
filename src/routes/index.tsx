@@ -2,16 +2,18 @@ import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "motion/react";
 import { ArrowRight, Check, Loader2, Minus, ScanSearch, ShieldAlert, Sparkles } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
+import { LiveConsole } from "@/components/audit/LiveConsole";
 import { allFrictionPoints, totalConsoleErrors } from "@/lib/audit-schema";
 import { fixtureReports, isPlausibleUrl, normalizeUrl, resolveReportForUrl } from "@/lib/audit-runner";
 import { preflightTarget } from "@/lib/browserbase.functions";
-import { runLiveAudit } from "@/lib/audit.functions";
+import { pollLiveAudit, startLiveAudit, type LiveStep } from "@/lib/audit.functions";
 import { saveLiveReport } from "@/lib/live-store";
 import type { PreflightResult } from "@/lib/preflight-types";
 import { scoreReport } from "@/lib/scoring";
 import { cn } from "@/lib/utils";
+
 
 
 export const Route = createFileRoute("/")({
