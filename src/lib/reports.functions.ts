@@ -44,30 +44,40 @@ export const saveAuditRun = createServerFn({ method: "POST" })
   .inputValidator((input: { url: string; report: unknown }) => input)
   .handler(async ({ data }): Promise<{ ok: boolean; error?: string }> => {
     const parsed = auditReportSchema.safeParse(data.report);
-    if (!parsed.success) return { ok: false, error: "Report failed validation." };
+    if (!parsed.success) {
+      const first = parsed.error.issues[0];
+      return {
+        ok: false,
+        error: `Report failed validation${first ? ` at ${first.path.join(".")}: ${first.message}` : ""}.`,
+      };
+    }
     const report = parsed.data;
 
     const score = report.status === "partial" ? null : scoreReport(report).total;
+    // Insert only — the table intentionally allows no updates, so an upsert
+    // would be rejected outright. A repeat id just means the run is already on
+    // file, which is a success from the caller's point of view.
     const { error } = await publicClient()
       .from("audit_runs")
-      .upsert(
-        {
-          id: report.id,
-          url: data.url,
-          domain: report.domain,
-          status: report.status,
-          score,
-          report: report as unknown as Record<string, unknown>,
-          stages_count: report.stages.length,
-          friction_count: allFrictionPoints(report).length,
-          console_errors: totalConsoleErrors(report),
-        },
-        { onConflict: "id" },
-      );
+      .insert({
+        id: report.id,
+        url: data.url,
+        domain: report.domain,
+        status: report.status,
+        score,
+        report: report as unknown as Record<string, unknown>,
+        stages_count: report.stages.length,
+        friction_count: allFrictionPoints(report).length,
+        console_errors: totalConsoleErrors(report),
+      });
 
-    if (error) return { ok: false, error: error.message };
+    if (error) {
+      if (error.code === "23505") return { ok: true };
+      return { ok: false, error: error.message };
+    }
     return { ok: true };
   });
+
 
 /** The most recent saved runs, newest first — summary fields only. */
 export const listRecentAudits = createServerFn({ method: "GET" }).handler(
