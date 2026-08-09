@@ -2,7 +2,8 @@ import { AISdkClient, Stagehand } from "@browserbasehq/stagehand";
 import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
 
-import { FRICTION_SCRIPT } from "./friction.js";
+import { FRICTION_SCRIPT, PAGE_DIGEST_SCRIPT } from "./friction.js";
+import { createReviewer } from "./ux-review.js";
 import { VITALS_INIT, VITALS_READ } from "./vitals.js";
 import { dismissOverlays } from "./overlays.js";
 
@@ -269,6 +270,9 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     compatibility: process.env.OPENAI_BASE_URL ? "compatible" : "strict",
   });
 
+  // The judgement layer shares the same provider as the navigator.
+  reviewer = createReviewer(provider);
+
   const stagehand = new Stagehand({
     env: "BROWSERBASE",
     // Run the agent loop in this process against the remote browser; the
@@ -338,7 +342,12 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     }
 
     stages.push(
-      await captureStage(page, { kind, label: entryLabel || KIND_LABELS[kind], transition: null }),
+      await captureStage(page, {
+        kind,
+        label: entryLabel || KIND_LABELS[kind],
+        transition: null,
+        emit,
+      }),
     );
     emit("browser", `Landed on ${KIND_LABELS[kind] || kind} in ${Date.now() - t0}ms`, "success");
 
@@ -506,6 +515,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
         kind: decision.resulting_kind,
         label: decision.label,
         transition: { action: moves.join(" then "), duration_ms: Date.now() - tAct },
+        emit,
       });
       stages.push(stage);
       emit("browser", `${stage.label} captured in ${Date.now() - tAct}ms`, "success");
@@ -536,6 +546,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
                 action: "open the cart page directly",
                 duration_ms: Date.now() - tCart,
               },
+              emit,
             }),
           );
           emit("browser", `Cart captured in ${Date.now() - tCart}ms`, "success");
