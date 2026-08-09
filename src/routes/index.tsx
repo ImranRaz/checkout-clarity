@@ -200,6 +200,7 @@ function Home() {
                 id="target-url"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
+                disabled={busy}
                 placeholder="wayfarer-outdoor.com/p/atmos-ag-65-backpack"
                 inputMode="url"
                 autoComplete="off"
@@ -207,25 +208,30 @@ function Home() {
                 className={cn(
                   "min-w-0 flex-1 rounded-md border border-input bg-card px-4 py-3.5 font-mono text-sm text-foreground shadow-tile outline-none transition-colors",
                   "placeholder:text-muted-foreground/70 focus:border-primary focus:ring-2 focus:ring-ring/25",
+                  "disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground",
                   touched && !valid && url.length > 0 && "border-sev-high",
                 )}
               />
               <button
                 type="submit"
-                disabled={checking}
+                disabled={busy}
                 className={cn(
                   "inline-flex shrink-0 items-center justify-center gap-2 rounded-md bg-primary px-6 py-3.5 text-sm font-medium text-primary-foreground",
                   "shadow-tile transition-all duration-200 hover:-translate-y-0.5 hover:shadow-tile-hover",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
-                  "disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0",
+                  "disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none disabled:hover:translate-y-0",
                 )}
               >
-                {checking ? (
+                {busy ? (
                   <Loader2 className="size-4 animate-spin" aria-hidden />
                 ) : (
                   <Sparkles className="size-4" aria-hidden />
                 )}
-                {checking ? "Preflighting target…" : "Run forensic audit"}
+                {checking
+                  ? "Preflighting target…"
+                  : liveRunning
+                    ? "Agent is running…"
+                    : "Run forensic audit"}
               </button>
             </div>
 
@@ -246,9 +252,19 @@ function Home() {
                 onContinue={continueToAudit}
                 onRunLive={() => void runRealAgent()}
                 liveRunning={liveRunning}
-                liveError={liveError}
+                liveError={liveStatus === "error" && liveSteps.length === 0 ? liveError : null}
               />
             ) : null}
+
+            {liveStatus !== "idle" ? (
+              <LiveConsole
+                steps={liveSteps}
+                elapsedMs={liveElapsed}
+                status={liveStatus === "idle" ? "starting" : liveStatus}
+                error={liveError}
+              />
+            ) : null}
+
           </motion.form>
 
         </div>
