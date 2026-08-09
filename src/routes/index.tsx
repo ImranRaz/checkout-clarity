@@ -448,6 +448,7 @@ function RecentCard({
         />
       </p>
     </Link>
+    </div>
   );
 }
 
