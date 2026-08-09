@@ -91,58 +91,13 @@ function Home() {
   }
 
   /**
-   * The worker runs the journey as a background job — a full run outlives the
-   * 100s edge timeout — so we start it, then poll for its step log.
+   * The live run gets its own page, so the agent's activity streams in the same
+   * terminal the recorded runs replay in.
    */
-  async function runRealAgent() {
-    if (liveRunning) return;
-    cancelled.current = false;
-    setLiveStatus("starting");
-    setLiveSteps([]);
-    setLiveElapsed(0);
-    setLiveError(null);
-
-    const started = await startLive({ data: { url: normalizeUrl(url) } });
-    if (!started.ok) {
-      setLiveStatus("error");
-      setLiveError(started.error);
-      return;
-    }
-    setLiveStatus("running");
-
-    const deadline = Date.now() + 8 * 60 * 1000;
-    while (!cancelled.current && Date.now() < deadline) {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      if (cancelled.current) return;
-
-      const poll = await pollLive({ data: { jobId: started.jobId } });
-      if (!poll.ok) {
-        setLiveStatus("error");
-        setLiveError(poll.error);
-        return;
-      }
-
-      setLiveSteps(poll.steps);
-      setLiveElapsed(poll.elapsed_ms);
-
-      if (poll.status === "error") {
-        setLiveStatus("error");
-        setLiveError(poll.error ?? "The agent run failed.");
-        return;
-      }
-      if (poll.status === "done" && poll.report) {
-        setLiveStatus("done");
-        saveLiveReport(poll.report);
-        void navigate({ to: "/audit/$runId", params: { runId: poll.report.id } });
-        return;
-      }
-    }
-
-    if (!cancelled.current) {
-      setLiveStatus("error");
-      setLiveError("The run exceeded eight minutes and was abandoned.");
-    }
+  function runRealAgent() {
+    void navigate({ to: "/audit/live", search: { url: normalizeUrl(url) } });
   }
+
 
 
   function continueToAudit() {
