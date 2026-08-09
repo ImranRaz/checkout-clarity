@@ -62,7 +62,7 @@ export const FRICTION_SCRIPT = (kind = "other", device = "desktop") => `(() => {
   const clickable = [...document.querySelectorAll('a,button,[role="button"],input[type="submit"]')].filter(visible);
 
   // 1. Primary action placement — only judged where a buy control belongs.
-  const cta = clickable.find((el) => /add to (cart|bag|basket)|buy now|checkout|reserve|book now|continue/i.test(el.textContent || el.value || ''));
+  const cta = clickable.find((el) => /add to (cart|bag|basket)|buy now|checkout|reserve|book now|select (cabin|room|fare|stateroom)|continue/i.test(el.textContent || el.value || ''));
   if (cta) {
     const r = cta.getBoundingClientRect();
     if (r.top + window.scrollY > window.innerHeight) {
@@ -72,18 +72,10 @@ export const FRICTION_SCRIPT = (kind = "other", device = "desktop") => `(() => {
     }
   } else if (expectsBuy) {
     const h = document.querySelector('h1');
-    if (h) push(h, 'high', 'clarity', 'No add-to-cart control found',
-      'This step shows a single item but exposes no visible add-to-cart, buy, or continue affordance.',
+    if (h) push(h, 'high', 'clarity', 'No way to proceed from this step',
+      'This step shows a single item but exposes no visible add-to-cart, book, reserve, or continue affordance.',
       'Scanned ' + clickable.length + ' interactive elements.');
-  } else if (STAGE === 'listing' || STAGE === 'category') {
-    // A listing should at least make its items openable.
-    const productLinks = clickable.filter((el) => /\\/(products?|p|item|dp|shop)\\//i.test(el.getAttribute('href') || ''));
-    const h = document.querySelector('h1');
-    if (h && productLinks.length === 0) {
-      push(h, 'medium', 'clarity', 'No obvious product links on this listing',
-        'Nothing on this listing resolves to a recognisable product detail URL, so shoppers (and crawlers) have no clear next step.',
-        'Scanned ' + clickable.length + ' interactive elements.');
-    }
+  }
   }
 
   // 2. Click / tap target size — touch guideline on touch devices only.
