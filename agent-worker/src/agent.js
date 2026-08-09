@@ -338,11 +338,19 @@ export async function runJourney(entryUrl, { onLog } = {}) {
 
       const decision = await withTimeout(stagehand.page.extract({
         instruction:
-          "GOAL: get one bookable or purchasable item into the cart / booking summary on this site. " +
-          "The site may need anywhere from one to six steps: opening an item from a listing, choosing required options " +
-          "(size, colour, date, sailing, cabin, room, guests) using swatches, dropdowns or steppers, filling a short " +
-          "required form, then adding to cart or continuing to a summary. Work out the site's own flow — do not assume " +
-          "a standard retail checkout. " +
+          "GOAL: get one bookable or purchasable item as far as a cart or booking summary on this site. " +
+          "Sites differ wildly: it may take one step or a dozen. Work out this site's own flow from what is on screen — " +
+          "never assume a standard retail checkout. " +
+          "TWO COMMON SHAPES. (a) Catalogue: listing grid -> item detail -> choose required options -> add to cart. " +
+          "(b) Search-first booking funnel (cruises, hotels, flights, tickets, rentals): the homepage has no products at " +
+          "all — you must first fill a search widget (destination or region, month or departure date, number of guests) " +
+          "and submit it, then pick a result (a sailing, itinerary, date or departure), then pick a fare or category, " +
+          "then a specific cabin, room, seat or slot, then continue through guest/traveller steps until a summary with a " +
+          "total price appears. On these sites 'add to cart' does not exist — the equivalent is Book, Reserve, Select, " +
+          "Choose, or Continue. Progressing one step of that funnel IS progress; keep going. " +
+          "Fill required fields with sensible defaults: nearest available future date, 2 adults, cheapest available " +
+          "option, first available cabin/room. Skip optional upsells, insurance, extras and loyalty prompts by choosing " +
+          "the plain continue / no-thanks option. " +
           "IMPORTANT — where the buy control lives: a category or listing grid almost never has an add-to-cart button. " +
           "If you are on a grid of several items, do NOT look for add-to-cart; open one in-stock item to reach its " +
           "detail page first. On a detail page for clothing, footwear or anything with variants, the add-to-cart " +
@@ -358,8 +366,9 @@ export async function runJourney(entryUrl, { onLog } = {}) {
             ? `Already attempted (never repeat one marked no effect — pick a different control or route): ${history.map((h) => `"${h}"`).join(", ")}. `
             : "") +
           "If a cookie banner, newsletter modal, region picker or any other pop-up is covering the page, your first move must close or accept it. " +
-          "Return the next 1-3 moves that belong together (for example: open the size dropdown, then choose an available size). " +
-          "Set done=true only when the current page already shows the item in a cart or booking summary.",
+          "Return the next 1-3 moves that belong together (for example: open the size dropdown, then choose an available size; " +
+          "or set the departure month, then click Search). " +
+          "Set done=true only when the current page already shows the chosen item in a cart or a booking summary with a total.",
         schema: z.object({
           done: z.boolean(),
           note: z
