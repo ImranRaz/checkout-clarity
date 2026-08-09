@@ -1,4 +1,4 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowLeft } from "lucide-react";
@@ -35,6 +35,7 @@ function hostOf(url: string): string {
 
 function LiveRun() {
   const { url } = Route.useSearch();
+  const router = useRouter();
   const startLive = useServerFn(startLiveAudit);
   const pollLive = useServerFn(pollLiveAudit);
   const persistRun = useServerFn(saveAuditRun);
@@ -43,7 +44,9 @@ function LiveRun() {
   const [steps, setSteps] = useState<LiveStep[]>([]);
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [report, setReport] = useState<ForensicAuditReport | null>(null);
+
 
   const startedRef = useRef(false);
   const cancelled = useRef(false);
@@ -102,9 +105,20 @@ function LiveRun() {
           saveLiveReport(poll.report);
           // Persist it so the run shows up under "Recent audits" and its
           // permalink keeps working in another browser or after a reload.
-          void fns.current.persistRun({
-            data: { url: normalizeUrl(url), report: poll.report },
-          });
+          void fns.current
+            .persistRun({ data: { url: normalizeUrl(url), report: poll.report } })
+            .then((res) => {
+              if (!res?.ok) {
+                setSaveError(res?.error ?? "Could not save this run.");
+                return;
+              }
+              // Make the landing page's Recent audits rail pick it up.
+              void router.invalidate();
+            })
+            .catch((err: unknown) => {
+              setSaveError(err instanceof Error ? err.message : "Could not save this run.");
+            });
+
           setReport(poll.report);
           setStatus("done");
           return;
@@ -170,7 +184,14 @@ function LiveRun() {
           ) : null}
         </div>
 
+        {saveError ? (
+          <p className="mt-4 rounded-md border border-border bg-muted/40 px-3 py-2 font-mono text-xs text-muted-foreground">
+            Not saved to Recent audits — {saveError}
+          </p>
+        ) : null}
+
         <div className="mt-8">
+
           <AnimatePresence mode="wait">
             {report && revealed ? (
               <motion.div
