@@ -35,6 +35,7 @@ function hostOf(url: string): string {
 
 function LiveRun() {
   const { url } = Route.useSearch();
+  const router = useRouter();
   const startLive = useServerFn(startLiveAudit);
   const pollLive = useServerFn(pollLiveAudit);
   const persistRun = useServerFn(saveAuditRun);
@@ -43,7 +44,9 @@ function LiveRun() {
   const [steps, setSteps] = useState<LiveStep[]>([]);
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [report, setReport] = useState<ForensicAuditReport | null>(null);
+
 
   const startedRef = useRef(false);
   const cancelled = useRef(false);
