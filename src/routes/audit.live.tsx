@@ -10,6 +10,7 @@ import { pollLiveAudit, startLiveAudit, type LiveStep } from "@/lib/audit.functi
 import { normalizeUrl } from "@/lib/audit-runner";
 import type { ForensicAuditReport } from "@/lib/audit-schema";
 import { saveLiveReport } from "@/lib/live-store";
+import { saveAuditRun } from "@/lib/reports.functions";
 
 export const Route = createFileRoute("/audit/live")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -36,6 +37,7 @@ function LiveRun() {
   const { url } = Route.useSearch();
   const startLive = useServerFn(startLiveAudit);
   const pollLive = useServerFn(pollLiveAudit);
+  const persistRun = useServerFn(saveAuditRun);
 
   const [status, setStatus] = useState<"starting" | "running" | "done" | "error">("starting");
   const [steps, setSteps] = useState<LiveStep[]>([]);
@@ -49,8 +51,8 @@ function LiveRun() {
   // Server-function wrappers get a fresh identity on every render, so they must
   // stay out of the effect deps — otherwise the effect tears down and its
   // cleanup cancels the poll loop that the guarded re-run never restarts.
-  const fns = useRef({ startLive, pollLive });
-  fns.current = { startLive, pollLive };
+  const fns = useRef({ startLive, pollLive, persistRun });
+  fns.current = { startLive, pollLive, persistRun };
 
   useEffect(() => {
     if (!url || startedRef.current) return;
@@ -98,6 +100,11 @@ function LiveRun() {
         }
         if (poll.status === "done" && poll.report) {
           saveLiveReport(poll.report);
+          // Persist it so the run shows up under "Recent audits" and its
+          // permalink keeps working in another browser or after a reload.
+          void fns.current.persistRun({
+            data: { url: normalizeUrl(url), report: poll.report },
+          });
           setReport(poll.report);
           setStatus("done");
           return;

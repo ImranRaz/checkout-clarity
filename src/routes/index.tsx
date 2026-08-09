@@ -6,6 +6,7 @@ import { useState, type FormEvent } from "react";
 
 import { allFrictionPoints, totalConsoleErrors } from "@/lib/audit-schema";
 import { fixtureReports, isPlausibleUrl, normalizeUrl, resolveReportForUrl } from "@/lib/audit-runner";
+import { listRecentAudits, type RecentAudit } from "@/lib/reports.functions";
 import { preflightTarget } from "@/lib/browserbase.functions";
 import { saveLiveReport } from "@/lib/live-store";
 import type { PreflightResult } from "@/lib/preflight-types";
@@ -15,6 +16,19 @@ import { cn } from "@/lib/utils";
 
 
 export const Route = createFileRoute("/")({
+  loader: async () => ({ recent: await listRecentAudits() }),
+  errorComponent: ({ error }) => (
+    <main className="mx-auto max-w-3xl px-6 py-20">
+      <p role="alert" className="font-mono text-sm text-sev-high">
+        {error.message}
+      </p>
+    </main>
+  ),
+  notFoundComponent: () => (
+    <main className="mx-auto max-w-3xl px-6 py-20">
+      <p className="font-mono text-sm text-muted-foreground">Nothing here.</p>
+    </main>
+  ),
   head: () => ({
     meta: [
       { title: "Checkout Forensic — Audit any store's cart flow" },
@@ -38,6 +52,7 @@ export const Route = createFileRoute("/")({
 
 function Home() {
   const navigate = useNavigate();
+  const { recent } = Route.useLoaderData() as { recent: RecentAudit[] };
   const runPreflight = useServerFn(preflightTarget);
   const [url, setUrl] = useState("");
   const [touched, setTouched] = useState(false);
@@ -201,61 +216,32 @@ function Home() {
         <div className="flex items-baseline justify-between gap-4">
           <h2 className="label-caps">Recent audits</h2>
           <p className="font-mono text-[11px] text-muted-foreground">
-            {fixtureReports.length} runs on file
+            {recent.length + fixtureReports.length} runs on file
           </p>
         </div>
 
         <ul className="mt-4 flex snap-x gap-4 overflow-x-auto pb-3">
+          {recent.map((run) => (
+            <li key={run.id} className="w-72 shrink-0 snap-start">
+              <RecentCard run={run} live />
+            </li>
+          ))}
           {fixtureReports.map((report) => {
             const score = scoreReport(report);
             return (
               <li key={report.id} className="w-72 shrink-0 snap-start">
-                <Link
-                  to="/report/$reportId"
-                  params={{ reportId: report.id }}
-                  className="tile group flex h-full flex-col p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-tile-hover"
-                >
-                  <div className="flex items-baseline justify-between gap-3">
-                    <p className="truncate font-mono text-xs text-muted-foreground">
-                      {report.domain}
-                    </p>
-                    <span
-                      className={cn(
-                        "font-mono text-[10px] uppercase tracking-[0.12em]",
-                        report.status === "partial" ? "text-sev-medium" : "text-primary",
-                      )}
-                    >
-                      {report.status}
-                    </span>
-                  </div>
-                  {report.status === "partial" ? (
-                    <>
-                      <p className="mt-5 font-mono text-2xl leading-none text-muted-foreground">
-                        n/a
-                      </p>
-                      <p className="mt-1 text-sm text-foreground">Not scored</p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="mt-4 flex items-baseline gap-1.5">
-                        <span className="font-display text-4xl leading-none tabular-nums">
-                          {score.total}
-                        </span>
-                        <span className="font-mono text-xs text-muted-foreground">/100</span>
-                      </p>
-                      <p className="mt-1 text-sm text-foreground">{score.grade}</p>
-                    </>
-                  )}
-
-                  <p className="mt-4 flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
-                    {report.stages.length} stages · {allFrictionPoints(report).length} friction ·{" "}
-                    {totalConsoleErrors(report)} console
-                    <ArrowRight
-                      className="size-3 transition-transform duration-200 group-hover:translate-x-0.5"
-                      aria-hidden
-                    />
-                  </p>
-                </Link>
+                <RecentCard
+                  run={{
+                    id: report.id,
+                    domain: report.domain,
+                    status: report.status,
+                    score: report.status === "partial" ? null : score.total,
+                    stages: report.stages.length,
+                    friction: allFrictionPoints(report).length,
+                    consoleErrors: totalConsoleErrors(report),
+                    createdAt: report.captured_at,
+                  }}
+                />
               </li>
             );
           })}
@@ -354,3 +340,56 @@ function TargetSummary({
 }
 
 
+
+/** One card in the Recent audits rail — saved live runs and fixtures alike. */
+function RecentCard({ run, live = false }: { run: RecentAudit; live?: boolean }) {
+  return (
+    <Link
+      to="/report/$reportId"
+      params={{ reportId: run.id }}
+      className="tile group flex h-full flex-col p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-tile-hover"
+    >
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="truncate font-mono text-xs text-muted-foreground">{run.domain}</p>
+        <span
+          className={cn(
+            "font-mono text-[10px] uppercase tracking-[0.12em]",
+            run.status === "partial" ? "text-sev-medium" : "text-primary",
+          )}
+        >
+          {live ? "live" : run.status}
+        </span>
+      </div>
+
+      {run.score === null ? (
+        <>
+          <p className="mt-5 font-mono text-2xl leading-none text-muted-foreground">n/a</p>
+          <p className="mt-1 text-sm text-foreground">Not scored</p>
+        </>
+      ) : (
+        <>
+          <p className="mt-4 flex items-baseline gap-1.5">
+            <span className="font-display text-4xl leading-none tabular-nums">{run.score}</span>
+            <span className="font-mono text-xs text-muted-foreground">/100</span>
+          </p>
+          <p className="mt-1 text-sm text-foreground">{gradeFor(run.score)}</p>
+        </>
+      )}
+
+      <p className="mt-4 flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
+        {run.stages} stages · {run.friction} friction · {run.consoleErrors} console
+        <ArrowRight
+          className="size-3 transition-transform duration-200 group-hover:translate-x-0.5"
+          aria-hidden
+        />
+      </p>
+    </Link>
+  );
+}
+
+function gradeFor(score: number): string {
+  if (score >= 80) return "Strong";
+  if (score >= 60) return "Workable";
+  if (score >= 40) return "Leaking";
+  return "Critical";
+}

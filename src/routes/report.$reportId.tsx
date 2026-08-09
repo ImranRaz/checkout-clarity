@@ -1,13 +1,16 @@
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { ReportDashboard } from "@/components/audit/ReportDashboard";
 import { allFrictionPoints, reachedStep, totalConsoleErrors } from "@/lib/audit-schema";
 import { getReportById } from "@/lib/audit-runner";
 import { isLiveId, loadLiveReport } from "@/lib/live-store";
+import { getSavedAuditRun } from "@/lib/reports.functions";
 import type { ForensicAuditReport } from "@/lib/audit-schema";
 import { scoreReport } from "@/lib/scoring";
+
 
 export const Route = createFileRoute("/report/$reportId")({
   loader: ({ params }) => {
@@ -48,16 +51,35 @@ export const Route = createFileRoute("/report/$reportId")({
 function ReportPage() {
   const { reportId } = Route.useParams();
   const { report: fixtureReport } = Route.useLoaderData();
+  const loadSaved = useServerFn(getSavedAuditRun);
   const [liveReport, setLiveReport] = useState<ForensicAuditReport | null>(null);
   const [restored, setRestored] = useState(false);
 
+  const loadSavedRef = useRef(loadSaved);
+  loadSavedRef.current = loadSaved;
+
   useEffect(() => {
     if (fixtureReport) return;
-    setLiveReport(loadLiveReport(reportId));
-    setRestored(true);
+    let active = true;
+    const cached = loadLiveReport(reportId);
+    if (cached) {
+      setLiveReport(cached);
+      setRestored(true);
+      return;
+    }
+    void (async () => {
+      const saved = await loadSavedRef.current({ data: { id: reportId } });
+      if (!active) return;
+      setLiveReport(saved);
+      setRestored(true);
+    })();
+    return () => {
+      active = false;
+    };
   }, [fixtureReport, reportId]);
 
   const report = fixtureReport ?? liveReport;
+
 
   if (!report) {
     return (
