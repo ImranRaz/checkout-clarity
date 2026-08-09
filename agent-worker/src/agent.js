@@ -229,14 +229,14 @@ export async function runJourney(entryUrl, { onLog } = {}) {
       }
       await page.waitForTimeout(2200);
 
-      stages.push(
-        await captureStage(page, {
-          kind: decision.resulting_kind,
-          label: decision.label,
-          transition: { action: decision.action, duration_ms: Date.now() - tAct },
-        }),
-      );
-      emit("browser", `${decision.label} captured in ${Date.now() - tAct}ms`, "success");
+      const stage = await captureStage(page, {
+        kind: decision.resulting_kind,
+        label: decision.label,
+        transition: { action: decision.action, duration_ms: Date.now() - tAct },
+      });
+      stages.push(stage);
+      emit("browser", `${stage.label} captured in ${Date.now() - tAct}ms`, "success");
+
 
       if (decision.resulting_kind === "cart") break;
     }
@@ -288,6 +288,15 @@ export async function runJourney(entryUrl, { onLog } = {}) {
   if (stages.length === 0) {
     throw new Error(blockedReason || "The run produced no stages.");
   }
+
+  // Journey strips read badly with two "Category" chips in a row; number repeats.
+  const seen = new Map();
+  for (const stage of stages) {
+    const count = (seen.get(stage.label) || 0) + 1;
+    seen.set(stage.label, count);
+    if (count > 1) stage.label = `${stage.label} ${count}`;
+  }
+
 
   const host = new URL(entryUrl).hostname.replace(/^www\./, "");
   return {
