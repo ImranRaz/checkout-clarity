@@ -67,6 +67,59 @@ function log(steps, actor, text, tone = "normal") {
 }
 
 
+/**
+ * A cheap fingerprint of what the shopper can currently see. Used to tell a
+ * click that actually moved the journey from one that silently did nothing —
+ * without it the run captures the same screen three times and calls it a
+ * journey (which is exactly what happened on stores with overlay pickers).
+ */
+const PAGE_SIGNATURE = `(() => {
+  const text = (document.body ? document.body.innerText : "").replace(/\\s+/g, " ").slice(0, 1200);
+  const dialogs = document.querySelectorAll('[role=dialog],[aria-modal=true],dialog[open]').length;
+  return location.href + "|" + dialogs + "|" + document.title + "|" + text;
+})()`;
+
+async function readSignature(page) {
+  try {
+    return await page.evaluate(PAGE_SIGNATURE);
+  } catch {
+    return String(Math.random());
+  }
+}
+
+/** Wait until the page stops changing, or the budget runs out. */
+async function settle(page, before, budgetMs = 9000) {
+  const deadline = Date.now() + budgetMs;
+  let last = before;
+  while (Date.now() < deadline) {
+    await page.waitForTimeout(700);
+    const now = await readSignature(page);
+    if (now !== before) {
+      // Changed — give it one more quiet tick so async carts finish rendering.
+      if (now === last) return true;
+      last = now;
+    }
+  }
+  return (await readSignature(page)) !== before;
+}
+
+/**
+ * Category pages are where act() most often no-ops (product tiles are often
+ * image-only links). Falling back to the first plausible product href keeps
+ * the journey moving instead of screenshotting the grid again.
+ */
+async function firstProductHref(page) {
+  try {
+    return await page.evaluate(`(() => {
+      const links = Array.from(document.querySelectorAll('a[href]'));
+      const hit = links.find((a) => /\\/(products?|p|item|shop\\/[^/]+\\/[^/]+)\\//i.test(a.getAttribute('href') || ''));
+      return hit ? hit.href : null;
+    })()`);
+  } catch {
+    return null;
+  }
+}
+
 async function captureStage(page, { kind, label: rawLabel, transition }) {
   const label = cleanLabel(rawLabel, kind);
   const [metrics, friction, shot, size] = await Promise.all([
@@ -219,15 +272,33 @@ export async function runJourney(entryUrl, { onLog } = {}) {
       emit("vision", decision.action);
 
       const tAct = Date.now();
+      const before = await readSignature(page);
       try {
         await stagehand.page.act(decision.action);
       } catch (error) {
-        status = "partial";
-        blockedReason = `The agent could not complete "${decision.action}" — ${error.message.slice(0, 160)}`;
-        emit("browser", blockedReason, "error");
-        break;
+        emit("browser", `That didn't work — ${error.message.slice(0, 120)}`, "warn");
+        history[history.length - 1] = `${decision.action} (failed)`;
+        continue;
       }
-      await page.waitForTimeout(2200);
+
+      let moved = await settle(page, before);
+
+      // No visible change: the click landed on nothing. Try a direct product
+      // link before burning another model turn on the same screen.
+      if (!moved) {
+        const href = decision.resulting_kind === "product" ? await firstProductHref(page) : null;
+        if (href) {
+          emit("system", "That click did nothing — opening the product directly");
+          await page.goto(href, { waitUntil: "domcontentloaded", timeout: 30000 }).catch(() => {});
+          moved = (await readSignature(page)) !== before;
+        }
+      }
+
+      if (!moved) {
+        history[history.length - 1] = `${decision.action} (no visible effect)`;
+        emit("browser", "Nothing on the page changed — trying another route", "warn");
+        continue;
+      }
 
       const stage = await captureStage(page, {
         kind: decision.resulting_kind,
@@ -236,7 +307,6 @@ export async function runJourney(entryUrl, { onLog } = {}) {
       });
       stages.push(stage);
       emit("browser", `${stage.label} captured in ${Date.now() - tAct}ms`, "success");
-
 
       if (decision.resulting_kind === "cart") break;
     }
