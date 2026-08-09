@@ -14,7 +14,9 @@ import { VITALS_INIT, VITALS_READ } from "./vitals.js";
  * two-step Shopify store and a six-step cruise booking share one code path.
  */
 
-const MAX_STEPS = 10;
+const MAX_STEPS = Number(process.env.AGENT_MAX_STEPS || 16);
+/** Long booking flows need room; the budget stops a runaway from burning credits. */
+const RUN_BUDGET_MS = Number(process.env.AGENT_BUDGET_MS || 6 * 60 * 1000);
 
 /**
  * The API key alone identifies the account, so the project id is looked up
@@ -37,14 +39,37 @@ async function resolveProjectId() {
   return id;
 }
 
-const stageKind = z.enum(["category", "product", "variant", "mini-cart", "cart"]);
+// Deliberately generic. A shoe store's journey is listing -> product -> cart;
+// a cruise line's is listing (sailings) -> detail (itinerary) -> options
+// (cabin) -> form (guests) -> summary -> cart. One vocabulary covers both.
+const stageKind = z.enum([
+  "category",
+  "listing",
+  "product",
+  "detail",
+  "variant",
+  "options",
+  "form",
+  "mini-cart",
+  "summary",
+  "cart",
+  "checkout",
+  "other",
+]);
 
 const KIND_LABELS = {
   category: "Category",
+  listing: "Listing",
   product: "Product page",
+  detail: "Detail page",
   variant: "Variant selected",
+  options: "Options",
+  form: "Details form",
   "mini-cart": "Mini-cart",
+  summary: "Summary",
   cart: "Cart",
+  checkout: "Checkout",
+  other: "Step",
 };
 
 /**
@@ -65,7 +90,6 @@ function cleanLabel(label, kind) {
 function log(steps, actor, text, tone = "normal") {
   steps.push({ actor, text, delay_ms: 260, tone });
 }
-
 
 /**
  * A cheap fingerprint of what the shopper can currently see. Used to tell a
@@ -119,6 +143,54 @@ async function firstProductHref(page) {
     return null;
   }
 }
+
+/**
+ * Consent banners and newsletter modals sit on top of everything and swallow
+ * the first click on most retail and travel sites. Cheap to clear, expensive
+ * to ignore.
+ */
+const OVERLAY_SCRIPT = `(() => {
+  const wanted = /^(accept|accept all|allow all|agree|i agree|got it|ok|close|no thanks|continue|dismiss|x)$/i;
+  let hits = 0;
+  const nodes = document.querySelectorAll('button,[role=button],a[href="#"]');
+  for (const el of nodes) {
+    const text = (el.innerText || el.getAttribute('aria-label') || '').trim();
+    if (!text || text.length > 24 || !wanted.test(text)) continue;
+    const box = el.getBoundingClientRect();
+    if (box.width === 0 || box.height === 0) continue;
+    el.click();
+    hits += 1;
+    if (hits >= 3) break;
+  }
+  return hits;
+})()`;
+
+/**
+ * What can actually be clicked right now, in the model's own words. Feeding
+ * this in is what lets the planner cope with a cruise line's cabin grid or a
+ * dropdown size picker without any per-site rules.
+ */
+async function visibleControls(page) {
+  try {
+    const found = await page.observe(
+      "List the interactive controls on this page that could move a shopper forward: product links, size/colour/date/cabin selectors, dropdowns, quantity controls, add-to-cart, continue, and cart links.",
+    );
+    return (found || [])
+      .map((item) => (item.description || "").trim())
+      .filter(Boolean)
+      .slice(0, 14);
+  } catch {
+    return [];
+  }
+}
+
+/** Heuristic backstop for "is there something in the basket yet". */
+const CART_CHECK = `(() => {
+  const text = (document.body ? document.body.innerText : "").toLowerCase();
+  const cartish = /(subtotal|order summary|booking summary|your (cart|bag|basket)|proceed to checkout|checkout now)/.test(text);
+  const empty = /(cart is empty|bag is empty|basket is empty|no items in your)/.test(text);
+  return cartish && !empty;
+})()`;
 
 async function captureStage(page, { kind, label: rawLabel, transition }) {
   const label = cleanLabel(rawLabel, kind);
@@ -193,9 +265,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
         solveCaptchas: true,
       },
     },
-
   });
-
 
   let status = "complete";
   let blockedReason = null;
@@ -223,124 +293,175 @@ export async function runJourney(entryUrl, { onLog } = {}) {
       emit("browser", blockedReason, "error");
     }
 
-    let kind = "product";
+    await page.evaluate(OVERLAY_SCRIPT).catch(() => {});
+
+    let kind = "other";
+    let entryLabel = "";
     if (!wall) {
       const classified = await stagehand.page.extract({
         instruction:
-          "Classify this page as one of: category (a list of products), product (a single product with a buy control), variant, mini-cart, or cart.",
-        schema: z.object({ kind: stageKind }),
+          "What kind of page is this in a buying journey? listing = several items to choose from, detail = one item with a buy or book control, options = choosing size/colour/date/cabin/room, form = entering traveller or shopper details, summary = a review step, cart = a basket with items, checkout = payment.",
+        schema: z.object({ kind: stageKind, label: z.string() }),
       });
       kind = classified.kind;
+      entryLabel = classified.label;
     }
 
     stages.push(
-      await captureStage(page, {
-        kind,
-        label: kind === "category" ? "Category" : "Product page",
-        transition: null,
-      }),
+      await captureStage(page, { kind, label: entryLabel || KIND_LABELS[kind], transition: null }),
     );
-    emit("browser", `Landed on ${kind} in ${Date.now() - t0}ms`, "success");
+    emit("browser", `Landed on ${KIND_LABELS[kind] || kind} in ${Date.now() - t0}ms`, "success");
 
-    // Goal loop: keep taking the single next action that moves toward a cart
-    // containing an item, stopping when we get there or run out of moves.
-    // The action history is fed back in, otherwise the model happily retries
-    // the same variant click forever on stores with sticky size pickers.
+    // The goal loop. Nothing here is store-specific: every turn the model sees
+    // where it is, what it can click, and what has already been tried, then
+    // proposes the next one-to-three moves. That is the same code path for a
+    // two-step Shopify store and a six-step cruise booking.
     const history = [];
-    for (let step = 0; !wall && step < MAX_STEPS; step += 1) {
+    const deadline = startedAt + RUN_BUDGET_MS;
+    let reachedGoal = false;
+
+    for (let step = 0; !wall && step < MAX_STEPS && Date.now() < deadline; step += 1) {
+      const controls = await visibleControls(page);
+
       const decision = await stagehand.page.extract({
         instruction:
-          "You are walking this store to a cart containing one item. Order of moves: open a single product from any listing grid, then choose any required size/colour option, then add to cart, then open the cart. What is the single next action? " +
-          (history.length
-            ? `Actions already tried (do NOT repeat them; if one appears to have had no effect, try a different route such as opening the cart directly): ${history.map((h) => `"${h}"`).join(", ")}. `
+          "GOAL: get one bookable or purchasable item into the cart / booking summary on this site. " +
+          "The site may need anywhere from one to six steps: opening an item from a listing, choosing required options " +
+          "(size, colour, date, sailing, cabin, room, guests) using swatches, dropdowns or steppers, filling a short " +
+          "required form, then adding to cart or continuing to a summary. Work out the site's own flow — do not assume " +
+          "a standard retail checkout. " +
+          `You are on ${page.url()}. ` +
+          (controls.length
+            ? `Controls visible right now: ${controls.map((c) => `"${c}"`).join(", ")}. `
             : "") +
-          "Reply done=true only if the current page is a cart page that already contains at least one item.",
+          (history.length
+            ? `Already attempted (never repeat one marked no effect — pick a different control or route): ${history.map((h) => `"${h}"`).join(", ")}. `
+            : "") +
+          "Return the next 1-3 moves that belong together (for example: open the size dropdown, then choose an available size). " +
+          "Set done=true only when the current page already shows the item in a cart or booking summary.",
         schema: z.object({
           done: z.boolean(),
-          action: z.string().describe("A short imperative instruction, e.g. 'click the Add to Cart button'"),
+          note: z
+            .string()
+            .describe("One short plain-English sentence about what you are doing and why"),
+          actions: z
+            .array(z.string())
+            .describe("Imperative browser instructions, e.g. 'click the Add to Bag button'"),
           resulting_kind: stageKind,
           label: z.string(),
         }),
       });
 
       if (decision.done) {
-        emit("system", "Cart reached with an item present", "success");
+        reachedGoal = true;
+        emit("system", "Item is in the cart — journey complete", "success");
         break;
       }
 
-      history.push(decision.action);
-      emit("vision", decision.action);
+      const moves = (decision.actions || []).filter(Boolean).slice(0, 3);
+      if (moves.length === 0) break;
+
+      if (decision.note) emit("vision", decision.note);
 
       const tAct = Date.now();
       const before = await readSignature(page);
-      try {
-        await stagehand.page.act(decision.action);
-      } catch (error) {
-        emit("browser", `That didn't work — ${error.message.slice(0, 120)}`, "warn");
-        history[history.length - 1] = `${decision.action} (failed)`;
+      let failure = null;
+
+      for (const move of moves) {
+        emit("vision", move);
+        try {
+          await stagehand.page.act(move);
+        } catch (error) {
+          failure = error.message.slice(0, 120);
+          break;
+        }
+        await settle(page, await readSignature(page), 4000);
+      }
+
+      if (failure) {
+        emit("browser", `That didn't work — ${failure}`, "warn");
+        history.push(`${moves[0]} (failed)`);
         continue;
       }
 
-      let moved = await settle(page, before);
+      let moved = (await readSignature(page)) !== before || (await settle(page, before, 4000));
 
-      // No visible change: the click landed on nothing. Try a direct product
-      // link before burning another model turn on the same screen.
+      // Recovery ladder — nothing on screen changed, so the clicks landed on
+      // nothing. Reveal more of the page, then fall back to a real link.
       if (!moved) {
-        const href = decision.resulting_kind === "product" ? await firstProductHref(page) : null;
-        if (href) {
-          emit("system", "That click did nothing — opening the product directly");
+        await page.evaluate(`window.scrollBy(0, window.innerHeight * 1.2)`).catch(() => {});
+        await page.waitForTimeout(900);
+        moved = (await readSignature(page)) !== before;
+      }
+      if (!moved) {
+        const href = await firstProductHref(page);
+        if (href && href !== page.url()) {
+          emit("system", "That control did nothing — opening the item directly");
           await page.goto(href, { waitUntil: "domcontentloaded", timeout: 30000 }).catch(() => {});
+          await page.evaluate(OVERLAY_SCRIPT).catch(() => {});
           moved = (await readSignature(page)) !== before;
         }
       }
 
       if (!moved) {
-        history[history.length - 1] = `${decision.action} (no visible effect)`;
+        history.push(`${moves.join(" then ")} (no visible effect)`);
         emit("browser", "Nothing on the page changed — trying another route", "warn");
         continue;
       }
 
+      history.push(moves.join(" then "));
+      await page.evaluate(OVERLAY_SCRIPT).catch(() => {});
+
       const stage = await captureStage(page, {
         kind: decision.resulting_kind,
         label: decision.label,
-        transition: { action: decision.action, duration_ms: Date.now() - tAct },
+        transition: { action: moves.join(" then "), duration_ms: Date.now() - tAct },
       });
       stages.push(stage);
       emit("browser", `${stage.label} captured in ${Date.now() - tAct}ms`, "success");
 
-      if (decision.resulting_kind === "cart") break;
-    }
-
-    // Many stores add to cart via a drawer and never navigate, so the loop can
-    // end one hop short. Try the conventional cart URL before giving up.
-    if (!wall && !stages.some((s) => s.kind === "cart")) {
-      try {
-        const cartUrl = new URL("/cart", page.url()).toString();
-        emit("system", `No cart page captured yet — opening ${cartUrl}`);
-        const tCart = Date.now();
-        await page.goto(cartUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
-        await page.waitForTimeout(2000);
-        stages.push(
-          await captureStage(page, {
-            kind: "cart",
-            label: "Cart",
-            transition: { action: "open the cart page directly", duration_ms: Date.now() - tCart },
-          }),
-        );
-        emit("browser", `Cart captured in ${Date.now() - tCart}ms`, "success");
-        blockedReason = null;
-        status = "complete";
-      } catch (error) {
-        status = "partial";
-        blockedReason = `The run stopped before reaching a cart page (${error.message.slice(0, 120)}).`;
+      if (await page.evaluate(CART_CHECK).catch(() => false)) {
+        reachedGoal = true;
+        emit("system", "Item is in the cart — journey complete", "success");
+        break;
       }
     }
 
-    if (!stages.some((s) => s.kind === "cart") && !blockedReason) {
-      status = "partial";
-      blockedReason = "The run stopped before reaching a cart page.";
+    // Many stores add to cart via a drawer and never navigate, so the loop can
+    // end one hop short of a cart page. Try the conventional cart URL. This is
+    // a convention, not a requirement: flows without one just stay partial.
+    if (!wall && !reachedGoal) {
+      try {
+        const cartUrl = new URL("/cart", page.url()).toString();
+        emit("system", `No cart captured yet — trying ${cartUrl}`);
+        const tCart = Date.now();
+        await page.goto(cartUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
+        await page.waitForTimeout(2000);
+        if (await page.evaluate(CART_CHECK).catch(() => false)) {
+          stages.push(
+            await captureStage(page, {
+              kind: "cart",
+              label: "Cart",
+              transition: {
+                action: "open the cart page directly",
+                duration_ms: Date.now() - tCart,
+              },
+            }),
+          );
+          emit("browser", `Cart captured in ${Date.now() - tCart}ms`, "success");
+          reachedGoal = true;
+          blockedReason = null;
+          status = "complete";
+        }
+      } catch {
+        /* no conventional cart URL — handled below */
+      }
     }
 
+    if (!reachedGoal && !blockedReason) {
+      status = "partial";
+      blockedReason = `The run captured ${stages.length} step${stages.length === 1 ? "" : "s"} but never reached a cart or booking summary.`;
+    }
   } catch (error) {
     status = "partial";
     blockedReason = error.message.slice(0, 240);
@@ -366,7 +487,6 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     seen.set(stage.label, count);
     if (count > 1) stage.label = `${stage.label} ${count}`;
   }
-
 
   const host = new URL(entryUrl).hostname.replace(/^www\./, "");
   return {

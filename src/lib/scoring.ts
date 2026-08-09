@@ -29,10 +29,7 @@ const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
 
 const SEVERITY_PENALTY = { high: 9, medium: 5, low: 2 } as const;
 
-export function computeScore(
-  metrics: TechnicalMetrics,
-  friction: FrictionPoint[],
-): ScoreBreakdown {
+export function computeScore(metrics: TechnicalMetrics, friction: FrictionPoint[]): ScoreBreakdown {
   // Loading — LCP scaled between 1.2 s (full marks) and 4.0 s (zero).
   const lcpWeight = 30;
   const lcpRatio = clamp01((4000 - metrics.largest_contentful_paint_ms) / (4000 - 1200));
@@ -45,7 +42,8 @@ export function computeScore(
 
   // Runtime integrity — console errors and blocking scripts.
   const errWeight = 15;
-  const errPenalty = metrics.console_errors.length * 4 + Math.floor(metrics.total_blocking_time_ms / 300);
+  const errPenalty =
+    metrics.console_errors.length * 4 + Math.floor(metrics.total_blocking_time_ms / 300);
   const errEarned = Math.max(0, errWeight - errPenalty);
 
   // Conversion friction — weighted by severity of each observed friction point.
@@ -103,10 +101,17 @@ export function scoreStage(stage: AuditStage): ScoreBreakdown {
  */
 const STAGE_WEIGHT: Record<StageKind, number> = {
   cart: 1,
+  checkout: 1,
+  summary: 0.95,
   product: 0.9,
+  detail: 0.9,
+  form: 0.7,
   "mini-cart": 0.6,
   variant: 0.5,
+  options: 0.5,
   category: 0.4,
+  listing: 0.4,
+  other: 0.5,
 };
 
 function gradeFor(total: number): ScoreBreakdown["grade"] {
@@ -117,7 +122,7 @@ function gradeFor(total: number): ScoreBreakdown["grade"] {
 export function scoreReport(report: ForensicAuditReport): ScoreBreakdown {
   const scored = report.stages.map((stage) => ({
     stage,
-    weight: STAGE_WEIGHT[stage.kind],
+    weight: STAGE_WEIGHT[stage.kind] ?? 0.5,
     score: scoreStage(stage),
   }));
   const totalWeight = scored.reduce((sum, s) => sum + s.weight, 0) || 1;

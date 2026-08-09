@@ -63,7 +63,25 @@ export const logLineSchema = z.object({
 });
 export type LogLine = z.infer<typeof logLineSchema>;
 
-export const stageKindSchema = z.enum(["category", "product", "variant", "mini-cart", "cart"]);
+/**
+ * Deliberately generic: a shoe store runs listing → product → cart, a cruise
+ * line runs listing → detail → options → form → summary → cart. The agent is
+ * not tied to a retail script, so neither is the vocabulary.
+ */
+export const stageKindSchema = z.enum([
+  "category",
+  "listing",
+  "product",
+  "detail",
+  "variant",
+  "options",
+  "form",
+  "mini-cart",
+  "summary",
+  "cart",
+  "checkout",
+  "other",
+]);
 export type StageKind = z.infer<typeof stageKindSchema>;
 
 /**
@@ -77,10 +95,7 @@ export const stageSchema = z.object({
   label: z.string(),
   url: z.string(),
   /** How the agent got here from the previous stage. Null for the entry stage. */
-  transition_in: z
-    .object({ action: z.string(), duration_ms: z.number() })
-    .nullable()
-    .default(null),
+  transition_in: z.object({ action: z.string(), duration_ms: z.number() }).nullable().default(null),
   screenshot: z.object({
     src: z.string(),
     width: z.number(),
@@ -108,10 +123,17 @@ export type ForensicAuditReport = z.infer<typeof auditReportSchema>;
 
 export const stageKindLabel: Record<StageKind, string> = {
   category: "Category",
+  listing: "Listing",
   product: "Product page",
+  detail: "Detail page",
   variant: "Variant picker",
+  options: "Options",
+  form: "Details form",
   "mini-cart": "Mini-cart",
+  summary: "Summary",
   cart: "Cart",
+  checkout: "Checkout",
+  other: "Step",
 };
 
 /** The last stage the run actually reached. */
