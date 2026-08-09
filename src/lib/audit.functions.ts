@@ -26,7 +26,32 @@ export type LivePoll =
       report: ForensicAuditReport | null;
     };
 
+/**
+ * A live browser can hand back NaN/Infinity for a metric it never observed,
+ * which JSON turns into null and the schema then rejects wholesale. Coerce
+ * numeric leaves rather than throwing away an otherwise good run.
+ */
+function sanitizeReport(input: unknown): unknown {
+  const NUMERIC =
+    /_ms$|_bytes$|_count$|^cumulative_layout_shift$|^duration_ms$|^width$|^height$|^id$|_percentage$/;
+
+  const walk = (value: unknown, key?: string): unknown => {
+    if (Array.isArray(value)) return value.map((item) => walk(item));
+    if (value && typeof value === "object") {
+      return Object.fromEntries(
+        Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, walk(v, k)]),
+      );
+    }
+    if (typeof value === "number" && !Number.isFinite(value)) return 0;
+    if (value === null && key && NUMERIC.test(key) && key !== "id") return 0;
+    return value;
+  };
+
+  return walk(input);
+}
+
 function agentConfig() {
+
   const base = process.env["AGENT_WORKER_URL"];
   const secret = process.env["AGENT_SHARED_SECRET"];
   return {
