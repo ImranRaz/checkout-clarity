@@ -103,10 +103,17 @@ export function scoreStage(stage: AuditStage): ScoreBreakdown {
  */
 const STAGE_WEIGHT: Record<StageKind, number> = {
   cart: 1,
+  checkout: 1,
+  summary: 0.95,
   product: 0.9,
+  detail: 0.9,
+  form: 0.7,
   "mini-cart": 0.6,
   variant: 0.5,
+  options: 0.5,
   category: 0.4,
+  listing: 0.4,
+  other: 0.5,
 };
 
 function gradeFor(total: number): ScoreBreakdown["grade"] {
@@ -117,7 +124,7 @@ function gradeFor(total: number): ScoreBreakdown["grade"] {
 export function scoreReport(report: ForensicAuditReport): ScoreBreakdown {
   const scored = report.stages.map((stage) => ({
     stage,
-    weight: STAGE_WEIGHT[stage.kind],
+    weight: STAGE_WEIGHT[stage.kind] ?? 0.5,
     score: scoreStage(stage),
   }));
   const totalWeight = scored.reduce((sum, s) => sum + s.weight, 0) || 1;

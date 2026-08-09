@@ -63,7 +63,25 @@ export const logLineSchema = z.object({
 });
 export type LogLine = z.infer<typeof logLineSchema>;
 
-export const stageKindSchema = z.enum(["category", "product", "variant", "mini-cart", "cart"]);
+/**
+ * Deliberately generic: a shoe store runs listing → product → cart, a cruise
+ * line runs listing → detail → options → form → summary → cart. The agent is
+ * not tied to a retail script, so neither is the vocabulary.
+ */
+export const stageKindSchema = z.enum([
+  "category",
+  "listing",
+  "product",
+  "detail",
+  "variant",
+  "options",
+  "form",
+  "mini-cart",
+  "summary",
+  "cart",
+  "checkout",
+  "other",
+]);
 export type StageKind = z.infer<typeof stageKindSchema>;
 
 /**
