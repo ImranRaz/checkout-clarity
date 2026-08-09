@@ -102,6 +102,15 @@ export const listRecentAudits = createServerFn({ method: "GET" }).handler(
   },
 );
 
+/** Removes an unfinished/unscored run from the Recent audits rail. */
+export const deleteAuditRun = createServerFn({ method: "POST" })
+  .inputValidator((input: { id: string }) => input)
+  .handler(async ({ data }): Promise<{ ok: boolean; error?: string }> => {
+    const { error } = await publicClient().from("audit_runs").delete().eq("id", data.id);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  });
+
 /** Full saved report for a permalink. */
 export const getSavedAuditRun = createServerFn({ method: "POST" })
   .inputValidator((input: { id: string }) => input)
