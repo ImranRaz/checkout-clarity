@@ -260,7 +260,7 @@ function Home() {
               <LiveConsole
                 steps={liveSteps}
                 elapsedMs={liveElapsed}
-                status={liveStatus === "idle" ? "starting" : liveStatus}
+                status={liveStatus}
                 error={liveError}
               />
             ) : null}
