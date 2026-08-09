@@ -41,20 +41,31 @@ export const Route = createFileRoute("/")({
 function Home() {
   const navigate = useNavigate();
   const runPreflight = useServerFn(preflightTarget);
-  const runLive = useServerFn(runLiveAudit);
+  const startLive = useServerFn(startLiveAudit);
+  const pollLive = useServerFn(pollLiveAudit);
   const [url, setUrl] = useState("");
   const [touched, setTouched] = useState(false);
   const [checking, setChecking] = useState(false);
   const [preflight, setPreflight] = useState<PreflightResult | null>(null);
-  const [liveRunning, setLiveRunning] = useState(false);
+  const [liveStatus, setLiveStatus] = useState<"idle" | "starting" | "running" | "done" | "error">(
+    "idle",
+  );
+  const [liveSteps, setLiveSteps] = useState<LiveStep[]>([]);
+  const [liveElapsed, setLiveElapsed] = useState(0);
   const [liveError, setLiveError] = useState<string | null>(null);
+  const cancelled = useRef(false);
+
+  const liveRunning = liveStatus === "starting" || liveStatus === "running";
+  const busy = checking || liveRunning;
+
+  useEffect(() => () => void (cancelled.current = true), []);
 
   const valid = isPlausibleUrl(url);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     setTouched(true);
-    if (!valid || checking) return;
+    if (!valid || busy) return;
 
     setChecking(true);
     setPreflight(null);
@@ -79,24 +90,60 @@ function Home() {
     }
   }
 
+  /**
+   * The worker runs the journey as a background job — a full run outlives the
+   * 100s edge timeout — so we start it, then poll for its step log.
+   */
   async function runRealAgent() {
     if (liveRunning) return;
-    setLiveRunning(true);
+    cancelled.current = false;
+    setLiveStatus("starting");
+    setLiveSteps([]);
+    setLiveElapsed(0);
     setLiveError(null);
-    try {
-      const result = await runLive({ data: { url: normalizeUrl(url) } });
-      if (!result.ok) {
-        setLiveError(result.error);
+
+    const started = await startLive({ data: { url: normalizeUrl(url) } });
+    if (!started.ok) {
+      setLiveStatus("error");
+      setLiveError(started.error);
+      return;
+    }
+    setLiveStatus("running");
+
+    const deadline = Date.now() + 8 * 60 * 1000;
+    while (!cancelled.current && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      if (cancelled.current) return;
+
+      const poll = await pollLive({ data: { jobId: started.jobId } });
+      if (!poll.ok) {
+        setLiveStatus("error");
+        setLiveError(poll.error);
         return;
       }
-      saveLiveReport(result.report);
-      void navigate({ to: "/audit/$runId", params: { runId: result.report.id } });
-    } catch (error) {
-      setLiveError(error instanceof Error ? error.message : "The agent run failed.");
-    } finally {
-      setLiveRunning(false);
+
+      setLiveSteps(poll.steps);
+      setLiveElapsed(poll.elapsed_ms);
+
+      if (poll.status === "error") {
+        setLiveStatus("error");
+        setLiveError(poll.error ?? "The agent run failed.");
+        return;
+      }
+      if (poll.status === "done" && poll.report) {
+        setLiveStatus("done");
+        saveLiveReport(poll.report);
+        void navigate({ to: "/audit/$runId", params: { runId: poll.report.id } });
+        return;
+      }
+    }
+
+    if (!cancelled.current) {
+      setLiveStatus("error");
+      setLiveError("The run exceeded eight minutes and was abandoned.");
     }
   }
+
 
   function continueToAudit() {
     const report = resolveReportForUrl(url);
