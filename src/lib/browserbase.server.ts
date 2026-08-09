@@ -31,22 +31,37 @@ function apiKey(): string {
 }
 
 async function callBrowserbase<T>(path: string, body: unknown): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
-    method: "POST",
-    headers: {
-      "X-BB-API-Key": apiKey(),
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  // The reader endpoint occasionally answers 5xx on heavy, slow marketing
+  // pages (travel and booking sites especially). That is our reader hiccuping,
+  // not the site refusing us, so retry once before giving up.
+  let lastStatus = 0;
+  let lastText = "";
 
-  if (!response.ok) {
-    const text = await response.text().catch(() => "");
-    throw new Error(`Browserbase ${path} returned ${response.status}: ${text.slice(0, 300)}`);
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const response = await fetch(`${API_BASE}${path}`, {
+      method: "POST",
+      headers: {
+        "X-BB-API-Key": apiKey(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (response.ok) return (await response.json()) as T;
+
+    lastStatus = response.status;
+    lastText = await response.text().catch(() => "");
+    if (lastStatus < 500) break;
   }
 
-  return (await response.json()) as T;
+  if (lastStatus >= 500) {
+    throw new Error(
+      "We couldn't preview this page (the page reader timed out). This usually means a heavy, slow page — not a block. You can still send in the agent.",
+    );
+  }
+  throw new Error(`Browserbase ${path} returned ${lastStatus}: ${lastText.slice(0, 300)}`);
 }
+
 
 const BLOCK_PATTERNS =
   /just a moment|checking your browser|access denied|robot or human|are you a (human|robot)|verify (you are|that you)|captcha|unusual traffic|request blocked/i;
