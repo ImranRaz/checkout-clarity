@@ -18,10 +18,18 @@ import { dismissOverlays } from "./overlays.js";
 const MAX_STEPS = Number(process.env.AGENT_MAX_STEPS || 16);
 /** Long booking flows need room; the budget stops a runaway from burning credits. */
 const RUN_BUDGET_MS = Number(process.env.AGENT_BUDGET_MS || 6 * 60 * 1000);
-/** Stop expensive browser calls that can otherwise sit unresolved for minutes. */
-const ACTION_TIMEOUT_MS = Number(process.env.AGENT_ACTION_TIMEOUT_MS || 30 * 1000);
-/** Two consecutive turns with no visible progress are enough evidence to stop. */
-const MAX_STALLED_ATTEMPTS = Number(process.env.AGENT_MAX_STALLED_ATTEMPTS || 2);
+/**
+ * Stop expensive browser calls that can otherwise sit unresolved for minutes.
+ * Acting on a heavy retail page (variant pickers, lazy media) routinely takes
+ * longer than planning does, so the two get separate budgets — a single 30s
+ * cap was ending runs on sites that were merely slow, not stuck.
+ */
+const ACTION_TIMEOUT_MS = Number(process.env.AGENT_ACTION_TIMEOUT_MS || 60 * 1000);
+const THINK_TIMEOUT_MS = Number(process.env.AGENT_THINK_TIMEOUT_MS || 35 * 1000);
+/** Three consecutive turns with no visible progress are enough evidence to stop. */
+const MAX_STALLED_ATTEMPTS = Number(process.env.AGENT_MAX_STALLED_ATTEMPTS || 3);
+/** Findings are judged against the form factor actually being driven. */
+const DEVICE = process.env.AGENT_DEVICE || "desktop";
 
 function withTimeout(promise, timeoutMs, label) {
   let timer;
@@ -188,7 +196,7 @@ async function captureStage(page, { kind, label: rawLabel, transition }) {
   const label = cleanLabel(rawLabel, kind);
   const [metrics, friction, shot, size] = await Promise.all([
     page.evaluate(VITALS_READ),
-    page.evaluate(FRICTION_SCRIPT),
+    page.evaluate(FRICTION_SCRIPT(kind, DEVICE)),
     page.screenshot({ fullPage: true, type: "jpeg", quality: 70 }),
     page.evaluate(
       `({ width: window.innerWidth, height: Math.max(document.documentElement.scrollHeight, window.innerHeight) })`,
@@ -318,13 +326,13 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     let overlayRetryUsed = false;
 
     for (let step = 0; !wall && step < MAX_STEPS && Date.now() < deadline; step += 1) {
-      await withTimeout(dismissOverlays(page, { emit }), ACTION_TIMEOUT_MS, "Clearing pop-ups").catch(
+      await withTimeout(dismissOverlays(page, { emit }), THINK_TIMEOUT_MS, "Clearing pop-ups").catch(
         () => {},
       );
 
       const controls = await withTimeout(
         visibleControls(page),
-        ACTION_TIMEOUT_MS,
+        THINK_TIMEOUT_MS,
         "Reading page controls",
       );
 
@@ -335,7 +343,14 @@ export async function runJourney(entryUrl, { onLog } = {}) {
           "(size, colour, date, sailing, cabin, room, guests) using swatches, dropdowns or steppers, filling a short " +
           "required form, then adding to cart or continuing to a summary. Work out the site's own flow — do not assume " +
           "a standard retail checkout. " +
-          `You are on ${page.url()}. ` +
+          "IMPORTANT — where the buy control lives: a category or listing grid almost never has an add-to-cart button. " +
+          "If you are on a grid of several items, do NOT look for add-to-cart; open one in-stock item to reach its " +
+          "detail page first. On a detail page for clothing, footwear or anything with variants, the add-to-cart " +
+          "control is usually disabled until every required option is chosen — pick a size, colour, length or fit " +
+          "(swatch, dropdown or button) before clicking add. Prefer an option that is not marked sold out or " +
+          "unavailable. Quick-add or hover 'add' buttons on a grid tile are a shortcut, not the main flow: use one " +
+          "only if it is plainly visible and does not open a picker you cannot complete. " +
+          `You are on ${page.url()}, driving a ${DEVICE} browser. ` +
           (controls.length
             ? `Controls visible right now: ${controls.map((c) => `"${c}"`).join(", ")}. `
             : "") +
@@ -356,7 +371,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
           resulting_kind: stageKind,
           label: z.string(),
         }),
-      }), ACTION_TIMEOUT_MS, "Planning the next move");
+      }), THINK_TIMEOUT_MS, "Planning the next move");
 
       if (decision.done) {
         reachedGoal = true;
@@ -381,7 +396,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
           failure = error.message.slice(0, 120);
           break;
         }
-        await settle(page, await readSignature(page), 4000);
+        await settle(page, await readSignature(page), 7000);
       }
 
       if (failure) {
@@ -389,7 +404,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
         // action timing out. Clear it and give this turn one free retry.
         const { blocker, cleared } = await withTimeout(
           dismissOverlays(page, { emit, deep: true }),
-          ACTION_TIMEOUT_MS,
+          THINK_TIMEOUT_MS,
           "Clearing pop-ups",
         ).catch(() => ({ blocker: null, cleared: 0 }));
         if ((cleared > 0 || blocker === null) && !overlayRetryUsed) {
@@ -409,7 +424,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
         continue;
       }
 
-      let moved = (await readSignature(page)) !== before || (await settle(page, before, 4000));
+      let moved = (await readSignature(page)) !== before || (await settle(page, before, 7000));
 
       // Recovery ladder — nothing on screen changed, so the clicks landed on
       // nothing. Reveal more of the page, then fall back to a real link.
