@@ -458,11 +458,6 @@ export async function runJourney(entryUrl, { onLog } = {}) {
       blockedReason = `The run captured ${stages.length} step${stages.length === 1 ? "" : "s"} but never reached a cart or booking summary.`;
     }
 
-    if (false) {
-    if (!stages.some((s) => s.kind === "cart") && !blockedReason) {
-      status = "partial";
-      blockedReason = "The run stopped before reaching a cart page.";
-    }
 
   } catch (error) {
     status = "partial";
