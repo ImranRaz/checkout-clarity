@@ -29,10 +29,7 @@ const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
 
 const SEVERITY_PENALTY = { high: 9, medium: 5, low: 2 } as const;
 
-export function computeScore(
-  metrics: TechnicalMetrics,
-  friction: FrictionPoint[],
-): ScoreBreakdown {
+export function computeScore(metrics: TechnicalMetrics, friction: FrictionPoint[]): ScoreBreakdown {
   // Loading — LCP scaled between 1.2 s (full marks) and 4.0 s (zero).
   const lcpWeight = 30;
   const lcpRatio = clamp01((4000 - metrics.largest_contentful_paint_ms) / (4000 - 1200));
@@ -45,7 +42,8 @@ export function computeScore(
 
   // Runtime integrity — console errors and blocking scripts.
   const errWeight = 15;
-  const errPenalty = metrics.console_errors.length * 4 + Math.floor(metrics.total_blocking_time_ms / 300);
+  const errPenalty =
+    metrics.console_errors.length * 4 + Math.floor(metrics.total_blocking_time_ms / 300);
   const errEarned = Math.max(0, errWeight - errPenalty);
 
   // Conversion friction — weighted by severity of each observed friction point.
