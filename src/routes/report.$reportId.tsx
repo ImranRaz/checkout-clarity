@@ -48,16 +48,35 @@ export const Route = createFileRoute("/report/$reportId")({
 function ReportPage() {
   const { reportId } = Route.useParams();
   const { report: fixtureReport } = Route.useLoaderData();
+  const loadSaved = useServerFn(getSavedAuditRun);
   const [liveReport, setLiveReport] = useState<ForensicAuditReport | null>(null);
   const [restored, setRestored] = useState(false);
 
+  const loadSavedRef = useRef(loadSaved);
+  loadSavedRef.current = loadSaved;
+
   useEffect(() => {
     if (fixtureReport) return;
-    setLiveReport(loadLiveReport(reportId));
-    setRestored(true);
+    let active = true;
+    const cached = loadLiveReport(reportId);
+    if (cached) {
+      setLiveReport(cached);
+      setRestored(true);
+      return;
+    }
+    void (async () => {
+      const saved = await loadSavedRef.current({ data: { id: reportId } });
+      if (!active) return;
+      setLiveReport(saved);
+      setRestored(true);
+    })();
+    return () => {
+      active = false;
+    };
   }, [fixtureReport, reportId]);
 
   const report = fixtureReport ?? liveReport;
+
 
   if (!report) {
     return (
