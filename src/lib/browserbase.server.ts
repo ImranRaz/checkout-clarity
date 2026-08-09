@@ -119,6 +119,20 @@ function buildSignals(content: string): PreflightSignal[] {
       present: has(/\/cart\b|\bview (cart|bag)\b|shopping (cart|bag)/i),
       detail: "A reachable cart page for the final stage of the journey.",
     },
+    {
+      key: "search-funnel",
+      label: "Search-first booking funnel",
+      present: has(
+        /\b(find a (cruise|trip|flight|stay)|search (cruises|sailings|trips|dates|rooms)|destination|itinerar(y|ies)|departure date|check[- ]in)\b/i,
+      ),
+      detail: "The journey starts with a search step rather than a product grid.",
+    },
+    {
+      key: "book-control",
+      label: "Booking entry point",
+      present: has(/\b(book now|reserve|select (cabin|room|stateroom|fare)|continue to guests?)\b/i),
+      detail: "A reservation control the agent can drive toward a booking summary.",
+    },
   ];
 }
 
