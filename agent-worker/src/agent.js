@@ -67,7 +67,8 @@ function log(steps, actor, text, tone = "normal") {
 }
 
 
-async function captureStage(page, { kind, label, transition }) {
+async function captureStage(page, { kind, label: rawLabel, transition }) {
+  const label = cleanLabel(rawLabel, kind);
   const [metrics, friction, shot, size] = await Promise.all([
     page.evaluate(VITALS_READ),
     page.evaluate(FRICTION_SCRIPT),
@@ -89,6 +90,7 @@ async function captureStage(page, { kind, label, transition }) {
       height: size.height,
       caption: `${label} — captured at ${size.width}×${size.height}`,
     },
+
     technical_metrics: metrics,
     friction_points: friction,
   };
