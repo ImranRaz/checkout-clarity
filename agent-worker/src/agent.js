@@ -17,6 +17,18 @@ import { VITALS_INIT, VITALS_READ } from "./vitals.js";
 const MAX_STEPS = Number(process.env.AGENT_MAX_STEPS || 16);
 /** Long booking flows need room; the budget stops a runaway from burning credits. */
 const RUN_BUDGET_MS = Number(process.env.AGENT_BUDGET_MS || 6 * 60 * 1000);
+/** Stop expensive browser calls that can otherwise sit unresolved for minutes. */
+const ACTION_TIMEOUT_MS = Number(process.env.AGENT_ACTION_TIMEOUT_MS || 30 * 1000);
+/** Two consecutive turns with no visible progress are enough evidence to stop. */
+const MAX_STALLED_ATTEMPTS = Number(process.env.AGENT_MAX_STALLED_ATTEMPTS || 2);
+
+function withTimeout(promise, timeoutMs, label) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out after ${Math.ceil(timeoutMs / 1000)}s`)), timeoutMs);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
 
 /**
  * The API key alone identifies the account, so the project id is looked up
@@ -319,11 +331,16 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     const history = [];
     const deadline = startedAt + RUN_BUDGET_MS;
     let reachedGoal = false;
+    let stalledAttempts = 0;
 
     for (let step = 0; !wall && step < MAX_STEPS && Date.now() < deadline; step += 1) {
-      const controls = await visibleControls(page);
+      const controls = await withTimeout(
+        visibleControls(page),
+        ACTION_TIMEOUT_MS,
+        "Reading page controls",
+      );
 
-      const decision = await stagehand.page.extract({
+      const decision = await withTimeout(stagehand.page.extract({
         instruction:
           "GOAL: get one bookable or purchasable item into the cart / booking summary on this site. " +
           "The site may need anywhere from one to six steps: opening an item from a listing, choosing required options " +
@@ -350,7 +367,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
           resulting_kind: stageKind,
           label: z.string(),
         }),
-      });
+      }), ACTION_TIMEOUT_MS, "Planning the next move");
 
       if (decision.done) {
         reachedGoal = true;
@@ -370,7 +387,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
       for (const move of moves) {
         emit("vision", move);
         try {
-          await stagehand.page.act(move);
+          await withTimeout(stagehand.page.act(move), ACTION_TIMEOUT_MS, `Action: ${move}`);
         } catch (error) {
           failure = error.message.slice(0, 120);
           break;
@@ -381,6 +398,12 @@ export async function runJourney(entryUrl, { onLog } = {}) {
       if (failure) {
         emit("browser", `That didn't work — ${failure}`, "warn");
         history.push(`${moves[0]} (failed)`);
+        stalledAttempts += 1;
+        if (stalledAttempts >= MAX_STALLED_ATTEMPTS) {
+          blockedReason = `The page stopped responding after ${stalledAttempts} attempts, so the run was ended early to conserve browser minutes.`;
+          emit("system", blockedReason, "error");
+          break;
+        }
         continue;
       }
 
@@ -406,9 +429,16 @@ export async function runJourney(entryUrl, { onLog } = {}) {
       if (!moved) {
         history.push(`${moves.join(" then ")} (no visible effect)`);
         emit("browser", "Nothing on the page changed — trying another route", "warn");
+        stalledAttempts += 1;
+        if (stalledAttempts >= MAX_STALLED_ATTEMPTS) {
+          blockedReason = `The page did not change after ${stalledAttempts} different attempts, so the run was ended early to conserve browser minutes.`;
+          emit("system", blockedReason, "error");
+          break;
+        }
         continue;
       }
 
+      stalledAttempts = 0;
       history.push(moves.join(" then "));
       await page.evaluate(OVERLAY_SCRIPT).catch(() => {});
 
