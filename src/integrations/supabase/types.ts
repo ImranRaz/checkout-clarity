@@ -16,29 +16,38 @@ export type Database = {
     Tables: {
       audit_runs: {
         Row: {
+          console_errors: number
           created_at: string
           domain: string
+          friction_count: number
           id: string
           report: Json
           score: number | null
+          stages_count: number
           status: string
           url: string
         }
         Insert: {
+          console_errors?: number
           created_at?: string
           domain: string
+          friction_count?: number
           id: string
           report: Json
           score?: number | null
+          stages_count?: number
           status?: string
           url: string
         }
         Update: {
+          console_errors?: number
           created_at?: string
           domain?: string
+          friction_count?: number
           id?: string
           report?: Json
           score?: number | null
+          stages_count?: number
           status?: string
           url?: string
         }

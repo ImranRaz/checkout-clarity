@@ -1,0 +1,4 @@
+ALTER TABLE public.audit_runs
+  ADD COLUMN stages_count INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN friction_count INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN console_errors INTEGER NOT NULL DEFAULT 0;
