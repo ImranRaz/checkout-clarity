@@ -39,9 +39,33 @@ async function resolveProjectId() {
 
 const stageKind = z.enum(["category", "product", "variant", "mini-cart", "cart"]);
 
+const KIND_LABELS = {
+  category: "Category",
+  product: "Product page",
+  variant: "Variant selected",
+  "mini-cart": "Mini-cart",
+  cart: "Cart",
+};
+
+/**
+ * The model sometimes hands back an element caption ("0-2289", "ADD TO CART - $100")
+ * instead of a stage name, which reads as noise in the journey strip. Anything
+ * that isn't a short, wordy label falls back to the stage kind.
+ */
+function cleanLabel(label, kind) {
+  const fallback = KIND_LABELS[kind] || "Stage";
+  const text = (label || "").trim();
+  if (!text || text.length > 32) return fallback;
+  if (!/[a-z]/i.test(text)) return fallback;
+  if (/^[\d\W]/.test(text)) return fallback;
+  if (/\$|\d{3,}/.test(text)) return fallback;
+  return text;
+}
+
 function log(steps, actor, text, tone = "normal") {
   steps.push({ actor, text, delay_ms: 260, tone });
 }
+
 
 async function captureStage(page, { kind, label, transition }) {
   const [metrics, friction, shot, size] = await Promise.all([
