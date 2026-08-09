@@ -212,20 +212,36 @@ function Home() {
         </div>
       </div>
 
-      <section className="mx-auto w-full max-w-5xl px-6 py-14" aria-label="Recent audits">
+      <section className="mx-auto w-full max-w-5xl px-6 pt-14" aria-label="Recent audits">
         <div className="flex items-baseline justify-between gap-4">
           <h2 className="label-caps">Recent audits</h2>
           <p className="font-mono text-[11px] text-muted-foreground">
-            {recent.length + fixtureReports.length} runs on file
+            {recent.length} live {recent.length === 1 ? "run" : "runs"} on file
           </p>
         </div>
 
+        {recent.length === 0 ? (
+          <p className="mt-4 rounded-lg border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
+            No live runs saved yet. Send in the agent and the finished report lands here.
+          </p>
+        ) : (
+          <ul className="mt-4 flex snap-x gap-4 overflow-x-auto pb-3">
+            {recent.map((run) => (
+              <li key={run.id} className="w-72 shrink-0 snap-start">
+                <RecentCard run={run} live />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="mx-auto w-full max-w-5xl px-6 pb-14 pt-10" aria-label="Sample reports">
+        <div className="flex items-baseline justify-between gap-4">
+          <h2 className="label-caps">Sample reports</h2>
+          <p className="font-mono text-[11px] text-muted-foreground">recorded walkthroughs</p>
+        </div>
+
         <ul className="mt-4 flex snap-x gap-4 overflow-x-auto pb-3">
-          {recent.map((run) => (
-            <li key={run.id} className="w-72 shrink-0 snap-start">
-              <RecentCard run={run} live />
-            </li>
-          ))}
           {fixtureReports.map((report) => {
             const score = scoreReport(report);
             return (
@@ -247,6 +263,7 @@ function Home() {
           })}
         </ul>
       </section>
+
 
       <footer className="border-t border-border">
         <div className="mx-auto w-full max-w-5xl px-6 py-8">
