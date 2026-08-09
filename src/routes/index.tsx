@@ -388,8 +388,8 @@ function RecentCard({ run, live = false }: { run: RecentAudit; live?: boolean })
 }
 
 function gradeFor(score: number): string {
-  if (score >= 85) return "Strong";
-  if (score >= 70) return "Workable";
-  if (score >= 50) return "Leaky";
+  if (score >= 80) return "Strong";
+  if (score >= 60) return "Workable";
+  if (score >= 40) return "Leaking";
   return "Critical";
 }
