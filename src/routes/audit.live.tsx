@@ -46,13 +46,19 @@ function LiveRun() {
   const startedRef = useRef(false);
   const cancelled = useRef(false);
 
+  // Server-function wrappers get a fresh identity on every render, so they must
+  // stay out of the effect deps — otherwise the effect tears down and its
+  // cleanup cancels the poll loop that the guarded re-run never restarts.
+  const fns = useRef({ startLive, pollLive });
+  fns.current = { startLive, pollLive };
+
   useEffect(() => {
     if (!url || startedRef.current) return;
     startedRef.current = true;
     cancelled.current = false;
 
     void (async () => {
-      const started = await startLive({ data: { url: normalizeUrl(url) } });
+      const started = await fns.current.startLive({ data: { url: normalizeUrl(url) } });
       if (cancelled.current) return;
       if (!started.ok) {
         setStatus("error");
@@ -62,17 +68,25 @@ function LiveRun() {
       setStatus("running");
 
       const deadline = Date.now() + 8 * 60 * 1000;
+      let consecutiveFailures = 0;
+
       while (!cancelled.current && Date.now() < deadline) {
         await new Promise((resolve) => setTimeout(resolve, 2000));
         if (cancelled.current) return;
 
-        const poll = await pollLive({ data: { jobId: started.jobId } });
+        const poll = await fns.current.pollLive({ data: { jobId: started.jobId } });
         if (cancelled.current) return;
         if (!poll.ok) {
-          setStatus("error");
-          setError(poll.error);
-          return;
+          // A single flaky poll shouldn't kill a run that's still going.
+          consecutiveFailures += 1;
+          if (consecutiveFailures >= 4) {
+            setStatus("error");
+            setError(poll.error);
+            return;
+          }
+          continue;
         }
+        consecutiveFailures = 0;
 
         setSteps(poll.steps);
         setElapsed(poll.elapsed_ms);
@@ -99,7 +113,14 @@ function LiveRun() {
     return () => {
       cancelled.current = true;
     };
-  }, [url, startLive, pollLive]);
+  }, [url]);
+
+  // Keep the clock moving between two-second polls.
+  useEffect(() => {
+    if (status !== "running") return;
+    const id = setInterval(() => setElapsed((ms) => ms + 1000), 1000);
+    return () => clearInterval(id);
+  }, [status]);
 
   // A finished run keeps its terminal on screen for a beat, then hands over to
   // the dashboard — the same reveal the recorded runs use.
