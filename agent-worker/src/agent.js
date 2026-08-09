@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { FRICTION_SCRIPT } from "./friction.js";
 import { VITALS_INIT, VITALS_READ } from "./vitals.js";
+import { dismissOverlays } from "./overlays.js";
 
 /**
  * Drives a real cloud browser from an entry URL through to the cart, emitting
@@ -157,27 +158,6 @@ async function firstProductHref(page) {
 }
 
 /**
- * Consent banners and newsletter modals sit on top of everything and swallow
- * the first click on most retail and travel sites. Cheap to clear, expensive
- * to ignore.
- */
-const OVERLAY_SCRIPT = `(() => {
-  const wanted = /^(accept|accept all|allow all|agree|i agree|got it|ok|close|no thanks|continue|dismiss|x)$/i;
-  let hits = 0;
-  const nodes = document.querySelectorAll('button,[role=button],a[href="#"]');
-  for (const el of nodes) {
-    const text = (el.innerText || el.getAttribute('aria-label') || '').trim();
-    if (!text || text.length > 24 || !wanted.test(text)) continue;
-    const box = el.getBoundingClientRect();
-    if (box.width === 0 || box.height === 0) continue;
-    el.click();
-    hits += 1;
-    if (hits >= 3) break;
-  }
-  return hits;
-})()`;
-
-/**
  * What can actually be clicked right now, in the model's own words. Feeding
  * this in is what lets the planner cope with a cruise line's cabin grid or a
  * dropdown size picker without any per-site rules.
@@ -305,7 +285,10 @@ export async function runJourney(entryUrl, { onLog } = {}) {
       emit("browser", blockedReason, "error");
     }
 
-    await page.evaluate(OVERLAY_SCRIPT).catch(() => {});
+    // First-visit interstitials often fire on a timer, so sweep twice.
+    await dismissOverlays(page, { emit, deep: true });
+    await page.waitForTimeout(1800);
+    await dismissOverlays(page, { emit, deep: true });
 
     let kind = "other";
     let entryLabel = "";
@@ -332,8 +315,13 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     const deadline = startedAt + RUN_BUDGET_MS;
     let reachedGoal = false;
     let stalledAttempts = 0;
+    let overlayRetryUsed = false;
 
     for (let step = 0; !wall && step < MAX_STEPS && Date.now() < deadline; step += 1) {
+      await withTimeout(dismissOverlays(page, { emit }), ACTION_TIMEOUT_MS, "Clearing pop-ups").catch(
+        () => {},
+      );
+
       const controls = await withTimeout(
         visibleControls(page),
         ACTION_TIMEOUT_MS,
@@ -396,6 +384,19 @@ export async function runJourney(entryUrl, { onLog } = {}) {
       }
 
       if (failure) {
+        // A pop-up that appeared mid-turn is the most common cause of an
+        // action timing out. Clear it and give this turn one free retry.
+        const { blocker, cleared } = await withTimeout(
+          dismissOverlays(page, { emit, deep: true }),
+          ACTION_TIMEOUT_MS,
+          "Clearing pop-ups",
+        ).catch(() => ({ blocker: null, cleared: 0 }));
+        if ((cleared > 0 || blocker === null) && !overlayRetryUsed) {
+          overlayRetryUsed = true;
+          emit("system", "Cleared what was in the way — retrying that step");
+          step -= 1;
+          continue;
+        }
         emit("browser", `That didn't work — ${failure}`, "warn");
         history.push(`${moves[0]} (failed)`);
         stalledAttempts += 1;
@@ -412,6 +413,13 @@ export async function runJourney(entryUrl, { onLog } = {}) {
       // Recovery ladder — nothing on screen changed, so the clicks landed on
       // nothing. Reveal more of the page, then fall back to a real link.
       if (!moved) {
+        const { cleared } = await dismissOverlays(page, { emit, deep: true });
+        if (cleared > 0) {
+          await page.waitForTimeout(600);
+          moved = (await readSignature(page)) !== before;
+        }
+      }
+      if (!moved) {
         await page.evaluate(`window.scrollBy(0, window.innerHeight * 1.2)`).catch(() => {});
         await page.waitForTimeout(900);
         moved = (await readSignature(page)) !== before;
@@ -421,7 +429,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
         if (href && href !== page.url()) {
           emit("system", "That control did nothing — opening the item directly");
           await page.goto(href, { waitUntil: "domcontentloaded", timeout: 30000 }).catch(() => {});
-          await page.evaluate(OVERLAY_SCRIPT).catch(() => {});
+          await dismissOverlays(page, { emit });
           moved = (await readSignature(page)) !== before;
         }
       }
@@ -440,7 +448,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
 
       stalledAttempts = 0;
       history.push(moves.join(" then "));
-      await page.evaluate(OVERLAY_SCRIPT).catch(() => {});
+      await dismissOverlays(page, { emit });
 
       const stage = await captureStage(page, {
         kind: decision.resulting_kind,
