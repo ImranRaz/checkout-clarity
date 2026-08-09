@@ -91,7 +91,6 @@ function log(steps, actor, text, tone = "normal") {
   steps.push({ actor, text, delay_ms: 260, tone });
 }
 
-
 /**
  * A cheap fingerprint of what the shopper can currently see. Used to tell a
  * click that actually moved the journey from one that silently did nothing —
@@ -266,9 +265,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
         solveCaptchas: true,
       },
     },
-
   });
-
 
   let status = "complete";
   let blockedReason = null;
@@ -334,7 +331,9 @@ export async function runJourney(entryUrl, { onLog } = {}) {
           "required form, then adding to cart or continuing to a summary. Work out the site's own flow — do not assume " +
           "a standard retail checkout. " +
           `You are on ${page.url()}. ` +
-          (controls.length ? `Controls visible right now: ${controls.map((c) => `"${c}"`).join(", ")}. ` : "") +
+          (controls.length
+            ? `Controls visible right now: ${controls.map((c) => `"${c}"`).join(", ")}. `
+            : "") +
           (history.length
             ? `Already attempted (never repeat one marked no effect — pick a different control or route): ${history.map((h) => `"${h}"`).join(", ")}. `
             : "") +
@@ -342,7 +341,9 @@ export async function runJourney(entryUrl, { onLog } = {}) {
           "Set done=true only when the current page already shows the item in a cart or booking summary.",
         schema: z.object({
           done: z.boolean(),
-          note: z.string().describe("One short plain-English sentence about what you are doing and why"),
+          note: z
+            .string()
+            .describe("One short plain-English sentence about what you are doing and why"),
           actions: z
             .array(z.string())
             .describe("Imperative browser instructions, e.g. 'click the Add to Bag button'"),
@@ -441,7 +442,10 @@ export async function runJourney(entryUrl, { onLog } = {}) {
             await captureStage(page, {
               kind: "cart",
               label: "Cart",
-              transition: { action: "open the cart page directly", duration_ms: Date.now() - tCart },
+              transition: {
+                action: "open the cart page directly",
+                duration_ms: Date.now() - tCart,
+              },
             }),
           );
           emit("browser", `Cart captured in ${Date.now() - tCart}ms`, "success");
@@ -458,8 +462,6 @@ export async function runJourney(entryUrl, { onLog } = {}) {
       status = "partial";
       blockedReason = `The run captured ${stages.length} step${stages.length === 1 ? "" : "s"} but never reached a cart or booking summary.`;
     }
-
-
   } catch (error) {
     status = "partial";
     blockedReason = error.message.slice(0, 240);
@@ -485,7 +487,6 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     seen.set(stage.label, count);
     if (count > 1) stage.label = `${stage.label} ${count}`;
   }
-
 
   const host = new URL(entryUrl).hostname.replace(/^www\./, "");
   return {
