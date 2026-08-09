@@ -196,7 +196,7 @@ async function captureStage(page, { kind, label: rawLabel, transition }) {
   const label = cleanLabel(rawLabel, kind);
   const [metrics, friction, shot, size] = await Promise.all([
     page.evaluate(VITALS_READ),
-    page.evaluate(FRICTION_SCRIPT),
+    page.evaluate(FRICTION_SCRIPT(kind, DEVICE)),
     page.screenshot({ fullPage: true, type: "jpeg", quality: 70 }),
     page.evaluate(
       `({ width: window.innerWidth, height: Math.max(document.documentElement.scrollHeight, window.innerHeight) })`,
