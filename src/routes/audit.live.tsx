@@ -184,7 +184,14 @@ function LiveRun() {
           ) : null}
         </div>
 
+        {saveError ? (
+          <p className="mt-4 rounded-md border border-border bg-muted/40 px-3 py-2 font-mono text-xs text-muted-foreground">
+            Not saved to Recent audits — {saveError}
+          </p>
+        ) : null}
+
         <div className="mt-8">
+
           <AnimatePresence mode="wait">
             {report && revealed ? (
               <motion.div
