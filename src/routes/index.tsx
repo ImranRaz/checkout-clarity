@@ -242,7 +242,14 @@ function Home() {
           <ul className="mt-4 flex snap-x gap-4 overflow-x-auto pb-3">
             {recent.map((run) => (
               <li key={run.id} className="w-72 shrink-0 snap-start">
-                <RecentCard run={run} live />
+                <RecentCard
+                  run={run}
+                  live
+                  {...(run.score === null || run.status !== "complete"
+                    ? { onDelete: () => void handleDelete(run.id), deleting: removing.includes(run.id) }
+                    : {})}
+                />
+
               </li>
             ))}
           </ul>
