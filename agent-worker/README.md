@@ -28,7 +28,12 @@ node src/cli.js "https://store.com/products/thing"
   them there makes session creation fail with 402/403.
 
 Then `POST /run` with `{ "url": "..." }` and an
-`Authorization: Bearer <AGENT_SHARED_SECRET>` header.
+`Authorization: Bearer <AGENT_SHARED_SECRET>` header. It returns `202
+{ "job_id": "..." }` immediately — a journey takes 1–3 minutes, longer than the
+100s edge timeout in front of Render (that's the HTTP 524 the app used to show).
+Poll `GET /run/:job_id` for `{ status, steps, elapsed_ms, report }`; the `steps`
+array streams the agent's live log while the run is still going.
+
 
 ## What it does per stage
 
