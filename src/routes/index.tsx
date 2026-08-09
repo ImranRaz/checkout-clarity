@@ -4,7 +4,7 @@ import { motion } from "motion/react";
 import { ArrowRight, Check, Loader2, Minus, ScanSearch, ShieldAlert, Sparkles } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
-import { LiveConsole } from "@/components/audit/LiveConsole";
+import { AgentActivity } from "@/components/audit/AgentActivity";
 import { allFrictionPoints, totalConsoleErrors } from "@/lib/audit-schema";
 import { fixtureReports, isPlausibleUrl, normalizeUrl, resolveReportForUrl } from "@/lib/audit-runner";
 import { preflightTarget } from "@/lib/browserbase.functions";
