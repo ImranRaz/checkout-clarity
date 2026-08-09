@@ -52,7 +52,7 @@ export const Route = createFileRoute("/")({
 
 function Home() {
   const navigate = useNavigate();
-  const { recent } = Route.useLoaderData();
+  const { recent } = Route.useLoaderData() as { recent: RecentAudit[] };
   const runPreflight = useServerFn(preflightTarget);
   const [url, setUrl] = useState("");
   const [touched, setTouched] = useState(false);
