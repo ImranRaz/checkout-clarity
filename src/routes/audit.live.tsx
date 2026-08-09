@@ -102,9 +102,20 @@ function LiveRun() {
           saveLiveReport(poll.report);
           // Persist it so the run shows up under "Recent audits" and its
           // permalink keeps working in another browser or after a reload.
-          void fns.current.persistRun({
-            data: { url: normalizeUrl(url), report: poll.report },
-          });
+          void fns.current
+            .persistRun({ data: { url: normalizeUrl(url), report: poll.report } })
+            .then((res) => {
+              if (!res?.ok) {
+                setSaveError(res?.error ?? "Could not save this run.");
+                return;
+              }
+              // Make the landing page's Recent audits rail pick it up.
+              void router.invalidate();
+            })
+            .catch((err: unknown) => {
+              setSaveError(err instanceof Error ? err.message : "Could not save this run.");
+            });
+
           setReport(poll.report);
           setStatus("done");
           return;
