@@ -18,10 +18,18 @@ import { dismissOverlays } from "./overlays.js";
 const MAX_STEPS = Number(process.env.AGENT_MAX_STEPS || 16);
 /** Long booking flows need room; the budget stops a runaway from burning credits. */
 const RUN_BUDGET_MS = Number(process.env.AGENT_BUDGET_MS || 6 * 60 * 1000);
-/** Stop expensive browser calls that can otherwise sit unresolved for minutes. */
-const ACTION_TIMEOUT_MS = Number(process.env.AGENT_ACTION_TIMEOUT_MS || 30 * 1000);
-/** Two consecutive turns with no visible progress are enough evidence to stop. */
-const MAX_STALLED_ATTEMPTS = Number(process.env.AGENT_MAX_STALLED_ATTEMPTS || 2);
+/**
+ * Stop expensive browser calls that can otherwise sit unresolved for minutes.
+ * Acting on a heavy retail page (variant pickers, lazy media) routinely takes
+ * longer than planning does, so the two get separate budgets — a single 30s
+ * cap was ending runs on sites that were merely slow, not stuck.
+ */
+const ACTION_TIMEOUT_MS = Number(process.env.AGENT_ACTION_TIMEOUT_MS || 60 * 1000);
+const THINK_TIMEOUT_MS = Number(process.env.AGENT_THINK_TIMEOUT_MS || 35 * 1000);
+/** Three consecutive turns with no visible progress are enough evidence to stop. */
+const MAX_STALLED_ATTEMPTS = Number(process.env.AGENT_MAX_STALLED_ATTEMPTS || 3);
+/** Findings are judged against the form factor actually being driven. */
+const DEVICE = process.env.AGENT_DEVICE || "desktop";
 
 function withTimeout(promise, timeoutMs, label) {
   let timer;
