@@ -227,8 +227,12 @@
     overflow: visible !important;
   }
 
-  [data-print-wrap] > ol {
+  ol[data-print-wrap] {
     flex-wrap: wrap !important;
+  }
+
+  ol[data-print-wrap] > li {
+    flex-shrink: 1 !important;
   }
 
   [data-print-table] {
