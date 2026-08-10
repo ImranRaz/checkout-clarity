@@ -114,7 +114,10 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
         </motion.div>
       )}
 
+      <ExecutiveSummary report={report} onLocate={(s, id) => select(s, id)} />
+
       {/* Journey strip */}
+
       <motion.section
         variants={tileMotion}
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
