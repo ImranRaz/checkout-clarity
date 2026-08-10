@@ -2,7 +2,9 @@ import { motion } from "motion/react";
 import { AlertTriangle, ArrowUpRight, Clock, Maximize2, ShieldAlert, ZoomIn } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
+import { ExecutiveSummary } from "./ExecutiveSummary";
 import { SeverityChip } from "./SeverityChip";
+
 import {
   categoryLabel,
   formatBytes,
