@@ -219,6 +219,7 @@
 
   .tile {
     box-shadow: none !important;
+    overflow: visible !important;
     break-inside: avoid;
     page-break-inside: avoid;
   }
