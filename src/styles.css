@@ -223,6 +223,18 @@
     page-break-inside: avoid;
   }
 
+  [data-print-wrap] {
+    overflow: visible !important;
+  }
+
+  [data-print-wrap] > ol {
+    flex-wrap: wrap !important;
+  }
+
+  [data-print-table] {
+    min-width: 0 !important;
+  }
+
   [data-print-expand] {
     max-height: none !important;
     overflow: visible !important;
