@@ -2,7 +2,9 @@ import { motion } from "motion/react";
 import { AlertTriangle, ArrowUpRight, Clock, Maximize2, ShieldAlert, ZoomIn } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
+import { ExecutiveSummary } from "./ExecutiveSummary";
 import { SeverityChip } from "./SeverityChip";
+
 import {
   categoryLabel,
   formatBytes,
@@ -114,7 +116,10 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
         </motion.div>
       )}
 
+      <ExecutiveSummary report={report} onLocate={(s, id) => select(s, id)} />
+
       {/* Journey strip */}
+
       <motion.section
         variants={tileMotion}
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
@@ -127,7 +132,7 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
             J / K to walk findings
           </p>
         </div>
-        <ol className="mt-3 flex gap-3 overflow-x-auto pb-1">
+        <ol data-print-wrap className="mt-3 flex gap-3 overflow-x-auto pb-1">
           {report.stages.map((s, i) => (
             <li key={s.id} className="flex shrink-0 items-center gap-3">
               {i > 0 && (
@@ -162,7 +167,7 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
             </h2>
             <p className="font-mono text-[11px] text-muted-foreground">select to locate</p>
           </header>
-          <div className="max-h-[40rem] overflow-y-auto p-3">
+          <div data-print-expand className="max-h-[40rem] overflow-y-auto p-3">
             {report.stages.map((s, i) => (
               <div key={s.id} className="mb-4 last:mb-0">
                 <button

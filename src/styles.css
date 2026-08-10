@@ -200,3 +200,56 @@
     linear-gradient(to bottom, oklch(0.2 0.02 80 / 0.045) 1px, transparent 1px);
   background-size: 56px 56px;
 }
+
+/* Print / "Export PDF" — the browser's own PDF writer, no extra tooling.
+   Everything interactive is dropped; the findings rail is unclipped so
+   nothing is lost off the bottom of a scroll container. */
+@media print {
+  .no-print,
+  nav,
+  header[data-app-header] {
+    display: none !important;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  .tile {
+    box-shadow: none !important;
+    overflow: visible !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  [data-print-wrap] {
+    overflow: visible !important;
+  }
+
+  ol[data-print-wrap] {
+    flex-wrap: wrap !important;
+  }
+
+  ol[data-print-wrap] > li {
+    flex-shrink: 1 !important;
+  }
+
+  [data-print-table] {
+    min-width: 0 !important;
+  }
+
+  [data-print-expand] {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .rule-grid {
+    background-image: none !important;
+  }
+
+  @page {
+    margin: 14mm;
+  }
+}

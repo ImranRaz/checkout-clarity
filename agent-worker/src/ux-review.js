@@ -51,8 +51,10 @@ DO NOT REPORT any of the following. They are correct design or already covered b
 - A buy/reserve button that is absent or disabled because a size, colour, date, or cabin has not been chosen yet. That gating is intentional. Only flag it if choosing an option is itself unclear.
 - A category, listing, or search-results page having no add-to-cart. That is expected.
 - Small link or tap sizes, missing alt text, missing form labels, page-speed and layout-shift numbers, console errors. All of these are measured separately.
+- Images that are blank, grey, or missing in the lower part of a long screenshot. Modern catalogues lazy-load imagery below the fold and the capture is taken before off-screen images decode. This is correct, intentional behaviour — NEVER report it as "images fail to load", "broken images", or "catalogue does not render". Only report an image problem if an image is missing INSIDE the first viewport height, or if a visible placeholder explicitly reads as an error.
 - Anything you cannot see evidence for in the screenshot or the digest. Never speculate about behaviour behind a click.
 - Generic advice that would apply to any website ("add social proof", "improve the design", "use clearer CTAs").
+
 
 Return AT MOST 3 findings, and return an empty list if the page is genuinely sound — an empty list is a valid, respected answer. Rank by revenue impact. Each finding must reference a real element ref from the digest and quote specific evidence from this page.`;
 
