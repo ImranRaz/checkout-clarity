@@ -132,7 +132,7 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
             J / K to walk findings
           </p>
         </div>
-        <ol className="mt-3 flex gap-3 overflow-x-auto pb-1">
+        <ol data-print-wrap className="mt-3 flex gap-3 overflow-x-auto pb-1">
           {report.stages.map((s, i) => (
             <li key={s.id} className="flex shrink-0 items-center gap-3">
               {i > 0 && (
