@@ -62,8 +62,9 @@ export function ExecutiveSummary({
         </button>
       </header>
 
-      <div className="overflow-x-auto p-4">
-        <table className="w-full min-w-[34rem] border-separate border-spacing-1 text-left">
+      <div data-print-wrap className="overflow-x-auto p-4">
+        <table data-print-table className="w-full min-w-[34rem] border-separate border-spacing-1 text-left">
+
           <caption className="sr-only">
             Experience pillars scored for each stage of the journey
           </caption>
