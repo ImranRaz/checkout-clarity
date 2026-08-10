@@ -167,7 +167,7 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
             </h2>
             <p className="font-mono text-[11px] text-muted-foreground">select to locate</p>
           </header>
-          <div className="max-h-[40rem] overflow-y-auto p-3">
+          <div data-print-expand className="max-h-[40rem] overflow-y-auto p-3">
             {report.stages.map((s, i) => (
               <div key={s.id} className="mb-4 last:mb-0">
                 <button
