@@ -349,7 +349,53 @@ const CLASSIFY_SCRIPT = `(() => {
 })()`;
 
 
-/** Heuristic backstop for "is something reserved / in the basket yet". */
+/**
+ * Bot-protection detection.
+ *
+ * Two distinct shapes matter, and they need different wording in the report:
+ *
+ *   challenge — the page itself is replaced by a CAPTCHA / "verify you are
+ *               human" interstitial. Nothing can be audited at all.
+ *   refusal   — the storefront renders normally and the click lands, but the
+ *               backend rejects the mutation and shows a generic apology
+ *               ("We couldn't complete your request", "unusual activity",
+ *               "close this tab and disable any browser extensions"). Nike,
+ *               Best Buy and most Akamai/PerimeterX tenants do this on
+ *               add-to-cart from a datacentre IP.
+ *
+ * A refusal is not a checkout defect, so scoring it as one would be a lie.
+ * The run stops there, keeps every stage it did capture, and says so.
+ */
+const BOT_WALL_SCRIPT = `(() => {
+  const text = ((document.body && document.body.innerText) || '').slice(0, 6000);
+  const challenge = /just a moment|checking your browser|robot or human|are you a (human|robot)|verify (you are|that you)|press and hold|complete the security check|captcha|access denied|request blocked|unusual traffic/i;
+  const refusal = /we (couldn't|could not|can't|cannot) complete your request|something went wrong[\\s\\S]{0,80}(try again|reopen)|disable any browser extensions|unusual activity (has been )?detected|your request (was|has been) (denied|blocked)|error reference number|reference #\\s*\\d/i;
+  const c = text.match(challenge);
+  if (c) return { kind: 'challenge', phrase: c[0].slice(0, 80) };
+  const r = text.match(refusal);
+  if (r) return { kind: 'refusal', phrase: r[0].slice(0, 80) };
+  return null;
+})()`;
+
+async function detectBotWall(page) {
+  try {
+    return (await page.evaluate(BOT_WALL_SCRIPT)) || null;
+  } catch {
+    return null;
+  }
+}
+
+const BOT_WALL_MESSAGE = {
+  challenge:
+    "The site served a bot-protection challenge instead of the page, so nothing could be audited. " +
+    "This is the target's edge protection, not a defect in the store.",
+  refusal:
+    "The store accepted the click but its bot protection refused the request and showed an error dialog " +
+    "instead of completing it. Everything up to that point is captured and scored; the cart step could not " +
+    "be reached from an automated browser. This is the target's bot defence, not a checkout defect.",
+};
+
+
 const CART_CHECK = `(() => {
   const text = (document.body ? document.body.innerText : "").toLowerCase();
   const cartish = /(subtotal|order summary|booking summary|your (cart|bag|basket)|proceed to checkout|checkout now|review your (booking|cruise|trip|reservation)|guest details|passenger details|total (price|due|fare)|price summary|continue to payment|your (booking|reservation|itinerary) so far)/.test(text);
