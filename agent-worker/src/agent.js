@@ -253,40 +253,101 @@ async function settle(page, before, budgetMs = 9000) {
 }
 
 /**
- * Category pages are where act() most often no-ops (product tiles are often
- * image-only links). Falling back to the first plausible product href keeps
- * the journey moving instead of screenshotting the grid again.
+ * Product-tile links on a grid, in DOM order, most-likely-first. Grids are
+ * where the loop used to burn a whole turn: the tiles are image-only links, so
+ * a described click often lands on nothing. Reading the hrefs directly is both
+ * instant and far more reliable than asking a model to describe them.
  */
-async function firstProductHref(page) {
-  try {
-    return await page.evaluate(`(() => {
-      const links = Array.from(document.querySelectorAll('a[href]'));
-      const hit = links.find((a) => /\\/(products?|p|item|shop\\/[^/]+\\/[^/]+)\\//i.test(a.getAttribute('href') || ''));
-      return hit ? hit.href : null;
-    })()`);
-  } catch {
-    return null;
+const PRODUCT_LINKS_SCRIPT = `(() => {
+  const detail = /\\/(products?|p|item|itm|dp|sku|shop\\/[^/]+\\/[^/]+|t\\/[^/]+)\\//i;
+  const junk = /(login|account|help|store-locator|gift-card|privacy|terms|careers|blog|search\\?)/i;
+  const seen = new Set();
+  const out = [];
+  for (const a of Array.from(document.querySelectorAll('a[href]'))) {
+    const href = a.href || "";
+    if (!href.startsWith('http') || junk.test(href) || !detail.test(new URL(href, location.href).pathname)) continue;
+    if (href === location.href || seen.has(href)) continue;
+    const box = a.getBoundingClientRect();
+    if (box.width < 24 || box.height < 24) continue;
+    seen.add(href);
+    out.push({ href, text: (a.innerText || a.getAttribute('aria-label') || '').replace(/\\s+/g, ' ').trim().slice(0, 60) });
+    if (out.length >= 8) break;
   }
-}
+  return out;
+})()`;
 
 /**
- * What can actually be clicked right now, in the model's own words. Feeding
- * this in is what lets the planner cope with a cruise line's cabin grid or a
- * dropdown size picker without any per-site rules.
+ * Every control a shopper could act on, read straight from the DOM.
+ *
+ * This used to be a Stagehand observe() call — an LLM pass over the whole
+ * accessibility tree. On a big catalogue page (Nike's 198-item grid) that
+ * routinely ran past 35s and killed the run before the agent had made a single
+ * move. The same information is in the DOM; reading it takes milliseconds and
+ * costs nothing, which is what makes the loop fast enough to be worth watching.
  */
+const CONTROLS_SCRIPT = `(() => {
+  const vh = window.innerHeight, vw = window.innerWidth;
+  const nodes = document.querySelectorAll(
+    'button,a[href],select,[role=button],[role=option],[role=radio],input[type=submit],input[type=button],input[type=date],[data-testid*=size],[class*=swatch]'
+  );
+  const out = [];
+  const seen = new Set();
+  for (const el of Array.from(nodes)) {
+    const box = el.getBoundingClientRect();
+    if (box.width < 8 || box.height < 8) continue;
+    if (box.bottom < -vh || box.top > vh * 3 || box.right < 0 || box.left > vw) continue;
+    const style = getComputedStyle(el);
+    if (style.visibility === 'hidden' || style.display === 'none' || Number(style.opacity) < 0.05) continue;
+    let text = (el.innerText || el.value || el.getAttribute('aria-label') || el.getAttribute('title') || '')
+      .replace(/\\s+/g, ' ').trim();
+    if (el.tagName === 'SELECT') {
+      const opts = Array.from(el.options || []).slice(1, 6).map((o) => o.text.trim()).filter(Boolean);
+      text = (el.getAttribute('aria-label') || el.name || 'dropdown') + (opts.length ? ' [' + opts.join(' / ') + ']' : '');
+    }
+    if (!text || text.length > 70) continue;
+    const key = text.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const disabled = el.disabled === true || el.getAttribute('aria-disabled') === 'true';
+    out.push(text + (disabled ? ' (disabled)' : ''));
+    if (out.length >= 40) break;
+  }
+  return out;
+})()`;
+
 async function visibleControls(page) {
   try {
-    const found = await page.observe(
-      "List the interactive controls on this page that could move a shopper forward: product links, size/colour/date/cabin selectors, dropdowns, quantity controls, add-to-cart, continue, and cart links.",
-    );
-    return (found || [])
-      .map((item) => (item.description || "").trim())
-      .filter(Boolean)
-      .slice(0, 14);
+    const found = await page.evaluate(CONTROLS_SCRIPT);
+    return (found || []).slice(0, 26);
   } catch {
     return [];
   }
 }
+
+async function productLinks(page) {
+  try {
+    return (await page.evaluate(PRODUCT_LINKS_SCRIPT)) || [];
+  } catch {
+    return [];
+  }
+}
+
+/** Cheap page-kind guess so the entry step doesn't need an LLM round trip. */
+const CLASSIFY_SCRIPT = `(() => {
+  const text = (document.body ? document.body.innerText : "").toLowerCase();
+  const path = location.pathname.toLowerCase();
+  const has = (re) => re.test(text);
+  if (has(/order summary|subtotal|your (cart|bag|basket)|proceed to checkout/)) return 'cart';
+  if (has(/payment|billing address|card number/) && has(/place order|pay now/)) return 'checkout';
+  if (has(/booking summary|review your (booking|trip|cruise)|total (fare|due)/)) return 'summary';
+  const buy = has(/add to (cart|bag|basket)|buy it now|book now|reserve now|select (cabin|room|fare)/);
+  const grid = document.querySelectorAll('a[href*="/product"],a[href*="/p/"],a[href*="/item"],[data-testid*="product-card"],[class*="product-card"],[class*="product-tile"]').length;
+  if (buy && grid < 6) return 'detail';
+  if (grid >= 6) return 'listing';
+  if (buy) return 'detail';
+  return 'other';
+})()`;
+
 
 /** Heuristic backstop for "is something reserved / in the basket yet". */
 const CART_CHECK = `(() => {
