@@ -273,6 +273,13 @@ export async function runJourney(entryUrl, { onLog } = {}) {
   // The judgement layer shares the same provider as the navigator.
   reviewer = createReviewer(provider);
 
+  // The session is created explicitly rather than left to Stagehand. Stagehand
+  // swallows the creation failure and only reports "browser context is
+  // undefined ... CDP connection failed", which hides the real cause (out of
+  // plan minutes, concurrency limit, bad key). Creating it here surfaces the
+  // actual HTTP status and message.
+  const sessionId = await createBrowserSession(projectId, emit);
+
   const stagehand = new Stagehand({
     env: "BROWSERBASE",
     // Run the agent loop in this process against the remote browser; the
@@ -280,29 +287,25 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     useAPI: false,
     apiKey: process.env.BROWSERBASE_API_KEY,
     projectId,
+    browserbaseSessionID: sessionId,
     llmClient: new AISdkClient({
       model: provider(process.env.STAGEHAND_MODEL || "gpt-4.1-mini"),
     }),
-
-    browserbaseSessionCreateParams: {
-      projectId,
-      // Residential proxies and Verified (advanced stealth) mode are paid /
-      // enterprise features: requesting them on a free plan makes session
-      // creation fail outright, so both are opt-in via env.
-      ...(process.env.BROWSERBASE_PROXIES === "true" ? { proxies: true } : {}),
-      browserSettings: {
-        ...(process.env.BROWSERBASE_STEALTH === "true" ? { advancedStealth: true } : {}),
-        viewport: { width: 1280, height: 900 },
-        solveCaptchas: true,
-      },
-    },
   });
 
   let status = "complete";
   let blockedReason = null;
 
   try {
-    await stagehand.init();
+    try {
+      await stagehand.init();
+    } catch (error) {
+      throw new Error(
+        `Could not attach to the cloud browser session (${error?.message || error}). ` +
+          "The session was created but the connection dropped — retry in a moment.",
+      );
+    }
+
     const page = stagehand.page;
     page.on("console", (m) => {
       if (m.type() === "error") consoleErrors.push(m.text().slice(0, 240));
