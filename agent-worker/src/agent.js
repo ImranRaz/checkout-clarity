@@ -721,6 +721,34 @@ export async function runJourney(entryUrl, { onLog } = {}) {
         await settle(page, await readSignature(page), 7000);
       }
 
+      // Bot-defence check runs BEFORE any overlay sweep — the refusal dialog
+      // looks exactly like a dismissible modal, and closing it would hide the
+      // real reason the step failed and send the run round the loop again on
+      // a store that will never let it through.
+      const midWall = await detectBotWall(page);
+      if (midWall) {
+        status = "partial";
+        blockedReason = BOT_WALL_MESSAGE[midWall.kind];
+        emit(
+          "browser",
+          `The store's bot protection stopped the request (“${midWall.phrase}”)`,
+          "error",
+        );
+        emit("system", "Ending the run here rather than burning browser minutes on a wall", "warn");
+        // Keep the evidence: the dialog itself is the most useful screenshot.
+        stages.push(
+          await captureStage(page, {
+            kind: decision.resulting_kind,
+            label: `${decision.label} (blocked by bot protection)`,
+            transition: { action: moves.join(" then "), duration_ms: Date.now() - tAct },
+            emit,
+          }).catch(() => null),
+        );
+        if (stages[stages.length - 1] === null) stages.pop();
+        break;
+      }
+
+
       if (failure) {
         // A pop-up that appeared mid-turn is the most common cause of an
         // action timing out. Clear it and give this turn one free retry.
