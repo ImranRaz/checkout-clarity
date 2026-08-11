@@ -253,40 +253,101 @@ async function settle(page, before, budgetMs = 9000) {
 }
 
 /**
- * Category pages are where act() most often no-ops (product tiles are often
- * image-only links). Falling back to the first plausible product href keeps
- * the journey moving instead of screenshotting the grid again.
+ * Product-tile links on a grid, in DOM order, most-likely-first. Grids are
+ * where the loop used to burn a whole turn: the tiles are image-only links, so
+ * a described click often lands on nothing. Reading the hrefs directly is both
+ * instant and far more reliable than asking a model to describe them.
  */
-async function firstProductHref(page) {
-  try {
-    return await page.evaluate(`(() => {
-      const links = Array.from(document.querySelectorAll('a[href]'));
-      const hit = links.find((a) => /\\/(products?|p|item|shop\\/[^/]+\\/[^/]+)\\//i.test(a.getAttribute('href') || ''));
-      return hit ? hit.href : null;
-    })()`);
-  } catch {
-    return null;
+const PRODUCT_LINKS_SCRIPT = `(() => {
+  const detail = /\\/(products?|p|item|itm|dp|sku|shop\\/[^/]+\\/[^/]+|t\\/[^/]+)\\//i;
+  const junk = /(login|account|help|store-locator|gift-card|privacy|terms|careers|blog|search\\?)/i;
+  const seen = new Set();
+  const out = [];
+  for (const a of Array.from(document.querySelectorAll('a[href]'))) {
+    const href = a.href || "";
+    if (!href.startsWith('http') || junk.test(href) || !detail.test(new URL(href, location.href).pathname)) continue;
+    if (href === location.href || seen.has(href)) continue;
+    const box = a.getBoundingClientRect();
+    if (box.width < 24 || box.height < 24) continue;
+    seen.add(href);
+    out.push({ href, text: (a.innerText || a.getAttribute('aria-label') || '').replace(/\\s+/g, ' ').trim().slice(0, 60) });
+    if (out.length >= 8) break;
   }
-}
+  return out;
+})()`;
 
 /**
- * What can actually be clicked right now, in the model's own words. Feeding
- * this in is what lets the planner cope with a cruise line's cabin grid or a
- * dropdown size picker without any per-site rules.
+ * Every control a shopper could act on, read straight from the DOM.
+ *
+ * This used to be a Stagehand observe() call — an LLM pass over the whole
+ * accessibility tree. On a big catalogue page (Nike's 198-item grid) that
+ * routinely ran past 35s and killed the run before the agent had made a single
+ * move. The same information is in the DOM; reading it takes milliseconds and
+ * costs nothing, which is what makes the loop fast enough to be worth watching.
  */
+const CONTROLS_SCRIPT = `(() => {
+  const vh = window.innerHeight, vw = window.innerWidth;
+  const nodes = document.querySelectorAll(
+    'button,a[href],select,[role=button],[role=option],[role=radio],input[type=submit],input[type=button],input[type=date],[data-testid*=size],[class*=swatch]'
+  );
+  const out = [];
+  const seen = new Set();
+  for (const el of Array.from(nodes)) {
+    const box = el.getBoundingClientRect();
+    if (box.width < 8 || box.height < 8) continue;
+    if (box.bottom < -vh || box.top > vh * 3 || box.right < 0 || box.left > vw) continue;
+    const style = getComputedStyle(el);
+    if (style.visibility === 'hidden' || style.display === 'none' || Number(style.opacity) < 0.05) continue;
+    let text = (el.innerText || el.value || el.getAttribute('aria-label') || el.getAttribute('title') || '')
+      .replace(/\\s+/g, ' ').trim();
+    if (el.tagName === 'SELECT') {
+      const opts = Array.from(el.options || []).slice(1, 6).map((o) => o.text.trim()).filter(Boolean);
+      text = (el.getAttribute('aria-label') || el.name || 'dropdown') + (opts.length ? ' [' + opts.join(' / ') + ']' : '');
+    }
+    if (!text || text.length > 70) continue;
+    const key = text.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const disabled = el.disabled === true || el.getAttribute('aria-disabled') === 'true';
+    out.push(text + (disabled ? ' (disabled)' : ''));
+    if (out.length >= 40) break;
+  }
+  return out;
+})()`;
+
 async function visibleControls(page) {
   try {
-    const found = await page.observe(
-      "List the interactive controls on this page that could move a shopper forward: product links, size/colour/date/cabin selectors, dropdowns, quantity controls, add-to-cart, continue, and cart links.",
-    );
-    return (found || [])
-      .map((item) => (item.description || "").trim())
-      .filter(Boolean)
-      .slice(0, 14);
+    const found = await page.evaluate(CONTROLS_SCRIPT);
+    return (found || []).slice(0, 26);
   } catch {
     return [];
   }
 }
+
+async function productLinks(page) {
+  try {
+    return (await page.evaluate(PRODUCT_LINKS_SCRIPT)) || [];
+  } catch {
+    return [];
+  }
+}
+
+/** Cheap page-kind guess so the entry step doesn't need an LLM round trip. */
+const CLASSIFY_SCRIPT = `(() => {
+  const text = (document.body ? document.body.innerText : "").toLowerCase();
+  const path = location.pathname.toLowerCase();
+  const has = (re) => re.test(text);
+  if (has(/order summary|subtotal|your (cart|bag|basket)|proceed to checkout/)) return 'cart';
+  if (has(/payment|billing address|card number/) && has(/place order|pay now/)) return 'checkout';
+  if (has(/booking summary|review your (booking|trip|cruise)|total (fare|due)/)) return 'summary';
+  const buy = has(/add to (cart|bag|basket)|buy it now|book now|reserve now|select (cabin|room|fare)/);
+  const grid = document.querySelectorAll('a[href*="/product"],a[href*="/p/"],a[href*="/item"],[data-testid*="product-card"],[class*="product-card"],[class*="product-tile"]').length;
+  if (buy && grid < 6) return 'detail';
+  if (grid >= 6) return 'listing';
+  if (buy) return 'detail';
+  return 'other';
+})()`;
+
 
 /** Heuristic backstop for "is something reserved / in the basket yet". */
 const CART_CHECK = `(() => {
@@ -302,38 +363,30 @@ const CART_CHECK = `(() => {
  */
 let reviewer = null;
 
+/**
+ * Vision reviews are slow (a multimodal call per stage) and nothing in the
+ * journey depends on their result, so they no longer block navigation: the
+ * screenshot and digest are taken synchronously while the page is still in
+ * that state, then the review runs alongside the next browser step and its
+ * findings are merged in when the run finishes.
+ */
+let pendingReviews = [];
+
 async function captureStage(page, { kind, label: rawLabel, transition, emit }) {
   const label = cleanLabel(rawLabel, kind);
-  const [metrics, friction, shot, size] = await Promise.all([
+  const [metrics, friction, shot, size, digest] = await Promise.all([
     page.evaluate(VITALS_READ),
     page.evaluate(FRICTION_SCRIPT(kind, DEVICE)),
     page.screenshot({ fullPage: true, type: "jpeg", quality: 70 }),
     page.evaluate(
       `({ width: window.innerWidth, height: Math.max(document.documentElement.scrollHeight, window.innerHeight) })`,
     ),
+    reviewer ? page.evaluate(PAGE_DIGEST_SCRIPT).catch(() => null) : Promise.resolve(null),
   ]);
 
-  // Judgement pass: experience problems a DOM rule cannot see. Pins still come
-  // from real element geometry, so a hallucinated location cannot survive.
-  let judged = [];
-  if (reviewer) {
-    try {
-      const digest = await page.evaluate(PAGE_DIGEST_SCRIPT);
-      judged = await reviewer(page, { kind, label, screenshot: shot, digest });
-      if (judged.length > 0) {
-        emit?.("vision", `Reviewed ${label}: ${judged.length} experience issue${judged.length === 1 ? "" : "s"}`);
-      }
-    } catch (error) {
-      emit?.("vision", `Experience review skipped on ${label} (${error.message})`, "warn");
-    }
-  }
+  const friction_points = friction.map((point, index) => ({ ...point, id: index + 1 }));
 
-  const friction_points = [...friction, ...judged].map((point, index) => ({
-    ...point,
-    id: index + 1,
-  }));
-
-  return {
+  const stage = {
     id: `${kind}-${Date.now()}`,
     kind,
     label,
@@ -349,7 +402,33 @@ async function captureStage(page, { kind, label: rawLabel, transition, emit }) {
     technical_metrics: metrics,
     friction_points,
   };
+
+  // Fire-and-merge: the review runs while the agent keeps clicking.
+  if (reviewer) {
+    pendingReviews.push(
+      (async () => {
+        try {
+          const judged = await reviewer(page, { kind, label, screenshot: shot, digest });
+          if (judged.length > 0) {
+            stage.friction_points = [...friction, ...judged].map((point, index) => ({
+              ...point,
+              id: index + 1,
+            }));
+            emit?.(
+              "vision",
+              `Reviewed ${label}: ${judged.length} experience issue${judged.length === 1 ? "" : "s"}`,
+            );
+          }
+        } catch (error) {
+          emit?.("vision", `Experience review skipped on ${label} (${error.message})`, "warn");
+        }
+      })(),
+    );
+  }
+
+  return stage;
 }
+
 
 
 export async function runJourney(entryUrl, { onLog } = {}) {
@@ -357,6 +436,8 @@ export async function runJourney(entryUrl, { onLog } = {}) {
   const steps = [];
   const stages = [];
   const consoleErrors = [];
+  pendingReviews = [];
+
   const emit = (actor, text, tone) => {
     log(steps, actor, text, tone);
     onLog?.({ actor, text, tone });
@@ -434,16 +515,12 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     await page.waitForTimeout(1800);
     await dismissOverlays(page, { emit, deep: true });
 
+    // Classifying the entry page used to be an LLM round trip before a single
+    // click. The DOM already answers it, so the run starts moving immediately.
     let kind = "other";
     let entryLabel = "";
     if (!wall) {
-      const classified = await stagehand.page.extract({
-        instruction:
-          "What kind of page is this in a buying journey? listing = several items to choose from, detail = one item with a buy or book control, options = choosing size/colour/date/cabin/room, form = entering traveller or shopper details, summary = a review step, cart = a basket with items, checkout = payment.",
-        schema: z.object({ kind: stageKind, label: z.string() }),
-      });
-      kind = classified.kind;
-      entryLabel = classified.label;
+      kind = await page.evaluate(CLASSIFY_SCRIPT).catch(() => "other");
     }
 
     stages.push(
@@ -465,17 +542,51 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     let reachedGoal = false;
     let stalledAttempts = 0;
     let overlayRetryUsed = false;
+    const openedProducts = new Set();
 
     for (let step = 0; !wall && step < MAX_STEPS && Date.now() < deadline; step += 1) {
-      await withTimeout(dismissOverlays(page, { emit }), THINK_TIMEOUT_MS, "Clearing pop-ups").catch(
-        () => {},
-      );
+      await withTimeout(dismissOverlays(page, { emit }), 12000, "Clearing pop-ups").catch(() => {});
 
+      // Reading controls is now a DOM scan, so it cannot stall the run; if it
+      // ever does, the planner simply works from the screen alone.
       const controls = await withTimeout(
         visibleControls(page),
-        THINK_TIMEOUT_MS,
+        10000,
         "Reading page controls",
-      );
+      ).catch(() => []);
+
+      // FAST LANE. Opening an item from a grid is the one move that never
+      // needs a model: the tiles are ordinary links. Skipping the planning
+      // call here is what turns "stuck on the listing for a minute" into a
+      // couple of seconds — and it cannot land on a logo or a filter.
+      const pageKind = await page.evaluate(CLASSIFY_SCRIPT).catch(() => "other");
+      if (pageKind === "listing") {
+        const candidates = (await productLinks(page)).filter((l) => !openedProducts.has(l.href));
+        const target = candidates[0];
+        if (target) {
+          openedProducts.add(target.href);
+          emit("vision", `Opening ${target.text || "the first item"} from this listing`);
+          const tJump = Date.now();
+          await page
+            .goto(target.href, { waitUntil: "domcontentloaded", timeout: 30000 })
+            .catch(() => {});
+          await page.waitForTimeout(1200);
+          await withTimeout(dismissOverlays(page, { emit }), 12000, "Clearing pop-ups").catch(
+            () => {},
+          );
+          const jumpedKind = await page.evaluate(CLASSIFY_SCRIPT).catch(() => "detail");
+          const stage = await captureStage(page, {
+            kind: jumpedKind === "listing" ? "detail" : jumpedKind,
+            label: target.text || "Product page",
+            transition: { action: `open "${target.text || "item"}"`, duration_ms: Date.now() - tJump },
+            emit,
+          });
+          stages.push(stage);
+          emit("browser", `${stage.label} captured in ${Date.now() - tJump}ms`, "success");
+          continue;
+        }
+      }
+
 
       const decision = await withTimeout(stagehand.page.extract({
         instruction:
@@ -521,7 +632,21 @@ export async function runJourney(entryUrl, { onLog } = {}) {
           resulting_kind: stageKind,
           label: z.string(),
         }),
-      }), THINK_TIMEOUT_MS, "Planning the next move");
+      }), THINK_TIMEOUT_MS, "Planning the next move").catch((error) => {
+        // A slow planning call should cost one turn, not the whole run.
+        emit("system", `Thinking took too long (${error.message}) — retrying this step`, "warn");
+        return null;
+      });
+
+      if (!decision) {
+        stalledAttempts += 1;
+        if (stalledAttempts >= MAX_STALLED_ATTEMPTS) {
+          blockedReason = "The planner kept timing out, so the run was ended early to conserve browser minutes.";
+          emit("system", blockedReason, "error");
+          break;
+        }
+        continue;
+      }
 
       if (decision.done) {
         reachedGoal = true;
@@ -531,6 +656,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
 
       const moves = (decision.actions || []).filter(Boolean).slice(0, 3);
       if (moves.length === 0) break;
+
 
       if (decision.note) emit("vision", decision.note);
 
@@ -591,7 +717,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
         moved = (await readSignature(page)) !== before;
       }
       if (!moved) {
-        const href = await firstProductHref(page);
+        const href = (await productLinks(page))[0]?.href;
         if (href && href !== page.url()) {
           emit("system", "That control did nothing — opening the item directly");
           await page.goto(href, { waitUntil: "domcontentloaded", timeout: 30000 }).catch(() => {});
@@ -599,6 +725,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
           moved = (await readSignature(page)) !== before;
         }
       }
+
 
       if (!moved) {
         history.push(`${moves.join(" then ")} (no visible effect)`);
@@ -673,8 +800,16 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     blockedReason = error.message.slice(0, 240);
     emit("system", blockedReason, "error");
   } finally {
+    // The reviews ran alongside navigation; collect them before the browser
+    // goes away, since they read element geometry from the live page.
+    await withTimeout(
+      Promise.allSettled(pendingReviews),
+      45000,
+      "Finishing the experience review",
+    ).catch(() => {});
     await stagehand.close().catch(() => {});
   }
+
 
   // Console errors are collected per run; attribute them to the last stage.
   const last = stages[stages.length - 1];
