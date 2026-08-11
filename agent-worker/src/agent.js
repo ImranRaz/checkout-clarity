@@ -838,7 +838,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     // Many stores add to cart via a drawer and never navigate, so the loop can
     // end one hop short of a cart page. Try the conventional cart URL. This is
     // a convention, not a requirement: flows without one just stay partial.
-    if (!wall && !reachedGoal) {
+    if (!wall && !botBlocked && !reachedGoal) {
       try {
         const cartUrl = new URL("/cart", page.url()).toString();
         emit("system", `No cart captured yet — trying ${cartUrl}`);
