@@ -436,6 +436,8 @@ export async function runJourney(entryUrl, { onLog } = {}) {
   const steps = [];
   const stages = [];
   const consoleErrors = [];
+  pendingReviews = [];
+
   const emit = (actor, text, tone) => {
     log(steps, actor, text, tone);
     onLog?.({ actor, text, tone });
