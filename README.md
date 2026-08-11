@@ -1,148 +1,158 @@
 # Checkout Clarity
 
-Review this app idea and let me know what would you change and improve: # Product Requirements Document (PRD)
+**Checkout Clarity** is an autonomous conversion-friction audit agent for e-commerce and booking funnels. Drop in any product URL — Shopify, WooCommerce, cruise lines, travel bookings — and the agent navigates the real site, captures screenshots, measures performance, and surfaces prioritized UX friction points with exact visual evidence.
 
-**Project:** Checkout Forensic Micro-Agent
-**Target Executor:** Google Antigravity / Claude / AI Coding Assistants
-
-## 1. Product Overview
-
-**Objective:** Build a sleek, single-purpose SaaS micro-product that autonomously audits the conversion friction of any e-commerce checkout flow. The application must prove agentic orchestration (tool use, multi-step reasoning) and front-end polish, acting as a portfolio piece for a Director-level Product/AI leader.
-**Core Narrative:** "Bad conversion isn't just UX, and it isn't just slow APIs. It's the intersection of both. This agent identifies both simultaneously."
+Built to demonstrate **agentic orchestration** end-to-end: a production-grade frontend, a remote browser worker, deterministic scoring, multi-modal reasoning, and persistent audit history.
 
 ---
 
-## 2. Architecture & Tech Stack
+## What it does
 
-* **Framework:** Next.js 14+ (App Router, Server Actions).
-* **LLM Orchestration:** Vercel AI SDK (`ai` package) for unified streaming and structured object generation.
-* **Model Provider:** `@openrouter/ai-sdk-provider`. This allows seamless switching between `google/gemini-2.5-flash` (extremely fast for Vision tasks), `openai/gpt-4o`, or `anthropic/claude-3.5-sonnet` without changing the core application logic.
-* **Browser Engine:** Playwright Core (for local dev/GitHub execution) with an option to route through Browserless.io via API key (for Vercel deployment).
-* **State Management:** React Context to handle the real-time Server-Sent Events (SSE) streaming from the Vercel AI SDK.
-
----
-
-## 3. UI/UX & Design System (The "Enterprise Light Mode")
-
-The application must project the polished, high-trust aesthetic of top-tier fintech and enterprise infrastructure platforms (e.g., Stripe, Vercel Light Mode, ClickUp Light Theme).
-
-* **Theme:** Strict Light Mode default.
-* **Backgrounds:** The primary background should be a highly crisp off-white (e.g., `#FAFAFA` or `#F4F4F5`).
-* **Accent Color:** A vivid, high-contrast primary action color like Electric Indigo (`#6366F1`) or Stripe Blurple (`#635BFF`). Do not mix multiple primary colors.
-* **Typography:** Clean, sans-serif variable fonts (e.g., *Inter*, *Geist*, or *SF Pro*) for standard text. Use a precise monospaced font (e.g., *Geist Mono* or *JetBrains Mono*) for technical outputs, terminal logs, and data metrics.
-* **Layout Structure (Bento Grid):** The dashboard utilizes a masonry "Bento Grid". Cards should have crisp, white backgrounds (`bg-white`), incredibly subtle gray borders (`border-slate-200` or `border-zinc-200`), and soft, diffuse drop shadows (`shadow-sm` or `shadow-md` on hover) rather than heavy glassmorphism.
-* **Micro-interactions (Framer Motion):**
-* Hover states on buttons should introduce a slight negative Y-axis translation (`-translate-y-0.5`) and increased shadow depth.
-* The "Thinking UI" terminal should resemble a clean Mac terminal window (light gray header, white background, distinct monospaced font weight).
-* The transition from the "Thinking UI" to the Results Dashboard must be seamless, utilizing a staggered fade-in.
-
-
+1. **Preflight check** — The app probes the target URL with Browserbase's fetch/search APIs, classifies the site type, and detects bot protection before spending a full browser session.
+2. **Live agent journey** — A remote Node worker opens a real Chrome via Browserbase + Stagehand and navigates freely toward the cart or booking summary.
+3. **Multi-stage capture** — Screenshots and technical metrics are collected for each meaningful stage (category → product → variant → cart, or search → results → detail → summary for cruises).
+4. **Deterministic friction audit** — Every finding is measured in the DOM (bounding boxes, contrast ratios, timing, console errors) and pinned to the exact screenshot location.
+5. **Vision UX review** — A vision-capable LLM reviews the captured pages to catch surface-level issues a DOM-only scan would miss.
+6. **Executive summary** — Scores are grouped into four pillars (Clarity, Trust, Effort, Speed) across stages, with the weakest link and the single best fix to make first.
+7. **Persistent history** — Live audit runs are saved to Lovable Cloud, so users can compare improvements over time.
 
 ---
 
-## 4. Core User Flow
+## Architecture
 
-### Phase 1: The Input & History
+This is a **custom-built agentic system**, not a LangChain / LangGraph agent. The orchestration is written in plain TypeScript/JavaScript using the **Vercel AI SDK** (`ai`) for the model interface, with an explicit **Observe → Plan → Act** loop that decides the next action based on the current page state.
 
-* **Hero Section:** A massive, minimalist input field with placeholder text: `Enter a specific Product Page URL (e.g., [target.com/p/coffee-maker](https://target.com/p/coffee-maker))...`.
-* **Button:** A primary accent-colored "Run Forensic Audit" button with a Sparkle icon.
-* **Below the Fold:** A horizontal, scrollable row of "Recent Audits" (mock data for the demo, e.g., "Nike.com - Score: 68").
+### Frontend
+- **Framework:** TanStack Start v1 (React 19, full-stack, edge-first)
+- **Styling:** Tailwind CSS v4 + shadcn/ui primitives
+- **Design:** Warm paper background with deep teal primary, Bricolage Grotesque headings + IBM Plex Mono for technical data
+- **Hosting:** Lovable Cloud / edge runtime
 
-### Phase 2: The "Thinking UI" (Crucial Trust-Building Step)
+### Backend / Data
+- **Database:** Lovable Cloud (Supabase) — `audit_runs` table with row-level security
+- **Server functions:** `createServerFn` from `@tanstack/react-start` for app-internal calls
+- **Public APIs:** TanStack server routes under `src/routes/api/public/*` for webhooks / probes
 
-When the user submits the URL, the input field morphs into a terminal-like window. The frontend subscribes to a stream emitting the agent's internal monologue in real-time.
+### Browser Agent Worker
+- **Runtime:** Node.js 20+ (the Lovable edge runtime cannot host a real browser)
+- **Browser:** Browserbase + Stagehand (remote Chrome with CDP)
+- **Model interface:** Vercel AI SDK with OpenAI-compatible models (`gpt-4o-mini`, etc.)
+- **Deployment:** Render web service (or local via the CLI)
 
-* `[System] Initializing Headless Agent...`
-* `[Playwright] Navigating to target Product URL...`
-* `[Vision AI] Scanning DOM for 'Add to Cart' coordinates...`
-* `[Playwright] Action: Clicked (x: 450, y: 820). Moving to Checkout...`
-* `[Playwright] Extracting network payload and console logs... Found 2 errors.`
-* `[Playwright] Capturing full-viewport snapshot...`
-* `[Vision AI] Running UX / Accessibility CRO analysis...`
-
-### Phase 3: The Dashboard (Bento Grid Results)
-
-The terminal fades out, and the Bento Grid dashboard staggers in.
-
-* **Left Column (Large Tile):** The captured full-page screenshot. Uses a custom scrollbar to view the whole page. CSS absolute positioning is used to place glowing red "Pins" (numbered 1, 2, 3) directly on the image, corresponding to the friction points.
-* **Top Right (Medium Tile):** The **Technical Health Card**. Displays Time to Interactive (TTI), total payload size, and a list of console errors (e.g., "Blocked Resource: tracking.js").
-* **Bottom Right (Medium Tile):** The **UX / CRO Insights Card**. A numbered list mapping to the pins on the image. (e.g., "1. Contrast ratio on 'Continue as Guest' fails WCAG standards.")
+The frontend and worker communicate via a long-poll job API: `POST /run` returns a `job_id`, then `GET /run/:job_id` streams step logs and the final report.
 
 ---
 
-## 5. Agentic Workflow Details (The Engine)
+## The agent loop
 
-The backend agent must execute the following sequential tool calls without breaking the loop:
+1. **Observe** — Snapshot the current page (screenshot + accessibility tree + DOM metrics + console errors + Web Vitals).
+2. **Classify** — Determine whether the page is a listing, product detail, variant picker, mini-cart, cart summary, or booking form.
+3. **Plan** — Ask the LLM: *"Given this stage, what is the single best next action to get closer to an item being in the cart / booking summary?"* Options are click, type, scroll, dismiss overlay, or navigate to a known route.
+4. **Act** — Execute the chosen action via Stagehand, wait for the page to settle, and loop.
+5. **Recover** — If blocked by an interstitial (cookie banner, newsletter popup, age gate), the agent runs a multimodal dismissal strategy before continuing.
+6. **Audit** — After each stage, run deterministic friction rules and a vision UX review, then move to the next stage.
 
-1. **`Tool_Navigate_And_Snapshot`:** Opens Playwright, loads the user-provided Product URL, waits for network idle, and takes a viewport screenshot.
-2. **`Tool_Locate_Cart_Button`:** Sends the screenshot to the Vision LLM with the prompt: *"You are an automation script. Identify the primary 'Add to Cart' button. Return ONLY the approximate X, Y coordinates in JSON."*
-3. **`Tool_Advance_To_Checkout`:** Playwright clicks the provided coordinates, waits for the subsequent page load (the cart or initial checkout step), and extracts `window.performance.timing` metrics and console logs.
-4. **`Tool_Final_Audit`:** Playwright takes the final, full-page screenshot of the checkout screen.
-5. **`Tool_Synthesize`:** Passes the final screenshot and technical logs to the Vision LLM (e.g., Gemini via OpenRouter) to generate the final dashboard JSON.
+The loop is **domain-agnostic** — the same engine drives a sneaker product page, a furniture category, or a multi-step cruise booking funnel.
 
 ---
 
-## 6. Strict Data Schema (JSON Output)
+## Key design decisions
 
-To ensure the Next.js frontend renders reliably, the final LLM call must output strict JSON matching this interface using the Vercel AI SDK:
+- **No coordinate guessing.** Clicks are resolved via Stagehand's accessibility-aware targeting, not raw x/y coordinates from a vision model.
+- **Reproducible scoring.** The Forensic Score and pillar scores are computed deterministically in code from real measurements, not by asking an LLM to guess a number.
+- **Fixture-first fallback.** The app ships with curated demo audits so the portfolio UI is always presentable even if browser minutes are exhausted.
+- **Key rotation.** Both the preflight calls and the live agent support multiple Browserbase API keys, so testing can rotate across free accounts without manual switching.
+- **Error transparency.** Browserbase quota errors (402 out-of-minutes) and bot blocks are surfaced in plain English in the live terminal, not buried as cryptic CDP failures.
 
-```typescript
-interface ForensicAuditReport {
-  overall_score: number; // 0-100
-  screenshot_url: string; // Path to the temporarily saved image
-  technical_metrics: {
-    time_to_interactive_ms: number;
-    console_errors: string[];
-    network_bottlenecks: string[];
-  };
-  ux_friction_points: Array<{
-    id: number;
-    x_coordinate_percentage: number; // For placing the pin on the UI relative to the image
-    y_coordinate_percentage: number;
-    severity: "High" | "Medium" | "Low";
-    title: string;
-    description: string;
-  }>;
-}
+---
 
+## Running locally
+
+### Frontend
+
+```bash
+npm install
+npm run dev
 ```
 
----
+The app runs on Vite and expects the Supabase environment variables from `.env` (see `.env.example`).
 
-## 7. Implementation Directives for the AI Assistant
+### Agent worker
 
-1. **Vercel AI SDK Integration:** Utilize the `generateObject` or `streamObject` functions from the `ai` package to enforce the `ForensicAuditReport` JSON schema.
-2. **Provider Setup:** Configure the AI SDK to use the OpenRouter provider. Example implementation pattern:
-```typescript
-import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { generateObject } from 'ai';
-
-const openrouter = createOpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY,
-});
-
-// Configurable model routing
-const model = openrouter('google/gemini-2.5-flash'); 
-
+```bash
+cd agent-worker
+npm install
+export BROWSERBASE_API_KEY="bb_live_..."
+export OPENAI_API_KEY="sk-..."
+export AGENT_SHARED_SECRET="any-shared-secret"
+node src/cli.js "https://example.com/products/thing"
 ```
 
+For the full local server with job polling:
 
-3. **Mock First, Connect Later:** Build the UI using a hardcoded `ForensicAuditReport` JSON object first. Ensure the Bento Grid, light mode styling, and Tailwind shadows perfectly match the enterprise standard before attempting to hook up Playwright or the LLM endpoints.
-4. **Playwright Configuration:** Create a separate utility file (`lib/playwright-agent.ts`) that can toggle between a local browser instance and a WebSocket connection to Browserless.io via environment variables (`NEXT_PUBLIC_USE_BROWSERLESS`).
+```bash
+cd agent-worker
+npm install
+export AGENT_SHARED_SECRET="any-shared-secret"
+npm start
+```
+
+Expose `localhost:3000` through a tunnel (ngrok / Cloudflare Quick Tunnel) and set the tunnel URL as `AGENT_WORKER_URL` in your Lovable Cloud secrets to have the frontend talk to your local worker.
+
+---
+
+## Security notes
+
+- No API keys, bearer tokens, or browser keys are hardcoded in the source.
+- Secrets are stored in **Lovable Cloud secrets** (or Render environment variables for the worker) and read inside server handlers at runtime.
+- The tracked `.env` file in earlier commits contained only Supabase **publishable** keys and project metadata. Before making the repository public, remove `.env` from git tracking:
+
+  ```bash
+  git rm --cached .env
+  git commit -m "chore: remove .env from tracking"
+  ```
+
+  If the project ID has already been pushed and you want to scrub it from history, use `git filter-repo` or BFG Repo-Cleaner on a private clone before switching the repository public.
+
+---
+
+## Why this project is useful
+
+- **Portfolio piece:** Shows the ability to architect a full AI-agent product — not just a chatbot, but an agent that drives a real browser, makes decisions, and reports back.
+- **Thought leadership:** Demonstrates the difference between deterministic evaluation and LLM reasoning, and why a hybrid approach is right for audit/scoring products.
+- **Reusable pattern:** The Observe-Plan-Act loop + worker split can be adapted to any other browser-automation agent (research, QA, compliance, etc.).
+
+---
+
+## Built with
+
+- [Lovable](https://lovable.dev) — AI-assisted product builder
+- [TanStack Start](https://tanstack.com/start) — full-stack React framework
+- [Browserbase](https://browserbase.com) — remote Chrome infrastructure
+- [Stagehand](https://stagehand.dev) — AI web browsing framework
+- [Vercel AI SDK](https://sdk.vercel.ai) — model interface and structured outputs
+- [Lovable Cloud](https://lovable.dev) — backend, auth, and storage
+
+---
+
+## Project links
+
+- **Lovable editor:** https://lovable.dev/projects/4abd7517-d555-471c-9133-3f63dd37e68d
+- **Live preview:** https://id-preview--4abd7517-d555-471c-9133-3f63dd37e68d.lovable.app
 
 This project was built with [Lovable](https://lovable.dev).
 
-## Build with Lovable
+## Continue developing
 
 Continue developing this project in the [Lovable editor](https://lovable.dev/projects/4abd7517-d555-471c-9133-3f63dd37e68d).
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+- **Ship faster:** describe what you want to build and Lovable handles the code.
+- **Stay in sync:** every change made in Lovable is committed straight to this repository.
+- **Full ownership:** this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
 
-## Development
+## Development (local)
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+Prefer working locally? You need Node.js 20+ and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
 
 ```sh
 git clone <this-repository-url>
