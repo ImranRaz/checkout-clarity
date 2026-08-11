@@ -396,6 +396,7 @@ const BOT_WALL_MESSAGE = {
 };
 
 
+/** Heuristic backstop for "is something reserved / in the basket yet". */
 const CART_CHECK = `(() => {
   const text = (document.body ? document.body.innerText : "").toLowerCase();
   const cartish = /(subtotal|order summary|booking summary|your (cart|bag|basket)|proceed to checkout|checkout now|review your (booking|cruise|trip|reservation)|guest details|passenger details|total (price|due|fare)|price summary|continue to payment|your (booking|reservation|itinerary) so far)/.test(text);
