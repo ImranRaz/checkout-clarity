@@ -547,14 +547,13 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     await page.goto(entryUrl, { waitUntil: "domcontentloaded", timeout: 45000 });
     await page.waitForTimeout(2500);
 
-    const wall = await page.evaluate(
-      `/just a moment|robot or human|are you a (human|robot)|verify you are|captcha|access denied/i.test(document.body.innerText || '')`,
-    );
+    const entryWall = await detectBotWall(page);
+    const wall = entryWall?.kind === "challenge";
     if (wall) {
       status = "partial";
-      blockedReason =
-        "The target served a bot-protection challenge instead of the page. Retry with a different target or a residential proxy region.";
-      emit("browser", blockedReason, "error");
+      blockedReason = BOT_WALL_MESSAGE.challenge;
+      emit("browser", `Bot protection challenge on entry (“${entryWall.phrase}”)`, "error");
+      emit("system", blockedReason, "error");
     }
 
     // First-visit interstitials often fire on a timer, so sweep twice.
