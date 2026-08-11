@@ -729,6 +729,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
       const midWall = await detectBotWall(page);
       if (midWall) {
         status = "partial";
+        botBlocked = true;
         blockedReason = BOT_WALL_MESSAGE[midWall.kind];
         emit(
           "browser",
