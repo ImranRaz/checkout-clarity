@@ -513,16 +513,12 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     await page.waitForTimeout(1800);
     await dismissOverlays(page, { emit, deep: true });
 
+    // Classifying the entry page used to be an LLM round trip before a single
+    // click. The DOM already answers it, so the run starts moving immediately.
     let kind = "other";
     let entryLabel = "";
     if (!wall) {
-      const classified = await stagehand.page.extract({
-        instruction:
-          "What kind of page is this in a buying journey? listing = several items to choose from, detail = one item with a buy or book control, options = choosing size/colour/date/cabin/room, form = entering traveller or shopper details, summary = a review step, cart = a basket with items, checkout = payment.",
-        schema: z.object({ kind: stageKind, label: z.string() }),
-      });
-      kind = classified.kind;
-      entryLabel = classified.label;
+      kind = await page.evaluate(CLASSIFY_SCRIPT).catch(() => "other");
     }
 
     stages.push(
@@ -544,17 +540,51 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     let reachedGoal = false;
     let stalledAttempts = 0;
     let overlayRetryUsed = false;
+    const openedProducts = new Set();
 
     for (let step = 0; !wall && step < MAX_STEPS && Date.now() < deadline; step += 1) {
-      await withTimeout(dismissOverlays(page, { emit }), THINK_TIMEOUT_MS, "Clearing pop-ups").catch(
-        () => {},
-      );
+      await withTimeout(dismissOverlays(page, { emit }), 12000, "Clearing pop-ups").catch(() => {});
 
+      // Reading controls is now a DOM scan, so it cannot stall the run; if it
+      // ever does, the planner simply works from the screen alone.
       const controls = await withTimeout(
         visibleControls(page),
-        THINK_TIMEOUT_MS,
+        10000,
         "Reading page controls",
-      );
+      ).catch(() => []);
+
+      // FAST LANE. Opening an item from a grid is the one move that never
+      // needs a model: the tiles are ordinary links. Skipping the planning
+      // call here is what turns "stuck on the listing for a minute" into a
+      // couple of seconds — and it cannot land on a logo or a filter.
+      const pageKind = await page.evaluate(CLASSIFY_SCRIPT).catch(() => "other");
+      if (pageKind === "listing") {
+        const candidates = (await productLinks(page)).filter((l) => !openedProducts.has(l.href));
+        const target = candidates[0];
+        if (target) {
+          openedProducts.add(target.href);
+          emit("vision", `Opening ${target.text || "the first item"} from this listing`);
+          const tJump = Date.now();
+          await page
+            .goto(target.href, { waitUntil: "domcontentloaded", timeout: 30000 })
+            .catch(() => {});
+          await page.waitForTimeout(1200);
+          await withTimeout(dismissOverlays(page, { emit }), 12000, "Clearing pop-ups").catch(
+            () => {},
+          );
+          const jumpedKind = await page.evaluate(CLASSIFY_SCRIPT).catch(() => "detail");
+          const stage = await captureStage(page, {
+            kind: jumpedKind === "listing" ? "detail" : jumpedKind,
+            label: target.text || "Product page",
+            transition: { action: `open "${target.text || "item"}"`, duration_ms: Date.now() - tJump },
+            emit,
+          });
+          stages.push(stage);
+          emit("browser", `${stage.label} captured in ${Date.now() - tJump}ms`, "success");
+          continue;
+        }
+      }
+
 
       const decision = await withTimeout(stagehand.page.extract({
         instruction:
