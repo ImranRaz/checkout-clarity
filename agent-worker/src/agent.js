@@ -121,6 +121,9 @@ async function createBrowserSession(projectId, emit) {
   const friendly = `Could not start a cloud browser session (HTTP ${response.status}${message ? `: ${message}` : ""}).`;
   emit?.("system", friendly, "error");
   throw new Error(friendly);
+}
+
+
 
 
 // Deliberately generic. A shoe store's journey is listing -> product -> cart;
