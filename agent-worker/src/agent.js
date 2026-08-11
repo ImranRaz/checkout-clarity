@@ -588,6 +588,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     let reachedGoal = false;
     let stalledAttempts = 0;
     let overlayRetryUsed = false;
+    let botBlocked = entryWall?.kind === "refusal";
     const openedProducts = new Set();
 
     for (let step = 0; !wall && step < MAX_STEPS && Date.now() < deadline; step += 1) {
