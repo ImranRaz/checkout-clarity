@@ -632,7 +632,21 @@ export async function runJourney(entryUrl, { onLog } = {}) {
           resulting_kind: stageKind,
           label: z.string(),
         }),
-      }), THINK_TIMEOUT_MS, "Planning the next move");
+      }), THINK_TIMEOUT_MS, "Planning the next move").catch((error) => {
+        // A slow planning call should cost one turn, not the whole run.
+        emit("system", `Thinking took too long (${error.message}) — retrying this step`, "warn");
+        return null;
+      });
+
+      if (!decision) {
+        stalledAttempts += 1;
+        if (stalledAttempts >= MAX_STALLED_ATTEMPTS) {
+          blockedReason = "The planner kept timing out, so the run was ended early to conserve browser minutes.";
+          emit("system", blockedReason, "error");
+          break;
+        }
+        continue;
+      }
 
       if (decision.done) {
         reachedGoal = true;
@@ -642,6 +656,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
 
       const moves = (decision.actions || []).filter(Boolean).slice(0, 3);
       if (moves.length === 0) break;
+
 
       if (decision.note) emit("vision", decision.note);
 
