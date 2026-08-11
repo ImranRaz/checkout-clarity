@@ -6,6 +6,7 @@ import { FRICTION_SCRIPT, PAGE_DIGEST_SCRIPT } from "./friction.js";
 import { createReviewer } from "./ux-review.js";
 import { VITALS_INIT, VITALS_READ } from "./vitals.js";
 import { dismissOverlays } from "./overlays.js";
+import { isExhaustedStatus, keyLabel, loadKeys, rotationOrder } from "./keys.js";
 
 /**
  * Drives a real cloud browser from an entry URL through to the cart, emitting
@@ -42,22 +43,26 @@ function withTimeout(promise, timeoutMs, label) {
 
 /**
  * The API key alone identifies the account, so the project id is looked up
- * rather than asked for. Cached for the life of the process.
+ * rather than asked for. Cached per key for the life of the process.
  */
-let cachedProjectId = null;
-async function resolveProjectId() {
-  if (process.env.BROWSERBASE_PROJECT_ID) return process.env.BROWSERBASE_PROJECT_ID;
-  if (cachedProjectId) return cachedProjectId;
+const projectIdCache = new Map();
+async function resolveProjectId(key) {
+  if (process.env.BROWSERBASE_PROJECT_ID && loadKeys().length <= 1) {
+    return process.env.BROWSERBASE_PROJECT_ID;
+  }
+  if (projectIdCache.has(key)) return projectIdCache.get(key);
   const response = await fetch("https://api.browserbase.com/v1/projects", {
-    headers: { "X-BB-API-Key": process.env.BROWSERBASE_API_KEY || "" },
+    headers: { "X-BB-API-Key": key },
   });
   if (!response.ok) {
-    throw new Error(`Could not resolve a Browserbase project (HTTP ${response.status}).`);
+    const error = new Error(`Could not resolve a Browserbase project (HTTP ${response.status}).`);
+    error.status = response.status;
+    throw error;
   }
   const projects = await response.json();
   const id = Array.isArray(projects) ? projects[0]?.id : projects?.id;
   if (!id) throw new Error("The Browserbase account has no projects.");
-  cachedProjectId = id;
+  projectIdCache.set(key, id);
   return id;
 }
 
@@ -65,11 +70,11 @@ async function resolveProjectId() {
  * Creates the cloud browser session up front so plan/quota failures read as
  * plain English instead of a downstream CDP error.
  */
-async function createBrowserSession(projectId, emit) {
+async function createBrowserSession(key, projectId) {
   const response = await fetch("https://api.browserbase.com/v1/sessions", {
     method: "POST",
     headers: {
-      "X-BB-API-Key": process.env.BROWSERBASE_API_KEY || "",
+      "X-BB-API-Key": key,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -100,28 +105,61 @@ async function createBrowserSession(projectId, emit) {
     /* non-JSON body */
   }
 
-  if (response.status === 402) {
-    const friendly =
-      "Out of cloud browser minutes on the current Browserbase plan, so no session could start. " +
-      "Upgrade the plan or wait for the monthly reset — sample reports still work in the meantime.";
+  const reason =
+    response.status === 402
+      ? "out of cloud browser minutes"
+      : response.status === 429
+        ? "all sessions on this account are busy"
+        : response.status === 401 || response.status === 403
+          ? "the API key was rejected"
+          : `HTTP ${response.status}${message ? `: ${message}` : ""}`;
+
+  const error = new Error(reason);
+  error.status = response.status;
+  throw error;
+}
+
+/**
+ * Walks the key pool until one account gives us a session. Keys that are out
+ * of minutes, busy, or rejected are skipped so a spare account can take over
+ * mid-test without a redeploy.
+ */
+async function acquireSession(emit) {
+  const keys = rotationOrder();
+  if (keys.length === 0) {
+    const friendly = "No Browserbase API key is configured on the agent worker.";
     emit?.("system", friendly, "error");
     throw new Error(friendly);
   }
-  if (response.status === 429) {
-    const friendly =
-      "All cloud browser sessions on this plan are busy. Wait for the running audit to finish and retry.";
-    emit?.("system", friendly, "error");
-    throw new Error(friendly);
+
+  const failures = [];
+
+  for (const key of keys) {
+    try {
+      const projectId = await resolveProjectId(key);
+      const sessionId = await createBrowserSession(key, projectId);
+      if (keys.length > 1) {
+        emit?.("system", `Using cloud browser account ${keyLabel(key)}`);
+      }
+      return { key, projectId, sessionId };
+    } catch (error) {
+      const reason = error?.message || "unknown error";
+      failures.push(`${keyLabel(key)} — ${reason}`);
+      if (!isExhaustedStatus(error?.status)) break;
+      emit?.("system", `Cloud browser account ${keyLabel(key)} unavailable (${reason}); trying the next key.`);
+    }
   }
-  if (response.status === 401 || response.status === 403) {
-    const friendly = "The Browserbase API key was rejected. Check the key configured on the agent worker.";
-    emit?.("system", friendly, "error");
-    throw new Error(friendly);
-  }
-  const friendly = `Could not start a cloud browser session (HTTP ${response.status}${message ? `: ${message}` : ""}).`;
+
+  const friendly =
+    keys.length > 1
+      ? `No cloud browser account could start a session. ${failures.join(" · ")}. ` +
+        "Add another key or wait for the monthly reset — sample reports still work in the meantime."
+      : `Could not start a cloud browser session: ${failures[0]}. ` +
+        "Add a second key via BROWSERBASE_API_KEYS to rotate accounts while testing.";
   emit?.("system", friendly, "error");
   throw new Error(friendly);
 }
+
 
 
 
@@ -324,7 +362,6 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     onLog?.({ actor, text, tone });
   };
 
-  const projectId = await resolveProjectId();
 
   // Stagehand's built-in model routing only knows a fixed list of providers
   // and ignores a custom base URL, so the LLM is wired explicitly through the
@@ -343,14 +380,14 @@ export async function runJourney(entryUrl, { onLog } = {}) {
   // undefined ... CDP connection failed", which hides the real cause (out of
   // plan minutes, concurrency limit, bad key). Creating it here surfaces the
   // actual HTTP status and message.
-  const sessionId = await createBrowserSession(projectId, emit);
+  const { key: browserbaseKey, projectId, sessionId } = await acquireSession(emit);
 
   const stagehand = new Stagehand({
     env: "BROWSERBASE",
     // Run the agent loop in this process against the remote browser; the
     // hosted Stagehand API does not accept a custom LLM provider.
     useAPI: false,
-    apiKey: process.env.BROWSERBASE_API_KEY,
+    apiKey: browserbaseKey,
     projectId,
     browserbaseSessionID: sessionId,
     llmClient: new AISdkClient({

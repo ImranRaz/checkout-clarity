@@ -24,34 +24,46 @@ type SearchResponse = {
   results?: Array<{ url: string; title?: string }>;
 };
 
-function apiKey(): string {
-  const key = process.env["BROWSERBASE_API_KEY"];
-  if (!key) throw new Error("BROWSERBASE_API_KEY is not configured");
-  return key;
+/**
+ * Multiple accounts can be configured (BROWSERBASE_API_KEYS, comma separated)
+ * so testing can rotate off a key that has run out of free minutes.
+ */
+function apiKeys(): string[] {
+  const raw = [process.env["BROWSERBASE_API_KEY"], process.env["BROWSERBASE_API_KEYS"]]
+    .filter(Boolean)
+    .join(",");
+  const keys = [...new Set(raw.split(/[,\s]+/).map((k) => k.trim()).filter(Boolean))];
+  if (keys.length === 0) throw new Error("BROWSERBASE_API_KEY is not configured");
+  return keys;
 }
 
 async function callBrowserbase<T>(path: string, body: unknown): Promise<T> {
   // The reader endpoint occasionally answers 5xx on heavy, slow marketing
   // pages (travel and booking sites especially). That is our reader hiccuping,
-  // not the site refusing us, so retry once before giving up.
+  // not the site refusing us, so retry once before giving up. Quota/auth
+  // failures instead move on to the next configured account.
   let lastStatus = 0;
   let lastText = "";
 
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    const response = await fetch(`${API_BASE}${path}`, {
-      method: "POST",
-      headers: {
-        "X-BB-API-Key": apiKey(),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
+  for (const key of apiKeys()) {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const response = await fetch(`${API_BASE}${path}`, {
+        method: "POST",
+        headers: {
+          "X-BB-API-Key": key,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
 
-    if (response.ok) return (await response.json()) as T;
+      if (response.ok) return (await response.json()) as T;
 
-    lastStatus = response.status;
-    lastText = await response.text().catch(() => "");
-    if (lastStatus < 500) break;
+      lastStatus = response.status;
+      lastText = await response.text().catch(() => "");
+      if (lastStatus < 500) break;
+    }
+    const rotatable = lastStatus === 401 || lastStatus === 402 || lastStatus === 403 || lastStatus === 429;
+    if (!rotatable) break;
   }
 
   if (lastStatus >= 500) {
