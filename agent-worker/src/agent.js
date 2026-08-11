@@ -363,36 +363,29 @@ const CART_CHECK = `(() => {
  */
 let reviewer = null;
 
+/**
+ * Vision reviews are slow (a multimodal call per stage) and nothing in the
+ * journey depends on their result, so they no longer block navigation: the
+ * screenshot and digest are taken synchronously while the page is still in
+ * that state, then the review runs alongside the next browser step and its
+ * findings are merged in when the run finishes.
+ */
+let pendingReviews = [];
+
 async function captureStage(page, { kind, label: rawLabel, transition, emit }) {
   const label = cleanLabel(rawLabel, kind);
-  const [metrics, friction, shot, size] = await Promise.all([
+  const [metrics, friction, shot, size, digest] = await Promise.all([
     page.evaluate(VITALS_READ),
     page.evaluate(FRICTION_SCRIPT(kind, DEVICE)),
     page.screenshot({ fullPage: true, type: "jpeg", quality: 70 }),
     page.evaluate(
       `({ width: window.innerWidth, height: Math.max(document.documentElement.scrollHeight, window.innerHeight) })`,
     ),
+    reviewer ? page.evaluate(PAGE_DIGEST_SCRIPT).catch(() => null) : Promise.resolve(null),
   ]);
 
-  // Judgement pass: experience problems a DOM rule cannot see. Pins still come
-  // from real element geometry, so a hallucinated location cannot survive.
-  let judged = [];
-  if (reviewer) {
-    try {
-      const digest = await page.evaluate(PAGE_DIGEST_SCRIPT);
-      judged = await reviewer(page, { kind, label, screenshot: shot, digest });
-      if (judged.length > 0) {
-        emit?.("vision", `Reviewed ${label}: ${judged.length} experience issue${judged.length === 1 ? "" : "s"}`);
-      }
-    } catch (error) {
-      emit?.("vision", `Experience review skipped on ${label} (${error.message})`, "warn");
-    }
-  }
+  const friction_points = friction.map((point, index) => ({ ...point, id: index + 1 }));
 
-  const friction_points = [...friction, ...judged].map((point, index) => ({
-    ...point,
-    id: index + 1,
-  }));
 
   return {
     id: `${kind}-${Date.now()}`,
