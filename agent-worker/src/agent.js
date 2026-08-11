@@ -783,8 +783,16 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     blockedReason = error.message.slice(0, 240);
     emit("system", blockedReason, "error");
   } finally {
+    // The reviews ran alongside navigation; collect them before the browser
+    // goes away, since they read element geometry from the live page.
+    await withTimeout(
+      Promise.allSettled(pendingReviews),
+      45000,
+      "Finishing the experience review",
+    ).catch(() => {});
     await stagehand.close().catch(() => {});
   }
+
 
   // Console errors are collected per run; attribute them to the last stage.
   const last = stages[stages.length - 1];
