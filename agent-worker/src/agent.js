@@ -386,8 +386,7 @@ async function captureStage(page, { kind, label: rawLabel, transition, emit }) {
 
   const friction_points = friction.map((point, index) => ({ ...point, id: index + 1 }));
 
-
-  return {
+  const stage = {
     id: `${kind}-${Date.now()}`,
     kind,
     label,
@@ -403,7 +402,33 @@ async function captureStage(page, { kind, label: rawLabel, transition, emit }) {
     technical_metrics: metrics,
     friction_points,
   };
+
+  // Fire-and-merge: the review runs while the agent keeps clicking.
+  if (reviewer) {
+    pendingReviews.push(
+      (async () => {
+        try {
+          const judged = await reviewer(page, { kind, label, screenshot: shot, digest });
+          if (judged.length > 0) {
+            stage.friction_points = [...friction, ...judged].map((point, index) => ({
+              ...point,
+              id: index + 1,
+            }));
+            emit?.(
+              "vision",
+              `Reviewed ${label}: ${judged.length} experience issue${judged.length === 1 ? "" : "s"}`,
+            );
+          }
+        } catch (error) {
+          emit?.("vision", `Experience review skipped on ${label} (${error.message})`, "warn");
+        }
+      })(),
+    );
+  }
+
+  return stage;
 }
+
 
 
 export async function runJourney(entryUrl, { onLog } = {}) {
