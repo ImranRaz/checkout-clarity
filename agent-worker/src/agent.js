@@ -61,6 +61,71 @@ async function resolveProjectId() {
   return id;
 }
 
+/**
+ * Creates the cloud browser session up front so plan/quota failures read as
+ * plain English instead of a downstream CDP error.
+ */
+async function createBrowserSession(projectId, emit) {
+  const response = await fetch("https://api.browserbase.com/v1/sessions", {
+    method: "POST",
+    headers: {
+      "X-BB-API-Key": process.env.BROWSERBASE_API_KEY || "",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      projectId,
+      // Residential proxies and Verified (advanced stealth) mode are paid /
+      // enterprise features: requesting them on a free plan makes session
+      // creation fail outright, so both are opt-in via env.
+      ...(process.env.BROWSERBASE_PROXIES === "true" ? { proxies: true } : {}),
+      browserSettings: {
+        ...(process.env.BROWSERBASE_STEALTH === "true" ? { advancedStealth: true } : {}),
+        viewport: { width: 1280, height: 900 },
+        solveCaptchas: true,
+      },
+    }),
+  });
+
+  if (response.ok) {
+    const session = await response.json();
+    if (!session?.id) throw new Error("Browserbase returned a session with no id.");
+    return session.id;
+  }
+
+  const detail = await response.text().catch(() => "");
+  let message = detail.slice(0, 300);
+  try {
+    message = JSON.parse(detail).message || message;
+  } catch {
+    /* non-JSON body */
+  }
+
+  if (response.status === 402) {
+    const friendly =
+      "Out of cloud browser minutes on the current Browserbase plan, so no session could start. " +
+      "Upgrade the plan or wait for the monthly reset — sample reports still work in the meantime.";
+    emit?.("system", friendly, "error");
+    throw new Error(friendly);
+  }
+  if (response.status === 429) {
+    const friendly =
+      "All cloud browser sessions on this plan are busy. Wait for the running audit to finish and retry.";
+    emit?.("system", friendly, "error");
+    throw new Error(friendly);
+  }
+  if (response.status === 401 || response.status === 403) {
+    const friendly = "The Browserbase API key was rejected. Check the key configured on the agent worker.";
+    emit?.("system", friendly, "error");
+    throw new Error(friendly);
+  }
+  const friendly = `Could not start a cloud browser session (HTTP ${response.status}${message ? `: ${message}` : ""}).`;
+  emit?.("system", friendly, "error");
+  throw new Error(friendly);
+}
+
+
+
+
 // Deliberately generic. A shoe store's journey is listing -> product -> cart;
 // a cruise line's is listing (sailings) -> detail (itinerary) -> options
 // (cabin) -> form (guests) -> summary -> cart. One vocabulary covers both.
@@ -273,6 +338,13 @@ export async function runJourney(entryUrl, { onLog } = {}) {
   // The judgement layer shares the same provider as the navigator.
   reviewer = createReviewer(provider);
 
+  // The session is created explicitly rather than left to Stagehand. Stagehand
+  // swallows the creation failure and only reports "browser context is
+  // undefined ... CDP connection failed", which hides the real cause (out of
+  // plan minutes, concurrency limit, bad key). Creating it here surfaces the
+  // actual HTTP status and message.
+  const sessionId = await createBrowserSession(projectId, emit);
+
   const stagehand = new Stagehand({
     env: "BROWSERBASE",
     // Run the agent loop in this process against the remote browser; the
@@ -280,29 +352,25 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     useAPI: false,
     apiKey: process.env.BROWSERBASE_API_KEY,
     projectId,
+    browserbaseSessionID: sessionId,
     llmClient: new AISdkClient({
       model: provider(process.env.STAGEHAND_MODEL || "gpt-4.1-mini"),
     }),
-
-    browserbaseSessionCreateParams: {
-      projectId,
-      // Residential proxies and Verified (advanced stealth) mode are paid /
-      // enterprise features: requesting them on a free plan makes session
-      // creation fail outright, so both are opt-in via env.
-      ...(process.env.BROWSERBASE_PROXIES === "true" ? { proxies: true } : {}),
-      browserSettings: {
-        ...(process.env.BROWSERBASE_STEALTH === "true" ? { advancedStealth: true } : {}),
-        viewport: { width: 1280, height: 900 },
-        solveCaptchas: true,
-      },
-    },
   });
 
   let status = "complete";
   let blockedReason = null;
 
   try {
-    await stagehand.init();
+    try {
+      await stagehand.init();
+    } catch (error) {
+      throw new Error(
+        `Could not attach to the cloud browser session (${error?.message || error}). ` +
+          "The session was created but the connection dropped — retry in a moment.",
+      );
+    }
+
     const page = stagehand.page;
     page.on("console", (m) => {
       if (m.type() === "error") consoleErrors.push(m.text().slice(0, 240));
