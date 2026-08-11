@@ -349,6 +349,53 @@ const CLASSIFY_SCRIPT = `(() => {
 })()`;
 
 
+/**
+ * Bot-protection detection.
+ *
+ * Two distinct shapes matter, and they need different wording in the report:
+ *
+ *   challenge — the page itself is replaced by a CAPTCHA / "verify you are
+ *               human" interstitial. Nothing can be audited at all.
+ *   refusal   — the storefront renders normally and the click lands, but the
+ *               backend rejects the mutation and shows a generic apology
+ *               ("We couldn't complete your request", "unusual activity",
+ *               "close this tab and disable any browser extensions"). Nike,
+ *               Best Buy and most Akamai/PerimeterX tenants do this on
+ *               add-to-cart from a datacentre IP.
+ *
+ * A refusal is not a checkout defect, so scoring it as one would be a lie.
+ * The run stops there, keeps every stage it did capture, and says so.
+ */
+const BOT_WALL_SCRIPT = `(() => {
+  const text = ((document.body && document.body.innerText) || '').slice(0, 6000);
+  const challenge = /just a moment|checking your browser|robot or human|are you a (human|robot)|verify (you are|that you)|press and hold|complete the security check|captcha|access denied|request blocked|unusual traffic/i;
+  const refusal = /we (couldn't|could not|can't|cannot) complete your request|something went wrong[\\s\\S]{0,80}(try again|reopen)|disable any browser extensions|unusual activity (has been )?detected|your request (was|has been) (denied|blocked)|error reference number|reference #\\s*\\d/i;
+  const c = text.match(challenge);
+  if (c) return { kind: 'challenge', phrase: c[0].slice(0, 80) };
+  const r = text.match(refusal);
+  if (r) return { kind: 'refusal', phrase: r[0].slice(0, 80) };
+  return null;
+})()`;
+
+async function detectBotWall(page) {
+  try {
+    return (await page.evaluate(BOT_WALL_SCRIPT)) || null;
+  } catch {
+    return null;
+  }
+}
+
+const BOT_WALL_MESSAGE = {
+  challenge:
+    "The site served a bot-protection challenge instead of the page, so nothing could be audited. " +
+    "This is the target's edge protection, not a defect in the store.",
+  refusal:
+    "The store accepted the click but its bot protection refused the request and showed an error dialog " +
+    "instead of completing it. Everything up to that point is captured and scored; the cart step could not " +
+    "be reached from an automated browser. This is the target's bot defence, not a checkout defect.",
+};
+
+
 /** Heuristic backstop for "is something reserved / in the basket yet". */
 const CART_CHECK = `(() => {
   const text = (document.body ? document.body.innerText : "").toLowerCase();
@@ -500,14 +547,13 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     await page.goto(entryUrl, { waitUntil: "domcontentloaded", timeout: 45000 });
     await page.waitForTimeout(2500);
 
-    const wall = await page.evaluate(
-      `/just a moment|robot or human|are you a (human|robot)|verify you are|captcha|access denied/i.test(document.body.innerText || '')`,
-    );
+    const entryWall = await detectBotWall(page);
+    const wall = entryWall?.kind === "challenge";
     if (wall) {
       status = "partial";
-      blockedReason =
-        "The target served a bot-protection challenge instead of the page. Retry with a different target or a residential proxy region.";
-      emit("browser", blockedReason, "error");
+      blockedReason = BOT_WALL_MESSAGE.challenge;
+      emit("browser", `Bot protection challenge on entry (“${entryWall.phrase}”)`, "error");
+      emit("system", blockedReason, "error");
     }
 
     // First-visit interstitials often fire on a timer, so sweep twice.
@@ -542,6 +588,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     let reachedGoal = false;
     let stalledAttempts = 0;
     let overlayRetryUsed = false;
+    let botBlocked = entryWall?.kind === "refusal";
     const openedProducts = new Set();
 
     for (let step = 0; !wall && step < MAX_STEPS && Date.now() < deadline; step += 1) {
@@ -675,6 +722,35 @@ export async function runJourney(entryUrl, { onLog } = {}) {
         await settle(page, await readSignature(page), 7000);
       }
 
+      // Bot-defence check runs BEFORE any overlay sweep — the refusal dialog
+      // looks exactly like a dismissible modal, and closing it would hide the
+      // real reason the step failed and send the run round the loop again on
+      // a store that will never let it through.
+      const midWall = await detectBotWall(page);
+      if (midWall) {
+        status = "partial";
+        botBlocked = true;
+        blockedReason = BOT_WALL_MESSAGE[midWall.kind];
+        emit(
+          "browser",
+          `The store's bot protection stopped the request (“${midWall.phrase}”)`,
+          "error",
+        );
+        emit("system", "Ending the run here rather than burning browser minutes on a wall", "warn");
+        // Keep the evidence: the dialog itself is the most useful screenshot.
+        stages.push(
+          await captureStage(page, {
+            kind: decision.resulting_kind,
+            label: `${decision.label} (blocked by bot protection)`,
+            transition: { action: moves.join(" then "), duration_ms: Date.now() - tAct },
+            emit,
+          }).catch(() => null),
+        );
+        if (stages[stages.length - 1] === null) stages.pop();
+        break;
+      }
+
+
       if (failure) {
         // A pop-up that appeared mid-turn is the most common cause of an
         // action timing out. Clear it and give this turn one free retry.
@@ -762,7 +838,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     // Many stores add to cart via a drawer and never navigate, so the loop can
     // end one hop short of a cart page. Try the conventional cart URL. This is
     // a convention, not a requirement: flows without one just stay partial.
-    if (!wall && !reachedGoal) {
+    if (!wall && !botBlocked && !reachedGoal) {
       try {
         const cartUrl = new URL("/cart", page.url()).toString();
         emit("system", `No cart captured yet — trying ${cartUrl}`);
