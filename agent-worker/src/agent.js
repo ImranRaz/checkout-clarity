@@ -6,6 +6,7 @@ import { FRICTION_SCRIPT, PAGE_DIGEST_SCRIPT } from "./friction.js";
 import { createReviewer } from "./ux-review.js";
 import { VITALS_INIT, VITALS_READ } from "./vitals.js";
 import { dismissOverlays } from "./overlays.js";
+import { isExhaustedStatus, keyLabel, loadKeys, rotationOrder } from "./keys.js";
 
 /**
  * Drives a real cloud browser from an entry URL through to the cart, emitting
@@ -361,7 +362,6 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     onLog?.({ actor, text, tone });
   };
 
-  const projectId = await resolveProjectId();
 
   // Stagehand's built-in model routing only knows a fixed list of providers
   // and ignores a custom base URL, so the LLM is wired explicitly through the
@@ -380,14 +380,14 @@ export async function runJourney(entryUrl, { onLog } = {}) {
   // undefined ... CDP connection failed", which hides the real cause (out of
   // plan minutes, concurrency limit, bad key). Creating it here surfaces the
   // actual HTTP status and message.
-  const sessionId = await createBrowserSession(projectId, emit);
+  const { key: browserbaseKey, projectId, sessionId } = await acquireSession(emit);
 
   const stagehand = new Stagehand({
     env: "BROWSERBASE",
     // Run the agent loop in this process against the remote browser; the
     // hosted Stagehand API does not accept a custom LLM provider.
     useAPI: false,
-    apiKey: process.env.BROWSERBASE_API_KEY,
+    apiKey: browserbaseKey,
     projectId,
     browserbaseSessionID: sessionId,
     llmClient: new AISdkClient({
