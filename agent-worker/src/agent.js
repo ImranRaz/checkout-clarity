@@ -700,7 +700,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
         moved = (await readSignature(page)) !== before;
       }
       if (!moved) {
-        const href = await firstProductHref(page);
+        const href = (await productLinks(page))[0]?.href;
         if (href && href !== page.url()) {
           emit("system", "That control did nothing — opening the item directly");
           await page.goto(href, { waitUntil: "domcontentloaded", timeout: 30000 }).catch(() => {});
@@ -708,6 +708,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
           moved = (await readSignature(page)) !== before;
         }
       }
+
 
       if (!moved) {
         history.push(`${moves.join(" then ")} (no visible effect)`);
