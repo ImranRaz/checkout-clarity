@@ -23,18 +23,61 @@ import { RESOLVE_REF_SCRIPT } from "./friction.js";
  *      Precision is scored higher than recall.
  */
 
+const SEVERITIES = ["high", "medium", "low"];
+const CATEGORIES = ["trust", "clarity", "accessibility", "form", "performance"];
+
+/**
+ * Deliberately permissive. A `.max()` on a string or a strict enum makes the
+ * whole call fail with "response did not match schema" and silently throws away
+ * a page's findings, so length and vocabulary are normalised in code instead.
+ */
 const reviewFinding = z.object({
   ref: z.string().describe("The element ref from the digest, e.g. 'e12'. Must be one that exists."),
-  severity: z.enum(["high", "medium", "low"]),
-  category: z.enum(["trust", "clarity", "accessibility", "form", "performance"]),
-  title: z.string().max(80).describe("Plain, specific. What a shopper loses, not a rule name."),
-  description: z.string().max(320).describe("Why this costs conversions on THIS page, in concrete terms."),
-  evidence: z.string().max(200).describe("The exact wording, number, or measurement you observed."),
+  severity: z.string().describe("high, medium or low"),
+  category: z.string().describe("trust, clarity, accessibility, form or performance"),
+  title: z.string().describe("Plain, specific. What a shopper loses, not a rule name."),
+  description: z.string().describe("Why this costs conversions on THIS page, in concrete terms."),
+  evidence: z.string().describe("The exact wording, number, or measurement you observed."),
 });
 
 const reviewSchema = z.object({
-  findings: z.array(reviewFinding).max(5),
+  findings: z.array(reviewFinding),
 });
+
+function clamp(value, limit) {
+  const text = String(value ?? "").trim();
+  return text.length > limit ? `${text.slice(0, limit - 1).trimEnd()}…` : text;
+}
+
+/** Maps whatever vocabulary the model used onto the values the UI renders. */
+function normalise(finding) {
+  const severity = String(finding?.severity || "").toLowerCase();
+  const category = String(finding?.category || "").toLowerCase();
+  return {
+    ref: String(finding?.ref || "").trim(),
+    severity: SEVERITIES.find((s) => severity.includes(s)) || "medium",
+    category: CATEGORIES.find((c) => category.includes(c)) || "clarity",
+    title: clamp(finding?.title, 80),
+    description: clamp(finding?.description, 320),
+    evidence: clamp(finding?.evidence, 200),
+  };
+}
+
+/** Last resort: pull the first JSON object out of a plain-text completion. */
+function parseLoose(text) {
+  if (!text) return null;
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const candidate = (fenced ? fenced[1] : text).trim();
+  const start = candidate.indexOf("{");
+  const end = candidate.lastIndexOf("}");
+  if (start === -1 || end <= start) return null;
+  try {
+    return JSON.parse(candidate.slice(start, end + 1));
+  } catch {
+    return null;
+  }
+}
+
 
 const SYSTEM = `You are a senior conversion-experience reviewer auditing one step of a real purchase or booking journey. You have 15 years of e-commerce CRO and WCAG experience and your reputation rests on precision.
 
