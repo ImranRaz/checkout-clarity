@@ -1,5 +1,6 @@
-import { generateObject } from "ai";
+import { generateObject, generateText } from "ai";
 import { z } from "zod";
+
 
 import { RESOLVE_REF_SCRIPT } from "./friction.js";
 
@@ -22,18 +23,61 @@ import { RESOLVE_REF_SCRIPT } from "./friction.js";
  *      Precision is scored higher than recall.
  */
 
+const SEVERITIES = ["high", "medium", "low"];
+const CATEGORIES = ["trust", "clarity", "accessibility", "form", "performance"];
+
+/**
+ * Deliberately permissive. A `.max()` on a string or a strict enum makes the
+ * whole call fail with "response did not match schema" and silently throws away
+ * a page's findings, so length and vocabulary are normalised in code instead.
+ */
 const reviewFinding = z.object({
   ref: z.string().describe("The element ref from the digest, e.g. 'e12'. Must be one that exists."),
-  severity: z.enum(["high", "medium", "low"]),
-  category: z.enum(["trust", "clarity", "accessibility", "form", "performance"]),
-  title: z.string().max(80).describe("Plain, specific. What a shopper loses, not a rule name."),
-  description: z.string().max(320).describe("Why this costs conversions on THIS page, in concrete terms."),
-  evidence: z.string().max(200).describe("The exact wording, number, or measurement you observed."),
+  severity: z.string().describe("high, medium or low"),
+  category: z.string().describe("trust, clarity, accessibility, form or performance"),
+  title: z.string().describe("Plain, specific. What a shopper loses, not a rule name."),
+  description: z.string().describe("Why this costs conversions on THIS page, in concrete terms."),
+  evidence: z.string().describe("The exact wording, number, or measurement you observed."),
 });
 
 const reviewSchema = z.object({
-  findings: z.array(reviewFinding).max(5),
+  findings: z.array(reviewFinding),
 });
+
+function clamp(value, limit) {
+  const text = String(value ?? "").trim();
+  return text.length > limit ? `${text.slice(0, limit - 1).trimEnd()}…` : text;
+}
+
+/** Maps whatever vocabulary the model used onto the values the UI renders. */
+function normalise(finding) {
+  const severity = String(finding?.severity || "").toLowerCase();
+  const category = String(finding?.category || "").toLowerCase();
+  return {
+    ref: String(finding?.ref || "").trim(),
+    severity: SEVERITIES.find((s) => severity.includes(s)) || "medium",
+    category: CATEGORIES.find((c) => category.includes(c)) || "clarity",
+    title: clamp(finding?.title, 80),
+    description: clamp(finding?.description, 320),
+    evidence: clamp(finding?.evidence, 200),
+  };
+}
+
+/** Last resort: pull the first JSON object out of a plain-text completion. */
+function parseLoose(text) {
+  if (!text) return null;
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const candidate = (fenced ? fenced[1] : text).trim();
+  const start = candidate.indexOf("{");
+  const end = candidate.lastIndexOf("}");
+  if (start === -1 || end <= start) return null;
+  try {
+    return JSON.parse(candidate.slice(start, end + 1));
+  } catch {
+    return null;
+  }
+}
+
 
 const SYSTEM = `You are a senior conversion-experience reviewer auditing one step of a real purchase or booking journey. You have 15 years of e-commerce CRO and WCAG experience and your reputation rests on precision.
 
@@ -78,37 +122,60 @@ export function createReviewer(provider) {
       `Page copy: ${digest.above_fold_text}`,
     ].join("\n");
 
-    const call = generateObject({
-      model: provider(modelId),
-      schema: reviewSchema,
-      system: SYSTEM,
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: prompt },
-            { type: "image", image: screenshot },
-          ],
-        },
-      ],
-    });
+    const content = [
+      { type: "text", text: prompt },
+      { type: "image", image: screenshot },
+    ];
 
-    let timer;
-    const result = await Promise.race([
-      call,
-      new Promise((_, reject) => {
-        timer = setTimeout(() => reject(new Error("UX review timed out")), timeoutMs);
-      }),
-    ]).finally(() => clearTimeout(timer));
+    const withTimeout = (promise) => {
+      let timer;
+      return Promise.race([
+        promise,
+        new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error("UX review timed out")), timeoutMs);
+        }),
+      ]).finally(() => clearTimeout(timer));
+    };
+
+    let raw = null;
+    try {
+      const result = await withTimeout(
+        generateObject({
+          model: provider(modelId),
+          schema: reviewSchema,
+          system: SYSTEM,
+          messages: [{ role: "user", content }],
+        }),
+      );
+      raw = result.object?.findings;
+    } catch (error) {
+      if (/timed out/i.test(error?.message || "")) throw error;
+      // Structured mode failed (the classic "response did not match schema").
+      // Ask again in plain text and parse it ourselves rather than losing a
+      // whole page's worth of findings.
+      const retry = await withTimeout(
+        generateText({
+          model: provider(modelId),
+          system: `${SYSTEM}\n\nReply with JSON only, no prose: {"findings":[{"ref":"e12","severity":"high","category":"clarity","title":"...","description":"...","evidence":"..."}]}`,
+          messages: [{ role: "user", content }],
+        }),
+      );
+      raw = parseLoose(retry.text)?.findings;
+    }
+
+    if (!Array.isArray(raw)) return [];
 
     const findings = [];
-    for (const f of result.object.findings.slice(0, 3)) {
+    for (const candidate of raw.slice(0, 3)) {
+      const f = normalise(candidate);
+      if (!f.ref || !f.title) continue;
       let geometry = null;
       try {
         geometry = await page.evaluate(RESOLVE_REF_SCRIPT(f.ref));
       } catch {
         geometry = null;
       }
+
       // No resolvable element means no verifiable location — drop it rather
       // than pin it somewhere plausible-looking.
       if (!geometry) continue;
