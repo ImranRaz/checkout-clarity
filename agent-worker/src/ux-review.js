@@ -122,37 +122,60 @@ export function createReviewer(provider) {
       `Page copy: ${digest.above_fold_text}`,
     ].join("\n");
 
-    const call = generateObject({
-      model: provider(modelId),
-      schema: reviewSchema,
-      system: SYSTEM,
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: prompt },
-            { type: "image", image: screenshot },
-          ],
-        },
-      ],
-    });
+    const content = [
+      { type: "text", text: prompt },
+      { type: "image", image: screenshot },
+    ];
 
-    let timer;
-    const result = await Promise.race([
-      call,
-      new Promise((_, reject) => {
-        timer = setTimeout(() => reject(new Error("UX review timed out")), timeoutMs);
-      }),
-    ]).finally(() => clearTimeout(timer));
+    const withTimeout = (promise) => {
+      let timer;
+      return Promise.race([
+        promise,
+        new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error("UX review timed out")), timeoutMs);
+        }),
+      ]).finally(() => clearTimeout(timer));
+    };
+
+    let raw = null;
+    try {
+      const result = await withTimeout(
+        generateObject({
+          model: provider(modelId),
+          schema: reviewSchema,
+          system: SYSTEM,
+          messages: [{ role: "user", content }],
+        }),
+      );
+      raw = result.object?.findings;
+    } catch (error) {
+      if (/timed out/i.test(error?.message || "")) throw error;
+      // Structured mode failed (the classic "response did not match schema").
+      // Ask again in plain text and parse it ourselves rather than losing a
+      // whole page's worth of findings.
+      const retry = await withTimeout(
+        generateText({
+          model: provider(modelId),
+          system: `${SYSTEM}\n\nReply with JSON only, no prose: {"findings":[{"ref":"e12","severity":"high","category":"clarity","title":"...","description":"...","evidence":"..."}]}`,
+          messages: [{ role: "user", content }],
+        }),
+      );
+      raw = parseLoose(retry.text)?.findings;
+    }
+
+    if (!Array.isArray(raw)) return [];
 
     const findings = [];
-    for (const f of result.object.findings.slice(0, 3)) {
+    for (const candidate of raw.slice(0, 3)) {
+      const f = normalise(candidate);
+      if (!f.ref || !f.title) continue;
       let geometry = null;
       try {
         geometry = await page.evaluate(RESOLVE_REF_SCRIPT(f.ref));
       } catch {
         geometry = null;
       }
+
       // No resolvable element means no verifiable location — drop it rather
       // than pin it somewhere plausible-looking.
       if (!geometry) continue;
