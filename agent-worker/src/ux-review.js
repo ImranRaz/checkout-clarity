@@ -1,5 +1,6 @@
-import { generateObject } from "ai";
+import { generateObject, generateText } from "ai";
 import { z } from "zod";
+
 
 import { RESOLVE_REF_SCRIPT } from "./friction.js";
 
