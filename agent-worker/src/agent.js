@@ -197,20 +197,35 @@ const KIND_LABELS = {
   other: "Step",
 };
 
+/** Verbs that mean the model handed back an action name, not a stage name. */
+const ACTION_VERBS =
+  /^(click|tap|press|select|choose|open|close|go|goto|navigate|enter|set|type|add|submit|continue|proceed|scroll|dismiss|accept)\b/i;
+
 /**
  * The model sometimes hands back an element caption ("0-2289", "ADD TO CART - $100")
- * instead of a stage name, which reads as noise in the journey strip. Anything
- * that isn't a short, wordy label falls back to the stage kind.
+ * or the action it just performed ("click_price_and_build") instead of a stage
+ * name. Both read as noise in the journey strip, so anything that isn't a short,
+ * human-sounding stage name falls back to the stage kind.
  */
 function cleanLabel(label, kind) {
   const fallback = KIND_LABELS[kind] || "Stage";
-  const text = (label || "").trim();
+  let text = (label || "").trim();
+  // snake_case / kebab-case / camelCase → words
+  if (!/\s/.test(text)) {
+    text = text
+      .replace(/[_-]+/g, " ")
+      .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+      .trim();
+  }
   if (!text || text.length > 32) return fallback;
   if (!/[a-z]/i.test(text)) return fallback;
   if (/^[\d\W]/.test(text)) return fallback;
   if (/\$|\d{3,}/.test(text)) return fallback;
-  return text;
+  if (ACTION_VERBS.test(text)) return fallback;
+  // Sentence case, preserving words the model already capitalised.
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
+
 
 function log(steps, actor, text, tone = "normal") {
   steps.push({ actor, text, delay_ms: 260, tone });
