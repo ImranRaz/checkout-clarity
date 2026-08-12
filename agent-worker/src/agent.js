@@ -692,7 +692,14 @@ export async function runJourney(entryUrl, { onLog } = {}) {
             .array(z.string())
             .describe("Imperative browser instructions, e.g. 'click the Add to Bag button'"),
           resulting_kind: stageKind,
-          label: z.string(),
+          label: z
+            .string()
+            .describe(
+              "A short human-readable name for the page these moves land on, as a shopper would say it " +
+                "(e.g. 'Stateroom options', 'Guest details', 'Cart'). Title Case words only — never an action " +
+                "like 'click_price_and_build', never snake_case, never a price or button caption.",
+            ),
+
         }),
       }), THINK_TIMEOUT_MS, "Planning the next move").catch((error) => {
         // A slow planning call should cost one turn, not the whole run.
