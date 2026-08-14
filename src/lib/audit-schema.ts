@@ -128,8 +128,17 @@ export const stageSchema = z.object({
     caption: z.string(),
   }),
   technical_metrics: technicalMetricsSchema,
+  /**
+   * What the agent learned by scrolling the page top to bottom before
+   * capturing it. Null when the page was too short to sweep, or when the
+   * sweep failed — the report degrades to what it showed before.
+   */
+  scroll_profile: scrollProfileSchema.nullable().default(null),
+  /** Pop-ups that interrupted the shopper on the way to this stage. */
+  interstitials: z.array(interstitialSchema).default([]),
   friction_points: z.array(frictionPointSchema),
 });
+
 export type AuditStage = z.infer<typeof stageSchema>;
 
 export const auditReportSchema = z.object({
