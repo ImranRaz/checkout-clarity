@@ -199,9 +199,9 @@ export const stageSchema = z.object({
    * capturing it. Null when the page was too short to sweep, or when the
    * sweep failed — the report degrades to what it showed before.
    */
-  scroll_profile: scrollProfileSchema.nullable().default(null),
+  scroll_profile: scrollProfileSchema.nullish().optional(),
   /** Pop-ups that interrupted the shopper on the way to this stage. */
-  interstitials: z.array(interstitialSchema).default([]),
+  interstitials: z.array(interstitialSchema).optional(),
   friction_points: z.array(frictionPointSchema),
 });
 
