@@ -512,12 +512,21 @@ async function captureStage(page, { kind, label: rawLabel, transition, emit }) {
     pendingReviews.push(
       (async () => {
         try {
-          const judged = await reviewer(page, { kind, label, screenshot: shot, digest });
+          const judged = await reviewer(page, {
+            kind,
+            label,
+            screenshot: shot,
+            digest,
+            scroll_profile,
+            scroll_brief: scrollBrief(scroll_profile),
+            interstitials,
+          });
           if (judged.length > 0) {
-            stage.friction_points = [...friction, ...judged].map((point, index) => ({
+            stage.friction_points = [...measured, ...judged].map((point, index) => ({
               ...point,
               id: index + 1,
             }));
+
             emit?.(
               "vision",
               `Reviewed ${label}: ${judged.length} experience issue${judged.length === 1 ? "" : "s"}`,
