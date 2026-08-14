@@ -550,6 +550,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
   const stages = [];
   const consoleErrors = [];
   pendingReviews = [];
+  capturedInterstitials = [];
 
   const emit = (actor, text, tone) => {
     log(steps, actor, text, tone);
