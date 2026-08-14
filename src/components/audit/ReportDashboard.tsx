@@ -3,6 +3,7 @@ import { AlertTriangle, ArrowUpRight, Clock, Maximize2, ShieldAlert, ZoomIn } fr
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { ExecutiveSummary } from "./ExecutiveSummary";
+import { Interstitials, ScrollPass } from "./ScrollEvidence";
 import { SeverityChip } from "./SeverityChip";
 
 import {
@@ -427,6 +428,11 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
             <Metric label="Transferred" value={formatBytes(stage.technical_metrics.transfer_bytes)} />
             <Metric label="Requests" value={String(stage.technical_metrics.request_count)} />
           </dl>
+
+          {stage.scroll_profile && <ScrollPass profile={stage.scroll_profile} />}
+          {stage.interstitials && stage.interstitials.length > 0 && (
+            <Interstitials items={stage.interstitials} />
+          )}
 
           <div className="mt-5 border-t border-border pt-4">
             <p className="label-caps">Console · {stage.technical_metrics.console_errors.length}</p>
