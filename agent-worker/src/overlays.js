@@ -263,5 +263,5 @@ export async function dismissOverlays(page, { emit, deep = false, capture = true
   }
 
   if (cleared > 0 && !blocker) emit?.("browser", "Dismissed a pop-up before continuing");
-  return { cleared, blocker };
+  return { cleared, blocker, interstitials: captured };
 }
