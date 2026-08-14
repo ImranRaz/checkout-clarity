@@ -18,10 +18,25 @@ export OPENAI_BASE_URL=                         # optional: https://openrouter.a
 export STAGEHAND_MODEL=gpt-4.1-mini             # navigation: cheap + fast
 export UX_REVIEW_MODEL=gpt-4.1                  # per-page review council: needs vision + taste
 export JOURNEY_REVIEW_MODEL=                    # optional: run-level diagnosis (defaults to UX_REVIEW_MODEL)
+export AGENT_SCROLL_STEPS=12                    # scroll pass: max viewport steps per page
+export AGENT_SCROLL_SETTLE_MS=250               # pause per step, so lazy media can decode
+export AGENT_SCROLL_BUDGET_MS=8000              # hard cap per page — this is billed browser time
 node src/cli.js "https://store.com/products/thing"
 ```
 
 The CLI prints a readable summary of the report to the terminal.
+
+### The scroll pass
+
+Every stage is scrolled top to bottom before it is captured. This is what makes
+the rest of the capture honest: lazy images get a chance to decode (so the
+screenshot shows product photography instead of grey boxes), layout shift that
+happens *after* load becomes observable, and pinned bars, infinite scroll and
+the true depth of the buying action can be measured rather than guessed. The
+page is returned to the top before the screenshot is taken. Pop-ups are
+photographed and read before they are dismissed, so their copy, timing and how
+hard they make saying "no" become part of the audit rather than noise.
+
 
 ## Deploy on Render
 
