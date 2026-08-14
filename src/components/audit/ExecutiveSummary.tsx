@@ -2,7 +2,7 @@ import { motion } from "motion/react";
 import { ArrowRight, Printer, Target } from "lucide-react";
 
 import { SeverityChip } from "./SeverityChip";
-import { categoryLabel, type ForensicAuditReport } from "@/lib/audit-schema";
+import { categoryLabel, impactLabel, type ForensicAuditReport } from "@/lib/audit-schema";
 import { buildPillarMatrix, pillarLabel, pillarQuestion, PILLARS, topFix } from "@/lib/pillars";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +28,7 @@ export function ExecutiveSummary({
 }) {
   const matrix = buildPillarMatrix(report);
   const fix = topFix(report);
+  const diagnosis = report.journey_diagnosis;
 
   return (
     <motion.section
@@ -40,6 +41,9 @@ export function ExecutiveSummary({
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
         <div className="min-w-0">
           <h2 className="label-caps">Experience summary</h2>
+          {diagnosis && (
+            <p className="mt-1 text-sm font-medium text-foreground">{diagnosis.headline}</p>
+          )}
           {matrix.weakest && (
             <p className="mt-1 text-sm text-foreground">
               Weakest link:{" "}
@@ -61,6 +65,38 @@ export function ExecutiveSummary({
           Export PDF
         </button>
       </header>
+
+      {diagnosis && (
+        <div className="border-b border-border px-4 py-4">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+            <span>{diagnosis.vertical}</span>
+            <span>{diagnosis.steps_to_commit} steps to commit</span>
+            {diagnosis.drop_off_stage && <span>likeliest drop-off · {diagnosis.drop_off_stage}</span>}
+          </div>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{diagnosis.diagnosis}</p>
+
+          {diagnosis.moves.length > 0 && (
+            <ol className="mt-4 space-y-2.5">
+              {diagnosis.moves.map((move, i) => (
+                <li key={move.title} className="flex gap-3">
+                  <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/12 font-mono text-[10px] font-semibold text-primary">
+                    {i + 1}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-foreground">{move.title}</span>
+                    <span className="mt-0.5 block text-sm leading-relaxed text-muted-foreground">
+                      {move.rationale}
+                    </span>
+                    <span className="mt-1 block font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                      {impactLabel[move.impact]} · {move.stage}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      )}
 
       <div data-print-wrap className="overflow-x-auto p-4">
         <table data-print-table className="w-full min-w-[34rem] border-separate border-spacing-1 text-left">

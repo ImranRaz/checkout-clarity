@@ -15,6 +15,9 @@ export BROWSERBASE_API_KEY=bb_live_...        # your Browserbase key
 export BROWSERBASE_API_KEYS=k1,k2               # optional: rotate across free accounts
 export OPENAI_API_KEY=sk-...                    # OpenAI key, or an OpenRouter key
 export OPENAI_BASE_URL=                         # optional: https://openrouter.ai/api/v1
+export STAGEHAND_MODEL=gpt-4.1-mini             # navigation: cheap + fast
+export UX_REVIEW_MODEL=gpt-4.1                  # per-page review council: needs vision + taste
+export JOURNEY_REVIEW_MODEL=                    # optional: run-level diagnosis (defaults to UX_REVIEW_MODEL)
 node src/cli.js "https://store.com/products/thing"
 ```
 

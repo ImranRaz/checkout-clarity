@@ -241,9 +241,27 @@ export const PAGE_DIGEST_SCRIPT = `(() => {
       above_fold: r.top + window.scrollY < window.innerHeight,
     };
   };
+  const geometry = {};
+  const sel = (el) => {
+    const cls = (el.className && typeof el.className === 'string' ? el.className.trim().split(/\\s+/)[0] : '');
+    return el.id ? '#' + el.id : el.tagName.toLowerCase() + (cls ? '.' + cls : '');
+  };
   const ref = (el, i) => {
     el.setAttribute('data-fx-ref', String(i));
-    return 'e' + i;
+    const key = 'e' + i;
+    const r = el.getBoundingClientRect();
+    // Frozen at capture time, in percentages of the full-page screenshot, so a
+    // review that finishes after the agent has navigated away still pins onto
+    // the right pixels.
+    geometry[key] = {
+      x_percentage: Math.min(100, Math.max(0, ((r.left + r.width / 2) / vw) * 100)),
+      y_percentage: Math.min(100, Math.max(0, ((r.top + window.scrollY + r.height / 2) / vh) * 100)),
+      w_percentage: Math.min(100, Math.max(0, (r.width / vw) * 100)),
+      h_percentage: Math.min(100, Math.max(0, (r.height / vh) * 100)),
+      selector: sel(el),
+      text: (el.innerText || el.value || el.getAttribute('aria-label') || '').trim().slice(0, 70),
+    };
+    return key;
   };
   let i = 0;
   const controls = [...main.querySelectorAll('a,button,[role="button"],input,select,textarea,summary')]
@@ -262,17 +280,23 @@ export const PAGE_DIGEST_SCRIPT = `(() => {
     text: (el.innerText || '').trim().slice(0, 100),
     ...box(el),
   }));
+  const bodyText = ((document.body && document.body.innerText) || '').replace(/\\s+/g, ' ').trim();
   return {
     url: location.href,
     title: document.title,
     viewport: { width: vw, height: window.innerHeight, document_height: vh },
     above_fold_text: (main.innerText || '').trim().slice(0, 1200),
+    page_text: bodyText.slice(0, 6000),
     headings,
     controls,
+    geometry,
   };
 })()`;
 
-/** Resolve a ref handed back by the model into pin geometry. */
+/**
+ * Kept for callers that still resolve against the live page. The reviewer no
+ * longer uses it: geometry is frozen into the digest at capture time.
+ */
 export const RESOLVE_REF_SCRIPT = (ref) => `(() => {
   const el = document.querySelector('[data-fx-ref="${String(ref).replace(/[^0-9]/g, "")}"]');
   if (!el) return null;
@@ -286,3 +310,4 @@ export const RESOLVE_REF_SCRIPT = (ref) => `(() => {
     selector: el.id ? '#' + el.id : el.tagName.toLowerCase() + (cls ? '.' + cls : ''),
   };
 })()`;
+
