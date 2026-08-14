@@ -96,12 +96,131 @@ export const MODAL_PRESENT = `(() => {
 })()`;
 
 /**
- * Clear whatever is in the way. Safe to call often — the cheap passes are
- * pure DOM, and the model is only consulted when a blocker survives them.
+ * Everything a reviewer would want to say about a pop-up, read before we close
+ * it. A consent wall, newsletter modal or region picker is the first
+ * experience a shopper has: its copy, its timing and how hard it makes saying
+ * no are all fair game for the audit, not just noise to be clicked away.
  */
-export async function dismissOverlays(page, { emit, deep = false } = {}) {
+export const OVERLAY_CAPTURE = `(() => {
+  const w = window.innerWidth, h = window.innerHeight;
+  const seen = new Set();
+  const out = [];
+  const points = [[w/2, h/2], [w/2, h*0.3], [w/2, h*0.88], [w*0.18, h/2], [w*0.82, h/2]];
+
+  const blockerFor = (el) => {
+    let node = el;
+    while (node && node !== document.body) {
+      const s = getComputedStyle(node);
+      const box = node.getBoundingClientRect();
+      const fixed = s.position === 'fixed' || s.position === 'sticky';
+      const big = box.width * box.height > w * h * 0.04;
+      const layered = Number(s.zIndex || 0) > 50;
+      const dialog = node.getAttribute('role') === 'dialog' || node.getAttribute('aria-modal') === 'true' || node.tagName === 'DIALOG';
+      if (dialog || (fixed && big && layered)) return node;
+      node = node.parentElement;
+    }
+    return null;
+  };
+
+  const ACCEPT = /^(accept|accept all|allow|allow all|agree|i agree|subscribe|sign up|get \\d+%|yes|continue|ok|okay|shop|join|unlock|claim)/i;
+  const DECLINE = /(no thanks|no, thanks|not now|maybe later|decline|reject|deny|dismiss|close|skip|cancel|continue without)/i;
+
+  for (const [x, y] of points) {
+    const hit = document.elementFromPoint(x, y);
+    const node = hit && blockerFor(hit);
+    if (!node) continue;
+    const r = node.getBoundingClientRect();
+    const key = Math.round(r.left) + ':' + Math.round(r.top) + ':' + Math.round(r.width) + ':' + Math.round(r.height);
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const controls = [...node.querySelectorAll('button,[role="button"],a[href],input[type=submit]')].filter((el) => {
+      const b = el.getBoundingClientRect();
+      return b.width > 4 && b.height > 4;
+    });
+    const labelled = controls.map((el) => {
+      const b = el.getBoundingClientRect();
+      const s = getComputedStyle(el);
+      return {
+        text: ((el.innerText || el.value || el.getAttribute('aria-label') || '').replace(/\\s+/g, ' ').trim()).slice(0, 48),
+        area: Math.round(b.width * b.height),
+        // A "no thanks" set in 11px grey underline next to a filled button is
+        // the classic dark pattern; the numbers make that judgeable.
+        font_size: parseFloat(s.fontSize) || 0,
+        has_background: s.backgroundColor !== 'rgba(0, 0, 0, 0)' && s.backgroundColor !== 'transparent',
+      };
+    }).filter((c) => c.text);
+
+    const accept = labelled.find((c) => ACCEPT.test(c.text));
+    const decline = labelled.find((c) => DECLINE.test(c.text));
+    const closeControl = controls.find((el) =>
+      /close|dismiss|✕|×/i.test((el.getAttribute('aria-label') || el.innerText || '').trim()));
+
+    const heading = node.querySelector('h1,h2,h3,[class*="title" i],[class*="heading" i]');
+    const inputs = node.querySelectorAll('input:not([type=hidden]):not([type=submit]):not([type=button])');
+
+    out.push({
+      rect: { x: Math.max(0, Math.round(r.left)), y: Math.max(0, Math.round(r.top)), width: Math.round(Math.min(r.width, w)), height: Math.round(Math.min(r.height, h)) },
+      coverage_percentage: Math.round(((Math.min(r.width, w) * Math.min(r.height, h)) / (w * h)) * 1000) / 10,
+      role: node.getAttribute('role') || node.tagName.toLowerCase(),
+      heading: heading ? (heading.innerText || '').replace(/\\s+/g, ' ').trim().slice(0, 120) : '',
+      text: (node.innerText || '').replace(/\\s+/g, ' ').trim().slice(0, 600),
+      ctas: labelled.slice(0, 8),
+      accept_label: accept ? accept.text : '',
+      decline_label: decline ? decline.text : '',
+      // Weaker decline: no background fill, or noticeably smaller type.
+      decline_is_weaker: !!(accept && decline && (!decline.has_background && accept.has_background || decline.font_size + 1 < accept.font_size)),
+      has_close_control: !!closeControl,
+      close_is_keyboard_reachable: !!(closeControl && closeControl.tabIndex >= 0),
+      asks_for_input: inputs.length,
+      elapsed_ms: Math.round(performance.now()),
+    });
+    if (out.length >= 3) break;
+  }
+  return out;
+})()`;
+
+/**
+ * Clear whatever is in the way — but audit it on the way past. Safe to call
+ * often: the cheap passes are pure DOM, and the model is only consulted when a
+ * blocker survives them.
+ */
+export async function dismissOverlays(page, { emit, deep = false, capture = true } = {}) {
   let cleared = 0;
+
+  // Audit before dismissal: once it is closed the evidence is gone.
+  const captured = [];
+  if (capture) {
+    let found = [];
+    try {
+      found = (await page.evaluate(OVERLAY_CAPTURE)) || [];
+    } catch {}
+    for (const overlay of found.slice(0, 2)) {
+      const { rect } = overlay;
+      if (rect.width < 60 || rect.height < 40) continue;
+      let image = null;
+      try {
+        const shot = await page.screenshot({
+          type: "jpeg",
+          quality: 72,
+          clip: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+        });
+        image = `data:image/jpeg;base64,${shot.toString("base64")}`;
+      } catch {
+        /* a crop can fail on a page mid-navigation — the text still stands */
+      }
+      captured.push({ ...overlay, image });
+    }
+    if (captured.length > 0) {
+      emit?.(
+        "vision",
+        `Reading the pop-up before closing it${captured[0].heading ? ` (“${captured[0].heading.slice(0, 48)}”)` : ""}`,
+      );
+    }
+  }
+
   try {
+
     cleared = (await page.evaluate(OVERLAY_SCRIPT)) || 0;
   } catch {}
 
