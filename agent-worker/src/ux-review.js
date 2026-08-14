@@ -149,6 +149,10 @@ EVERY finding must:
 - carry a recommendation that a designer could act on tomorrow;
 - carry an impact of material, meaningful or minor, judged on revenue.
 
+WHAT THE SCROLL PASS SAW: before this capture the page was scrolled from top to bottom in viewport steps, so lazy content has loaded and the whole page is real. Where a "Scroll pass" line and a "During-scroll observations" block are given, treat them as measured fact and judge the READING EXPERIENCE they describe: whether the information a buyer needs arrives in the order they need it, whether the page pads the distance to the decision with repetition, whether something important is stranded far below the point of intent, and whether anything a shopper needs is simply absent from the full page copy. Do not restate the raw numbers as findings — layout shift, stalled images and CTA depth are already reported separately.
+
+POP-UPS: if a "Pop-up shown to the shopper" block is given, one of you must judge it (persona "copy" if it is about wording, "trust" if it is about pressure or consent, "strategist" if it is about timing or interruption). Ask: does its message connect to what the shopper came here for, or is it generic? Does it interrupt before the page has given any value? Is declining as easy and as visible as accepting, or is "no thanks" hidden in small grey text next to a filled button? Does it ask for an email before showing a single product? Use ref "o1" (or "o2") for a finding about a pop-up, and quote its actual wording. If a copy finding, rewrite the pop-up's headline or CTA concretely.
+
 Return AT MOST 4 findings, ideally spread across the lenses, and return an empty list if the page is genuinely sound — an empty list is a valid, respected answer.`;
 
 /**
@@ -163,9 +167,28 @@ export function createReviewer(provider, { vertical } = {}) {
   const device = process.env.AGENT_DEVICE || "desktop";
   const system = SYSTEM(brief, device);
 
-  return async function review(_page, { kind, label, screenshot, digest, timeoutMs = 60000 }) {
+  return async function review(
+    _page,
+    { kind, label, screenshot, digest, scroll_profile, scroll_brief, interstitials = [], timeoutMs = 60000 },
+  ) {
     if (!digest) return [];
-    const geometry = digest.geometry || {};
+    const geometry = { ...(digest.geometry || {}) };
+
+    // Pop-ups get their own refs. Their geometry is viewport-relative at the
+    // moment of capture, which is the top of the page, so it converts cleanly
+    // into the full-page percentage space the pins live in.
+    const docHeight = Math.max(digest.viewport.document_height || 1, 1);
+    const vw = Math.max(digest.viewport.width || 1, 1);
+    interstitials.slice(0, 2).forEach((overlay, index) => {
+      const r = overlay.rect || {};
+      geometry[`o${index + 1}`] = {
+        x_percentage: Math.min(100, ((r.x + r.width / 2) / vw) * 100),
+        y_percentage: Math.min(100, ((r.y + r.height / 2) / docHeight) * 100),
+        w_percentage: Math.min(100, (r.width / vw) * 100),
+        h_percentage: Math.min(100, (r.height / docHeight) * 100),
+        selector: "overlay",
+      };
+    });
 
     const prompt = [
       `Journey step: ${label} (stage type: ${kind}).`,
@@ -177,11 +200,42 @@ export function createReviewer(provider, { vertical } = {}) {
       `Interactive controls (ref, text, disabled, position as % of page): ${JSON.stringify(digest.controls)}`,
       ``,
       `Page copy: ${digest.above_fold_text}`,
+      ...(scroll_brief ? ["", scroll_brief] : []),
+      ...(scroll_profile
+        ? [
+            `During-scroll observations: ${JSON.stringify({
+              viewports: scroll_profile.viewports,
+              primary_cta: scroll_profile.primary_cta,
+              pinned_while_scrolling: scroll_profile.sticky,
+              infinite_scroll: scroll_profile.infinite_scroll,
+            })}`,
+            "",
+            `Full page copy after scrolling (this is everything the page says): ${scroll_profile.page_text}`,
+          ]
+        : []),
+      ...interstitials.slice(0, 2).flatMap((overlay, index) => [
+        "",
+        `Pop-up shown to the shopper (ref o${index + 1}, appeared ${(overlay.elapsed_ms / 1000).toFixed(1)}s after landing, covering ${overlay.coverage_percentage}% of the screen${overlay.repeat_count > 1 ? `, shown ${overlay.repeat_count} times during the journey` : ""}):`,
+        JSON.stringify({
+          heading: overlay.heading,
+          text: overlay.text,
+          buttons: overlay.ctas,
+          accept_label: overlay.accept_label,
+          decline_label: overlay.decline_label,
+          decline_is_visually_weaker: overlay.decline_is_weaker,
+          has_close_control: overlay.has_close_control,
+          asks_for_input_fields: overlay.asks_for_input,
+        }),
+      ]),
     ].join("\n");
 
     const content = [
       { type: "text", text: prompt },
       { type: "image", image: screenshot },
+      ...interstitials
+        .slice(0, 2)
+        .filter((overlay) => overlay.image)
+        .map((overlay) => ({ type: "image", image: overlay.image })),
     ];
 
     const withTimeout = (promise) => {
@@ -234,7 +288,14 @@ export function createReviewer(provider, { vertical } = {}) {
       if (!box) continue;
 
       // Guard 2 — quoted evidence must exist on the page we captured.
-      if (!evidenceHolds(f.evidence, digest.page_text || digest.above_fold_text)) continue;
+      const haystack = [
+        digest.page_text || digest.above_fold_text,
+        scroll_profile?.page_text,
+        ...interstitials.map((overlay) => `${overlay.heading} ${overlay.text}`),
+      ]
+        .filter(Boolean)
+        .join(" ");
+      if (!evidenceHolds(f.evidence, haystack)) continue;
 
       // A copy finding with no rewrite is exactly the generic advice we told
       // the model not to send.

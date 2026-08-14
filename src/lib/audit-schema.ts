@@ -110,6 +110,72 @@ export const stageKindSchema = z.enum([
 export type StageKind = z.infer<typeof stageKindSchema>;
 
 /**
+ * The result of scrolling a page from top to bottom before capturing it.
+ * Everything here is measured during the sweep, not inferred from the DOM at
+ * rest, which is why it can say things a static capture never could: what
+ * never loaded, what stayed pinned, how far down the decision lives.
+ */
+export const scrollProfileSchema = z.object({
+  /** Page height in viewports. 1.0 means everything fits on one screen. */
+  viewports: z.number().default(1),
+  document_height: z.number().default(0),
+  viewport_height: z.number().default(0),
+  steps: z.number().default(0),
+  swept: z.boolean().default(false),
+  /** Layout shift accumulated *after* load, during the scroll. */
+  shift_after_load: z.number().default(0),
+  long_tasks: z.number().default(0),
+  longest_task_ms: z.number().default(0),
+  /** Large images still blank after being scrolled into view. */
+  stalled_media_count: z.number().default(0),
+  media_count: z.number().default(0),
+  infinite_scroll: z.boolean().default(false),
+  sticky: z
+    .array(
+      z.object({
+        text: z.string().default(""),
+        coverage_percentage: z.number().default(0),
+        edge: z.string().default("middle"),
+      }),
+    )
+    .default([]),
+  primary_cta: z
+    .object({
+      text: z.string().default(""),
+      /** How far down the page the buying action sits, as a percentage. */
+      depth_percentage: z.number().default(0),
+      sticky: z.boolean().default(false),
+    })
+    .nullable()
+    .default(null),
+});
+export type ScrollProfile = z.infer<typeof scrollProfileSchema>;
+
+/**
+ * A pop-up the shopper had to get past. Recorded before dismissal, because
+ * the first thing a site says to a visitor is part of the experience being
+ * audited — not noise to be clicked away silently.
+ */
+export const interstitialSchema = z.object({
+  heading: z.string().default(""),
+  text: z.string().default(""),
+  /** Milliseconds after landing before it appeared. */
+  elapsed_ms: z.number().default(0),
+  coverage_percentage: z.number().default(0),
+  accept_label: z.string().default(""),
+  decline_label: z.string().default(""),
+  /** True when declining is visually de-emphasised next to accepting. */
+  decline_is_weaker: z.boolean().default(false),
+  has_close_control: z.boolean().default(false),
+  asks_for_input: z.number().default(0),
+  repeat_count: z.number().default(1),
+  /** Cropped screenshot of the overlay itself, as a data URL. */
+  image: z.string().nullable().default(null),
+});
+export type Interstitial = z.infer<typeof interstitialSchema>;
+
+
+/**
  * A stage is one page the agent actually landed on. A run records only the
  * stages it reached, so a two-step site has two stages and a four-step site
  * has four.
@@ -128,8 +194,17 @@ export const stageSchema = z.object({
     caption: z.string(),
   }),
   technical_metrics: technicalMetricsSchema,
+  /**
+   * What the agent learned by scrolling the page top to bottom before
+   * capturing it. Null when the page was too short to sweep, or when the
+   * sweep failed — the report degrades to what it showed before.
+   */
+  scroll_profile: scrollProfileSchema.nullish().optional(),
+  /** Pop-ups that interrupted the shopper on the way to this stage. */
+  interstitials: z.array(interstitialSchema).optional(),
   friction_points: z.array(frictionPointSchema),
 });
+
 export type AuditStage = z.infer<typeof stageSchema>;
 
 export const auditReportSchema = z.object({
