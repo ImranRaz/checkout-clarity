@@ -8,6 +8,7 @@ import { reviewJourney } from "./journey-review.js";
 import { classifyVertical, VERTICALS } from "./vertical.js";
 import { VITALS_INIT, VITALS_READ } from "./vitals.js";
 import { dismissOverlays } from "./overlays.js";
+import { scrollBrief, scrollFindings, scrollSweep } from "./scroll.js";
 import { isExhaustedStatus, keyLabel, loadKeys, rotationOrder } from "./keys.js";
 
 /**
@@ -437,6 +438,29 @@ let vertical = VERTICALS.generic;
  * findings are merged in when the run finishes.
  */
 let pendingReviews = [];
+/**
+ * Pop-ups are captured on the way past and attached to the stage they
+ * interrupted, so the report can judge their copy and timing instead of
+ * pretending they never happened.
+ */
+let capturedInterstitials = [];
+
+/** dismissOverlays, with the audit evidence kept rather than thrown away. */
+async function clearOverlays(page, options) {
+  const result = await dismissOverlays(page, options);
+  if (result?.interstitials?.length) {
+    for (const overlay of result.interstitials) {
+      const key = `${overlay.heading}|${overlay.text.slice(0, 80)}`;
+      if (capturedInterstitials.some((o) => `${o.heading}|${o.text.slice(0, 80)}` === key)) {
+        const seen = capturedInterstitials.find((o) => `${o.heading}|${o.text.slice(0, 80)}` === key);
+        seen.repeat_count = (seen.repeat_count || 1) + 1;
+        continue;
+      }
+      capturedInterstitials.push({ ...overlay, repeat_count: 1 });
+    }
+  }
+  return result;
+}
 
 async function captureStage(page, { kind, label: rawLabel, transition, emit }) {
   const label = cleanLabel(rawLabel, kind);
@@ -578,9 +602,9 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     }
 
     // First-visit interstitials often fire on a timer, so sweep twice.
-    await dismissOverlays(page, { emit, deep: true });
+    await clearOverlays(page, { emit, deep: true });
     await page.waitForTimeout(1800);
-    await dismissOverlays(page, { emit, deep: true });
+    await clearOverlays(page, { emit, deep: true });
 
     // Classifying the entry page used to be an LLM round trip before a single
     // click. The DOM already answers it, so the run starts moving immediately.
@@ -620,7 +644,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     const openedProducts = new Set();
 
     for (let step = 0; !wall && step < MAX_STEPS && Date.now() < deadline; step += 1) {
-      await withTimeout(dismissOverlays(page, { emit }), 12000, "Clearing pop-ups").catch(() => {});
+      await withTimeout(clearOverlays(page, { emit }), 12000, "Clearing pop-ups").catch(() => {});
 
       // Reading controls is now a DOM scan, so it cannot stall the run; if it
       // ever does, the planner simply works from the screen alone.
@@ -646,7 +670,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
             .goto(target.href, { waitUntil: "domcontentloaded", timeout: 30000 })
             .catch(() => {});
           await page.waitForTimeout(1200);
-          await withTimeout(dismissOverlays(page, { emit }), 12000, "Clearing pop-ups").catch(
+          await withTimeout(clearOverlays(page, { emit }), 12000, "Clearing pop-ups").catch(
             () => {},
           );
           const jumpedKind = await page.evaluate(CLASSIFY_SCRIPT).catch(() => "detail");
@@ -790,7 +814,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
         // A pop-up that appeared mid-turn is the most common cause of an
         // action timing out. Clear it and give this turn one free retry.
         const { blocker, cleared } = await withTimeout(
-          dismissOverlays(page, { emit, deep: true }),
+          clearOverlays(page, { emit, deep: true }),
           THINK_TIMEOUT_MS,
           "Clearing pop-ups",
         ).catch(() => ({ blocker: null, cleared: 0 }));
@@ -816,7 +840,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
       // Recovery ladder — nothing on screen changed, so the clicks landed on
       // nothing. Reveal more of the page, then fall back to a real link.
       if (!moved) {
-        const { cleared } = await dismissOverlays(page, { emit, deep: true });
+        const { cleared } = await clearOverlays(page, { emit, deep: true });
         if (cleared > 0) {
           await page.waitForTimeout(600);
           moved = (await readSignature(page)) !== before;
@@ -832,7 +856,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
         if (href && href !== page.url()) {
           emit("system", "That control did nothing — opening the item directly");
           await page.goto(href, { waitUntil: "domcontentloaded", timeout: 30000 }).catch(() => {});
-          await dismissOverlays(page, { emit });
+          await clearOverlays(page, { emit });
           moved = (await readSignature(page)) !== before;
         }
       }
@@ -852,7 +876,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
 
       stalledAttempts = 0;
       history.push(moves.join(" then "));
-      await dismissOverlays(page, { emit });
+      await clearOverlays(page, { emit });
 
       const stage = await captureStage(page, {
         kind: decision.resulting_kind,
