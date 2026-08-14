@@ -49,6 +49,7 @@ function LiveRun() {
 
 
   const startedRef = useRef(false);
+  const jobIdRef = useRef<string | null>(null);
   const cancelled = useRef(false);
 
   // Server-function wrappers get a fresh identity on every render, so they must
@@ -58,18 +59,26 @@ function LiveRun() {
   fns.current = { startLive, pollLive, persistRun };
 
   useEffect(() => {
-    if (!url || startedRef.current) return;
-    startedRef.current = true;
+    if (!url) return;
+    // Always clear the cancel flag on (re)mount. React's dev double-invoke
+    // tears the first effect down immediately; without this the loop below
+    // would see a stale `true` and abandon a job that is happily running.
     cancelled.current = false;
 
     void (async () => {
-      const started = await fns.current.startLive({ data: { url: normalizeUrl(url) } });
-      if (cancelled.current) return;
-      if (!started.ok) {
-        setStatus("error");
-        setError(started.error);
-        return;
+      if (!jobIdRef.current) {
+        if (startedRef.current) return; // a start is already in flight
+        startedRef.current = true;
+        const started = await fns.current.startLive({ data: { url: normalizeUrl(url) } });
+        if (!started.ok) {
+          setStatus("error");
+          setError(started.error);
+          return;
+        }
+        jobIdRef.current = started.jobId;
       }
+      const jobId = jobIdRef.current;
+      if (!jobId || cancelled.current) return;
       setStatus("running");
 
       const deadline = Date.now() + 8 * 60 * 1000;
@@ -79,7 +88,7 @@ function LiveRun() {
         await new Promise((resolve) => setTimeout(resolve, 2000));
         if (cancelled.current) return;
 
-        const poll = await fns.current.pollLive({ data: { jobId: started.jobId } });
+        const poll = await fns.current.pollLive({ data: { jobId } });
         if (cancelled.current) return;
         if (!poll.ok) {
           // A single flaky poll shouldn't kill a run that's still going.
@@ -135,6 +144,7 @@ function LiveRun() {
       cancelled.current = true;
     };
   }, [url]);
+
 
   // Keep the clock moving between two-second polls.
   useEffect(() => {
