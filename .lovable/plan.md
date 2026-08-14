@@ -44,6 +44,8 @@ The sweep is bounded: max ~12 viewport steps, ~250ms settle each, hard 8s budget
 - New `agent-worker/src/scroll.js`: `SCROLL_INIT` (installs a PerformanceObserver for layout-shift and longtask before the sweep), `SCROLL_STEP`, and `SCROLL_REPORT` scripts, plus a `scrollSweep(page)` driver that returns the scroll profile and evidence.
 - `agent-worker/src/agent.js`: run `scrollSweep` inside `captureStage` before the `Promise.all`, return to top, then screenshot. Attach `scroll_profile` to the stage and thread it into the reviewer call and the journey review.
 - `agent-worker/src/friction.js`: add scroll-derived checks to the measured pass (lazy failures, post-load CLS, CTA depth, sticky occlusion) using the sweep result; capture `page_text` after the sweep so below-fold copy is present.
-- `agent-worker/src/ux-review.js` / `journey-review.js`: include the scroll profile in the prompt context.
-- `src/lib/audit-schema.ts`: optional `scroll_profile` on the stage.
-- `src/components/audit/ReportDashboard.tsx`: show the scroll profile as a compact strip on the technical tile (page height in viewports, CTA depth, shift after load, lazy failures).
+- `agent-worker/src/overlays.js`: before the dismiss passes, capture each overlay (text, CTA labels, coverage %, close-control presence, decline-affordance weight, trigger timing) and an element screenshot; return them from `dismissOverlays` instead of discarding.
+- `agent-worker/src/agent.js`: collect overlay captures per stage and pass them to the reviewer alongside the digest.
+- `agent-worker/src/ux-review.js` / `journey-review.js`: include the scroll profile and the overlay captures in the prompt context; overlay findings get their own evidence image and attach to the interrupted stage.
+- `src/lib/audit-schema.ts`: optional `scroll_profile` and `interstitials` on the stage; optional `evidence_image` on a friction point.
+- `src/components/audit/ReportDashboard.tsx`: show the scroll profile as a compact strip on the technical tile (page height in viewports, CTA depth, shift after load, lazy failures), and render the overlay crop as the evidence for interstitial findings.
