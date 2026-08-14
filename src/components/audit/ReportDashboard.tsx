@@ -8,6 +8,8 @@ import { SeverityChip } from "./SeverityChip";
 import {
   categoryLabel,
   formatBytes,
+  impactLabel,
+  personaLabel,
   formatMs,
   reachedStep,
   type AuditStage,
@@ -218,12 +220,41 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
                                 <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
                                   {categoryLabel[point.category]}
                                 </span>
+                                {point.persona && (
+                                  <span className="rounded-full border border-border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                                    {personaLabel[point.persona]}
+                                  </span>
+                                )}
+                                {point.impact && (
+                                  <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-primary">
+                                    {impactLabel[point.impact]}
+                                  </span>
+                                )}
                               </span>
                               {isActive && (
                                 <>
                                   <span className="mt-2 block text-sm leading-relaxed text-muted-foreground">
                                     {point.description}
                                   </span>
+                                  {point.recommendation && (
+                                    <span className="mt-2 block rounded-md bg-secondary px-2.5 py-2 text-sm leading-relaxed text-foreground">
+                                      <span className="label-caps block">Recommendation</span>
+                                      <span className="mt-1 block">{point.recommendation}</span>
+                                    </span>
+                                  )}
+                                  {point.rewrite_after && (
+                                    <span className="mt-2 block rounded-md border border-border px-2.5 py-2">
+                                      <span className="label-caps block">Suggested copy</span>
+                                      {point.rewrite_before && (
+                                        <span className="mt-1 block font-mono text-[11px] leading-relaxed text-muted-foreground line-through">
+                                          {point.rewrite_before}
+                                        </span>
+                                      )}
+                                      <span className="mt-1 block font-mono text-[11px] leading-relaxed text-foreground">
+                                        {point.rewrite_after}
+                                      </span>
+                                    </span>
+                                  )}
                                   <span className="mt-2 block font-mono text-[11px] text-muted-foreground">
                                     {point.selector} — {point.evidence}
                                   </span>
@@ -493,7 +524,29 @@ function StageCard({
   );
 }
 
-const ZOOM = 2.4;
+/**
+ * Every finding has a centre; the newer ones also carry the offending
+ * element's real box. Older stored reports fall back to a small box around
+ * the centre so the viewer behaves identically either way.
+ */
+function pointRect(point: FrictionPoint) {
+  if (point.rect) {
+    return {
+      x: point.rect.x_percentage,
+      y: point.rect.y_percentage,
+      w: Math.max(point.rect.w_percentage, 2),
+      h: Math.max(point.rect.h_percentage, 0.8),
+    };
+  }
+  return {
+    x: Math.max(0, point.x_percentage - 12),
+    y: Math.max(0, point.y_percentage - 3),
+    w: 24,
+    h: 6,
+  };
+}
+
+const clampNum = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 function EvidenceViewer({
   stage,
@@ -521,12 +574,25 @@ function EvidenceViewer({
 
   const point = stage.friction_points.find((p) => p.id === activeId) ?? null;
   const ratio = stage.screenshot.height / stage.screenshot.width;
+  const rect = point ? pointRect(point) : null;
 
-  const imgW = box.w * ZOOM;
+  // Scale so the offending element fills roughly half the frame in each axis,
+  // rather than applying one blunt zoom to a full-page capture.
+  const zoomFor = () => {
+    if (!rect || box.w === 0) return 2.4;
+    const byWidth = 55 / rect.w;
+    const byHeight = box.h === 0 ? byWidth : (55 / rect.h) * (box.h / box.w) / ratio;
+    return clampNum(Math.min(byWidth, byHeight), 1.4, 6);
+  };
+  const zoom = zoomFor();
+
+  const imgW = box.w * zoom;
   const imgH = imgW * ratio;
-  const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
-  const tx = point ? clamp(box.w / 2 - (point.x_percentage / 100) * imgW, Math.min(box.w - imgW, 0), 0) : 0;
-  const ty = point ? clamp(box.h / 2 - (point.y_percentage / 100) * imgH, Math.min(box.h - imgH, 0), 0) : 0;
+  // Centre on the element's box, not on a bare point.
+  const cx = rect ? ((rect.x + rect.w / 2) / 100) * imgW : 0;
+  const cy = rect ? ((rect.y + rect.h / 2) / 100) * imgH : 0;
+  const tx = rect ? clampNum(box.w / 2 - cx, Math.min(box.w - imgW, 0), 0) : 0;
+  const ty = rect ? clampNum(box.h / 2 - cy, Math.min(box.h - imgH, 0), 0) : 0;
 
   if (!zoomed) {
     return (
@@ -568,20 +634,20 @@ function EvidenceViewer({
           height={stage.screenshot.height}
           className="w-full bg-card"
         />
-        {point && (
+        {point && rect && (
           <span
             aria-hidden
             className={cn(
-              "pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 rounded-md border-2 shadow-[0_0_0_9999px_rgba(20,20,20,0.45)]",
+              "pointer-events-none absolute rounded-sm border-2 shadow-[0_0_0_9999px_rgba(20,20,20,0.45)]",
               point.severity === "high" && "border-sev-high",
               point.severity === "medium" && "border-sev-medium",
               point.severity === "low" && "border-sev-low",
             )}
             style={{
-              left: `${point.x_percentage}%`,
-              top: `${point.y_percentage}%`,
-              width: `${Math.min(46, 130 / ZOOM)}%`,
-              height: imgW ? `${(box.h * 0.34) / imgH * 100}%` : "8%",
+              left: `${rect.x}%`,
+              top: `${rect.y}%`,
+              width: `${rect.w}%`,
+              height: `${rect.h}%`,
             }}
           />
         )}
@@ -599,6 +665,11 @@ function EvidenceViewer({
   );
 }
 
+/**
+ * The badge sits just outside the element it points at — above-left by
+ * default, flipping to whichever side has room — so it never covers the very
+ * thing the finding is describing.
+ */
 function Pin({
   point,
   active,
@@ -610,13 +681,20 @@ function Pin({
   dim: boolean;
   onSelect: () => void;
 }) {
+  const rect = pointRect(point);
+  const flipRight = rect.x < 6;
+  const flipDown = rect.y < 3;
   return (
     <button
       type="button"
       onClick={onSelect}
-      style={{ left: `${point.x_percentage}%`, top: `${point.y_percentage}%` }}
+      style={{
+        left: `${flipRight ? rect.x + rect.w : rect.x}%`,
+        top: `${flipDown ? rect.y + rect.h : rect.y}%`,
+        transform: `translate(${flipRight ? "8%" : "-108%"}, ${flipDown ? "8%" : "-108%"})`,
+      }}
       className={cn(
-        "absolute -translate-x-1/2 -translate-y-1/2 rounded-full font-mono text-xs font-semibold transition-all duration-200",
+        "absolute rounded-full font-mono text-xs font-semibold transition-all duration-200",
         "size-7 border-2 border-card ring-2",
         point.severity === "high" && "bg-sev-high text-card ring-sev-high/35",
         point.severity === "medium" && "bg-sev-medium text-card ring-sev-medium/35",
@@ -630,6 +708,7 @@ function Pin({
     </button>
   );
 }
+
 
 function ViewToggle({
   active,

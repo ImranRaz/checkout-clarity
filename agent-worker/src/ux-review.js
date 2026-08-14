@@ -1,30 +1,36 @@
 import { generateObject, generateText } from "ai";
 import { z } from "zod";
 
-
-import { RESOLVE_REF_SCRIPT } from "./friction.js";
+import { verticalBrief } from "./vertical.js";
 
 /**
- * The judgement layer.
+ * The judgement layer — a small consulting council rather than a linter.
  *
  * friction.js measures what a machine can measure. It cannot tell you that a
- * price says "from $199" without saying what the real price is, that a page
- * asks for an email before showing anything, or that the next step in a
- * booking funnel is buried under three upsells. That is conversion-experience
- * judgement, and it is what this file asks a vision model for.
+ * price says "from $199" without saying what the real price is, that the hero
+ * CTA promises something the funnel can't deliver yet, or that the headline is
+ * talking about the brand instead of the buyer. That is conversion judgement,
+ * and it is what this file asks a strong multimodal model for — in three
+ * distinct voices:
  *
- * Two rules keep the output honest:
- *   1. The model never invents coordinates. It names an element ref from the
- *      page digest; we read that element's real bounding box in the browser.
- *      Refs that don't resolve are dropped.
- *   2. The model is told, explicitly and with examples, which patterns are
- *      intentional design rather than friction — variant-gated buy buttons,
- *      cookie banners already dismissed, small utility-nav links on desktop.
- *      Precision is scored higher than recall.
+ *   strategist — funnel logic, hierarchy, price transparency, decision info
+ *   copy       — headline/CTA/value proposition, with a literal rewrite
+ *   trust      — reassurance appropriate to THIS business model
+ *
+ * Three guards keep it honest:
+ *   1. Geometry is frozen at capture time. The model names a ref from the
+ *      digest; we look it up in that stage's own geometry map. Refs that are
+ *      not in the map are dropped. Nothing is ever resolved against a live
+ *      page that has since navigated away.
+ *   2. Quoted evidence must actually appear in the captured page text.
+ *   3. The vertical brief tells the model what this category's buyer needs —
+ *      and, explicitly, what it must never fault this category for.
  */
 
 const SEVERITIES = ["high", "medium", "low"];
 const CATEGORIES = ["trust", "clarity", "accessibility", "form", "performance"];
+const PERSONAS = ["strategist", "copy", "trust", "accessibility"];
+const IMPACTS = ["material", "meaningful", "minor"];
 
 /**
  * Deliberately permissive. A `.max()` on a string or a strict enum makes the
@@ -33,11 +39,18 @@ const CATEGORIES = ["trust", "clarity", "accessibility", "form", "performance"];
  */
 const reviewFinding = z.object({
   ref: z.string().describe("The element ref from the digest, e.g. 'e12'. Must be one that exists."),
+  persona: z.string().describe("strategist, copy or trust — which lens found this"),
   severity: z.string().describe("high, medium or low"),
   category: z.string().describe("trust, clarity, accessibility, form or performance"),
   title: z.string().describe("Plain, specific. What a shopper loses, not a rule name."),
   description: z.string().describe("Why this costs conversions on THIS page, in concrete terms."),
-  evidence: z.string().describe("The exact wording, number, or measurement you observed."),
+  evidence: z
+    .string()
+    .describe("Quote the exact wording or number you saw on the page, in double quotes."),
+  recommendation: z.string().describe("The specific change to make on this page."),
+  impact: z.string().describe("material, meaningful or minor"),
+  rewrite_before: z.string().describe("Copy findings only: the current wording, verbatim. Otherwise empty."),
+  rewrite_after: z.string().describe("Copy findings only: your replacement wording. Otherwise empty."),
 });
 
 const reviewSchema = z.object({
@@ -53,13 +66,20 @@ function clamp(value, limit) {
 function normalise(finding) {
   const severity = String(finding?.severity || "").toLowerCase();
   const category = String(finding?.category || "").toLowerCase();
+  const persona = String(finding?.persona || "").toLowerCase();
+  const impact = String(finding?.impact || "").toLowerCase();
   return {
     ref: String(finding?.ref || "").trim(),
+    persona: PERSONAS.find((p) => persona.includes(p)) || "strategist",
     severity: SEVERITIES.find((s) => severity.includes(s)) || "medium",
     category: CATEGORIES.find((c) => category.includes(c)) || "clarity",
-    title: clamp(finding?.title, 80),
-    description: clamp(finding?.description, 320),
-    evidence: clamp(finding?.evidence, 200),
+    impact: IMPACTS.find((i) => impact.includes(i)) || "meaningful",
+    title: clamp(finding?.title, 90),
+    description: clamp(finding?.description, 340),
+    evidence: clamp(finding?.evidence, 220),
+    recommendation: clamp(finding?.recommendation, 260),
+    rewrite_before: clamp(finding?.rewrite_before, 180),
+    rewrite_after: clamp(finding?.rewrite_after, 180),
   };
 }
 
@@ -78,44 +98,81 @@ function parseLoose(text) {
   }
 }
 
+const squash = (text) => String(text || "").toLowerCase().replace(/[\u2018\u2019\u201c\u201d]/g, "'").replace(/\s+/g, " ").trim();
 
-const SYSTEM = `You are a senior conversion-experience reviewer auditing one step of a real purchase or booking journey. You have 15 years of e-commerce CRO and WCAG experience and your reputation rests on precision.
+/**
+ * Evidence binding. Anything the model puts in quotes has to exist on the page.
+ * Unquoted evidence (an observation like "no cancellation policy anywhere in
+ * the page copy") is allowed through — you cannot quote an absence.
+ */
+function evidenceHolds(evidence, pageText) {
+  const haystack = squash(pageText);
+  if (!haystack) return true;
+  const quotes = String(evidence || "").match(/["'\u201c\u2018]([^"'\u201d\u2019]{6,80})["'\u201d\u2019]/g) || [];
+  if (quotes.length === 0) return true;
+  return quotes.every((raw) => {
+    const needle = squash(raw.replace(/^["'\u201c\u2018]|["'\u201d\u2019]$/g, ""));
+    if (needle.length < 6) return true;
+    if (haystack.includes(needle)) return true;
+    // Allow light paraphrase of casing/punctuation by matching on words.
+    const words = needle.split(" ").filter((w) => w.length > 3);
+    if (words.length === 0) return true;
+    const hits = words.filter((w) => haystack.includes(w)).length;
+    return hits / words.length >= 0.8;
+  });
+}
 
-You are looking for LEAKAGE — the reasons a motivated buyer on this exact page hesitates, backtracks, or leaves:
-- Is the next step unambiguous, or does the shopper have to guess what to click?
-- Is the price complete and honest at this point, or does cost appear later?
-- Is the information needed to decide (size guide, availability, delivery date, what's included, cancellation terms) present at the decision point, or does it require leaving the page?
-- Does the page ask for effort or personal data before delivering value?
-- Does anything visually compete with, or outrank, the primary action?
-- Is the state of a choice (selected size, chosen date, current step of N) legible?
-- Are error, empty, and disabled states explained rather than silent?
-- Real accessibility barriers that a shopper would actually feel: contrast so low the price is hard to read, a control that reads as decoration, meaning carried by colour alone.
+const SYSTEM = (brief, device) => `You are a three-person conversion consultancy reviewing one step of a real purchase or booking journey for a Fortune-100 client. Between you there are decades of e-commerce CRO, direct-response copywriting and WCAG work, and the engagement is judged on precision, not volume.
 
-DO NOT REPORT any of the following. They are correct design or already covered by automated measurement, and reporting them destroys trust in the audit:
-- A buy/reserve button that is absent or disabled because a size, colour, date, or cabin has not been chosen yet. That gating is intentional. Only flag it if choosing an option is itself unclear.
-- A category, listing, or search-results page having no add-to-cart. That is expected.
-- Small link or tap sizes, missing alt text, missing form labels, page-speed and layout-shift numbers, console errors. All of these are measured separately.
-- Images that are blank, grey, or missing in the lower part of a long screenshot. Modern catalogues lazy-load imagery below the fold and the capture is taken before off-screen images decode. This is correct, intentional behaviour — NEVER report it as "images fail to load", "broken images", or "catalogue does not render". Only report an image problem if an image is missing INSIDE the first viewport height, or if a visible placeholder explicitly reads as an error.
+${brief}
+
+You are reviewing a ${device} session. Report findings from these three lenses, and tag each with the lens that found it:
+
+STRATEGIST (persona: "strategist") — funnel logic and decision-making. Is the next step unambiguous? Is the price complete and honest at this point, or does cost appear later? Is the information needed to decide present at the decision point, or does it require leaving the page? Does anything visually compete with or outrank the primary action? Is the state of a choice (selected option, step N of M) legible? Does the page ask for effort or personal data before delivering value? Are error, empty and disabled states explained rather than silent?
+
+COPY (persona: "copy") — the words. Is the headline about the buyer's outcome or the brand's self-image? Does the CTA name what happens next, or is it a generic verb? Is the value proposition stated where the decision is made? Is jargon standing in for meaning? Is an objection left unanswered in the copy? EVERY copy finding MUST include rewrite_before (the current wording, verbatim from the page) and rewrite_after (your replacement, in this brand's register). A copy finding without a concrete rewrite is worthless — do not submit one.
+
+TRUST (persona: "trust") — risk and reassurance, using THIS business model's vocabulary as set out in the brief above. Reassurance this category's buyer actually looks for, credibility, and honesty of claims (countdowns, "from" pricing, urgency that is not real).
+
+DO NOT REPORT any of the following. They are correct design, already measured elsewhere, or category-inappropriate, and reporting them destroys the client's trust in the audit:
+- Anything the brief lists under "DO NOT ask this business for". This is the most common and most damaging error.
+- A buy/reserve button that is absent or disabled because a size, colour, date or cabin has not been chosen yet. That gating is intentional. Only flag it if choosing an option is itself unclear.
+- A category, listing or search-results page having no add-to-cart. That is expected.
+- Small link or tap sizes, missing alt text, missing form labels, page-speed and layout-shift numbers, console errors. All measured separately.
+- Images that are blank, grey or missing in the lower part of a long screenshot. Catalogues lazy-load below the fold and the capture precedes decode. NEVER report this. Only report an image problem inside the first viewport height, or a visible error placeholder.
 - Anything you cannot see evidence for in the screenshot or the digest. Never speculate about behaviour behind a click.
 - Generic advice that would apply to any website ("add social proof", "improve the design", "use clearer CTAs").
 
+EVERY finding must:
+- name a ref that exists in the digest, and that ref must be the element the finding is actually about — if you are writing about the hero CTA, name the hero CTA's ref, not a nearby image;
+- quote real page wording in "evidence", copied exactly, or state plainly what is absent;
+- carry a recommendation that a designer could act on tomorrow;
+- carry an impact of material, meaningful or minor, judged on revenue.
 
-Return AT MOST 3 findings, and return an empty list if the page is genuinely sound — an empty list is a valid, respected answer. Rank by revenue impact. Each finding must reference a real element ref from the digest and quote specific evidence from this page.`;
+Return AT MOST 4 findings, ideally spread across the lenses, and return an empty list if the page is genuinely sound — an empty list is a valid, respected answer.`;
 
 /**
  * @param {(modelId: string) => any} provider  AI SDK provider factory
+ * @param {{ vertical?: object }} options
  */
-export function createReviewer(provider) {
-  const modelId = process.env.UX_REVIEW_MODEL || process.env.STAGEHAND_MODEL || "gpt-4.1-mini";
+export function createReviewer(provider, { vertical } = {}) {
+  const modelId =
+    process.env.UX_REVIEW_MODEL || process.env.REVIEW_MODEL || process.env.STAGEHAND_MODEL || "gpt-4.1";
   if (process.env.UX_REVIEW_DISABLED === "1") return null;
+  const brief = verticalBrief(vertical);
+  const device = process.env.AGENT_DEVICE || "desktop";
+  const system = SYSTEM(brief, device);
 
-  return async function review(page, { kind, label, screenshot, digest, timeoutMs = 45000 }) {
+  return async function review(_page, { kind, label, screenshot, digest, timeoutMs = 60000 }) {
+    if (!digest) return [];
+    const geometry = digest.geometry || {};
+
     const prompt = [
       `Journey step: ${label} (stage type: ${kind}).`,
       `URL: ${digest.url}`,
-      `Viewport ${digest.viewport.width}×${digest.viewport.height}, full page height ${digest.viewport.document_height}px. This is a ${process.env.AGENT_DEVICE || "desktop"} session.`,
+      `Viewport ${digest.viewport.width}×${digest.viewport.height}, full page height ${digest.viewport.document_height}px.`,
       ``,
-      `Headings: ${JSON.stringify(digest.headings)}`,
+      `Headings (ref, text, position as % of page): ${JSON.stringify(digest.headings)}`,
       ``,
       `Interactive controls (ref, text, disabled, position as % of page): ${JSON.stringify(digest.controls)}`,
       ``,
@@ -143,7 +200,7 @@ export function createReviewer(provider) {
         generateObject({
           model: provider(modelId),
           schema: reviewSchema,
-          system: SYSTEM,
+          system,
           messages: [{ role: "user", content }],
         }),
       );
@@ -156,7 +213,7 @@ export function createReviewer(provider) {
       const retry = await withTimeout(
         generateText({
           model: provider(modelId),
-          system: `${SYSTEM}\n\nReply with JSON only, no prose: {"findings":[{"ref":"e12","severity":"high","category":"clarity","title":"...","description":"...","evidence":"..."}]}`,
+          system: `${system}\n\nReply with JSON only, no prose: {"findings":[{"ref":"e12","persona":"strategist","severity":"high","category":"clarity","title":"...","description":"...","evidence":"...","recommendation":"...","impact":"material","rewrite_before":"","rewrite_after":""}]}`,
           messages: [{ role: "user", content }],
         }),
       );
@@ -166,30 +223,48 @@ export function createReviewer(provider) {
     if (!Array.isArray(raw)) return [];
 
     const findings = [];
-    for (const candidate of raw.slice(0, 3)) {
+    const seenTitles = new Set();
+
+    for (const candidate of raw.slice(0, 5)) {
       const f = normalise(candidate);
       if (!f.ref || !f.title) continue;
-      let geometry = null;
-      try {
-        geometry = await page.evaluate(RESOLVE_REF_SCRIPT(f.ref));
-      } catch {
-        geometry = null;
-      }
 
-      // No resolvable element means no verifiable location — drop it rather
-      // than pin it somewhere plausible-looking.
-      if (!geometry) continue;
+      // Guard 1 — geometry frozen at capture time. No live-page lookups.
+      const box = geometry[f.ref] || geometry[f.ref.replace(/[^0-9]/g, "") ? `e${f.ref.replace(/[^0-9]/g, "")}` : ""];
+      if (!box) continue;
+
+      // Guard 2 — quoted evidence must exist on the page we captured.
+      if (!evidenceHolds(f.evidence, digest.page_text || digest.above_fold_text)) continue;
+
+      // A copy finding with no rewrite is exactly the generic advice we told
+      // the model not to send.
+      if (f.persona === "copy" && !f.rewrite_after) continue;
+
+      const key = squash(f.title);
+      if (seenTitles.has(key)) continue;
+      seenTitles.add(key);
+
       findings.push({
-        x_percentage: geometry.x_percentage,
-        y_percentage: geometry.y_percentage,
+        x_percentage: box.x_percentage,
+        y_percentage: box.y_percentage,
+        rect: {
+          x_percentage: Math.max(0, box.x_percentage - box.w_percentage / 2),
+          y_percentage: Math.max(0, box.y_percentage - box.h_percentage / 2),
+          w_percentage: Math.max(1, box.w_percentage),
+          h_percentage: Math.max(0.5, box.h_percentage),
+        },
+        persona: f.persona,
         severity: f.severity,
         category: f.category,
+        impact: f.impact,
         title: f.title,
         description: f.description,
         evidence: f.evidence,
-        selector: geometry.selector,
+        recommendation: f.recommendation,
+        ...(f.rewrite_after ? { rewrite_before: f.rewrite_before, rewrite_after: f.rewrite_after } : {}),
+        selector: box.selector,
       });
     }
-    return findings;
+    return findings.slice(0, 4);
   };
 }

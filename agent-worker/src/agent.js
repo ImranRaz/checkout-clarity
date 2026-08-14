@@ -4,6 +4,8 @@ import { z } from "zod";
 
 import { FRICTION_SCRIPT, PAGE_DIGEST_SCRIPT } from "./friction.js";
 import { createReviewer } from "./ux-review.js";
+import { reviewJourney } from "./journey-review.js";
+import { classifyVertical, VERTICALS } from "./vertical.js";
 import { VITALS_INIT, VITALS_READ } from "./vitals.js";
 import { dismissOverlays } from "./overlays.js";
 import { isExhaustedStatus, keyLabel, loadKeys, rotationOrder } from "./keys.js";
@@ -424,6 +426,8 @@ const CART_CHECK = `(() => {
  * additive, and a failure there degrades the report rather than failing it.
  */
 let reviewer = null;
+/** The business model being audited, resolved once from the entry page. */
+let vertical = VERTICALS.generic;
 
 /**
  * Vision reviews are slow (a multimodal call per stage) and nothing in the
@@ -515,8 +519,10 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     compatibility: process.env.OPENAI_BASE_URL ? "compatible" : "strict",
   });
 
-  // The judgement layer shares the same provider as the navigator.
-  reviewer = createReviewer(provider);
+  // The judgement layer shares the provider but not the model: navigation
+  // wants cheap and fast, judgement wants taste. Both are env-configurable.
+  reviewer = null;
+  vertical = VERTICALS.generic;
 
   // The session is created explicitly rather than left to Stagehand. Stagehand
   // swallows the creation failure and only reports "browser context is
@@ -583,6 +589,13 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     if (!wall) {
       kind = await page.evaluate(CLASSIFY_SCRIPT).catch(() => "other");
     }
+
+    // What business is this? Resolved once, from the entry page's own words,
+    // and threaded into every review so a cruise line is never asked about
+    // shipping costs and a shoe store is never asked about cancellation policy.
+    vertical = await classifyVertical(page);
+    reviewer = createReviewer(provider, { vertical });
+    emit("system", `Auditing as: ${vertical.name}`);
 
     stages.push(
       await captureStage(page, {
@@ -898,11 +911,13 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     blockedReason = error.message.slice(0, 240);
     emit("system", blockedReason, "error");
   } finally {
-    // The reviews ran alongside navigation; collect them before the browser
-    // goes away, since they read element geometry from the live page.
+    // The reviews ran alongside navigation. Geometry is frozen into each
+    // stage's digest at capture time, so they no longer depend on the live
+    // page — but they are still collected before teardown so their findings
+    // land in the report.
     await withTimeout(
       Promise.allSettled(pendingReviews),
-      45000,
+      120000,
       "Finishing the experience review",
     ).catch(() => {});
     await stagehand.close().catch(() => {});
@@ -927,8 +942,23 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     if (count > 1) stage.label = `${stage.label} ${count}`;
   }
 
+  // Cross-stage dedupe. The same judgement ("no trust signal near the decision
+  // point") repeated on five screens reads as a template, not an audit — keep
+  // the first occurrence and the numbering contiguous.
+  const seenFindings = new Set();
+  for (const stage of stages) {
+    const kept = [];
+    for (const point of stage.friction_points) {
+      const key = `${point.category}:${String(point.title).toLowerCase().replace(/\s+/g, " ").trim()}`;
+      if (point.persona && seenFindings.has(key)) continue;
+      seenFindings.add(key);
+      kept.push(point);
+    }
+    stage.friction_points = kept.map((point, index) => ({ ...point, id: index + 1 }));
+  }
+
   const host = new URL(entryUrl).hostname.replace(/^www\./, "");
-  return {
+  const report = {
     id: `live-${Date.now().toString(36)}`,
     url: entryUrl,
     domain: host,
@@ -939,4 +969,15 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     steps,
     stages,
   };
+
+  // The consultancy's top-line judgement: the one pass that sees every stage
+  // at once. Additive — a failure here degrades the report, never fails it.
+  try {
+    const diagnosis = await reviewJourney(provider, { report, vertical });
+    if (diagnosis) report.journey_diagnosis = diagnosis;
+  } catch {
+    /* the measured report stands on its own */
+  }
+
+  return report;
 }

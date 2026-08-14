@@ -22,15 +22,40 @@ export type FrictionCategory = z.infer<typeof frictionCategorySchema>;
  * path they are derived from the offending element's bounding box, not
  * guessed by the model.
  */
+/** Which lens of the review council produced a finding. */
+export const personaSchema = z.enum(["strategist", "copy", "trust", "accessibility", "measured"]);
+export type Persona = z.infer<typeof personaSchema>;
+
+export const impactSchema = z.enum(["material", "meaningful", "minor"]);
+export type Impact = z.infer<typeof impactSchema>;
+
 export const frictionPointSchema = z.object({
   id: z.number().int(),
   x_percentage: z.number().min(0).max(100),
   y_percentage: z.number().min(0).max(100),
+  /**
+   * The offending element's box, as percentages of the screenshot. Frozen at
+   * capture time so a review that finishes after the agent has navigated on
+   * still highlights the right pixels. Absent on older stored reports.
+   */
+  rect: z
+    .object({
+      x_percentage: z.number(),
+      y_percentage: z.number(),
+      w_percentage: z.number(),
+      h_percentage: z.number(),
+    })
+    .optional(),
   severity: severitySchema,
   category: frictionCategorySchema,
+  persona: personaSchema.optional(),
+  impact: impactSchema.optional(),
   title: z.string(),
   description: z.string(),
   evidence: z.string(),
+  recommendation: z.string().optional(),
+  rewrite_before: z.string().optional(),
+  rewrite_after: z.string().optional(),
   selector: z.string(),
 });
 export type FrictionPoint = z.infer<typeof frictionPointSchema>;
@@ -118,6 +143,27 @@ export const auditReportSchema = z.object({
   run_duration_ms: z.number(),
   steps: z.array(logLineSchema),
   stages: z.array(stageSchema).min(1),
+  /**
+   * The run-level judgement: the shape of the funnel and the three changes
+   * worth doing first. Optional so reports captured before it existed parse.
+   */
+  journey_diagnosis: z
+    .object({
+      headline: z.string(),
+      diagnosis: z.string(),
+      steps_to_commit: z.number(),
+      drop_off_stage: z.string(),
+      vertical: z.string(),
+      moves: z.array(
+        z.object({
+          title: z.string(),
+          rationale: z.string(),
+          impact: impactSchema,
+          stage: z.string(),
+        }),
+      ),
+    })
+    .optional(),
 });
 export type ForensicAuditReport = z.infer<typeof auditReportSchema>;
 
@@ -161,6 +207,20 @@ export const categoryLabel: Record<FrictionCategory, string> = {
   accessibility: "Accessibility",
   form: "Form design",
   performance: "Performance",
+};
+
+export const personaLabel: Record<Persona, string> = {
+  strategist: "Conversion strategy",
+  copy: "Copy & messaging",
+  trust: "Trust & risk",
+  accessibility: "Accessibility",
+  measured: "Measured",
+};
+
+export const impactLabel: Record<Impact, string> = {
+  material: "Material impact",
+  meaningful: "Meaningful impact",
+  minor: "Minor impact",
 };
 
 export function formatBytes(bytes: number): string {
