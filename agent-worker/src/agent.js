@@ -464,6 +464,13 @@ async function clearOverlays(page, options) {
 
 async function captureStage(page, { kind, label: rawLabel, transition, emit }) {
   const label = cleanLabel(rawLabel, kind);
+
+  // Scroll the page before measuring anything. This is what makes the rest of
+  // the capture honest: lazy media gets a chance to load, post-load layout
+  // shift becomes observable, and the screenshot below shows real content
+  // rather than the grey placeholder boxes a never-scrolled page returns.
+  const scroll_profile = await scrollSweep(page, { emit }).catch(() => null);
+
   const [metrics, friction, shot, size, digest] = await Promise.all([
     page.evaluate(VITALS_READ),
     page.evaluate(FRICTION_SCRIPT(kind, DEVICE)),
@@ -474,7 +481,11 @@ async function captureStage(page, { kind, label: rawLabel, transition, emit }) {
     reviewer ? page.evaluate(PAGE_DIGEST_SCRIPT).catch(() => null) : Promise.resolve(null),
   ]);
 
-  const friction_points = friction.map((point, index) => ({ ...point, id: index + 1 }));
+  // Whatever interrupted the shopper on the way to this stage belongs to it.
+  const interstitials = capturedInterstitials.splice(0, capturedInterstitials.length);
+
+  const measured = [...friction, ...scrollFindings(scroll_profile, kind)];
+  const friction_points = measured.map((point, index) => ({ ...point, id: index + 1 }));
 
   const stage = {
     id: `${kind}-${Date.now()}`,
@@ -490,8 +501,11 @@ async function captureStage(page, { kind, label: rawLabel, transition, emit }) {
     },
 
     technical_metrics: metrics,
+    scroll_profile,
+    interstitials: interstitials.map(({ image, ...rest }) => ({ ...rest, image })),
     friction_points,
   };
+
 
   // Fire-and-merge: the review runs while the agent keeps clicking.
   if (reviewer) {
