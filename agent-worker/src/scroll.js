@@ -88,15 +88,38 @@ export const SCROLL_REPORT = `(() => {
   };
 
   // Media that has been scrolled past and still has nothing to show.
+  //
+  // The bar here is deliberately high. A lazily-loaded image that decodes a
+  // beat late is normal engineering, not a defect, and reporting it produces
+  // the worst kind of finding: one the screenshot visibly contradicts. So an
+  // image only counts as stalled when it is on-screen area, has no painted
+  // pixels of its own, and has no background image standing in for it.
   const media = [...document.querySelectorAll('img,iframe')].filter((el) => {
     const r = el.getBoundingClientRect();
-    return r.width >= 80 && r.height >= 80;
+    if (r.width < 80 || r.height < 80) return false;
+    const st = getComputedStyle(el);
+    return st.visibility !== 'hidden' && st.display !== 'none' && Number(st.opacity) > 0.05;
   });
+  const painted = (el) => {
+    // Something behind the element is showing the picture instead.
+    let node = el;
+    for (let i = 0; i < 3 && node; i += 1) {
+      const bg = getComputedStyle(node).backgroundImage;
+      if (bg && bg !== 'none' && /url\\(/.test(bg)) return true;
+      node = node.parentElement;
+    }
+    return false;
+  };
   const stalled = media.filter((el) => {
-    if (el.tagName === 'IFRAME') return !el.src;
-    if (!el.currentSrc && !el.src) return true;
-    return el.complete === false || (el.naturalWidth === 0 && el.getAttribute('loading') !== 'eager');
+    if (el.tagName === 'IFRAME') return !el.src && !el.getAttribute('data-src');
+    const source = el.currentSrc || el.src || '';
+    // A 1px or inline placeholder with a real srcset still resolves later.
+    if (!source && !el.srcset && !el.getAttribute('data-src')) return !painted(el);
+    if (!el.complete) return false;            // still decoding — not a defect
+    if (el.naturalWidth > 1) return false;     // it painted
+    return !painted(el);
   });
+
 
   // Sticky / fixed furniture: helpful when it carries the primary action,
   // harmful when it merely eats the viewport or covers content.
