@@ -173,13 +173,15 @@ export async function scrollSweep(page, { emit } = {}) {
   }
 
   let startHeight = 0;
+  let viewportHeight = 900;
   try {
     const box = await page.evaluate(`({ h: ${height}, vp: window.innerHeight })`);
     startHeight = box.h;
+    viewportHeight = box.vp || 900;
     // A page barely taller than the viewport has nothing to sweep.
     if (box.h < box.vp * 1.5) {
       const short = await page.evaluate(SCROLL_REPORT).catch(() => null);
-      return short ? { ...short, steps: 0, infinite_scroll: false, swept: false } : null;
+      return short ? { ...short, steps: 0, infinite_scroll: false, swept: false, frames: [] } : null;
     }
   } catch {
     return null;
