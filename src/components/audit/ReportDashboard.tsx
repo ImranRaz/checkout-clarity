@@ -332,25 +332,21 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
         >
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="label-caps">Forensic score</h2>
-              {partial ? (
-                <>
-                  <p className="mt-3 font-mono text-3xl leading-none tracking-tight text-muted-foreground">
-                    n/a
-                  </p>
-                  <p className="mt-1 text-sm font-medium text-sev-medium">Not scored</p>
-                </>
-              ) : (
-                <>
-                  <p className="mt-2 flex items-baseline gap-2">
-                    <span className="font-display text-6xl leading-none tracking-tight tabular-nums">
-                      {score.total}
-                    </span>
-                    <span className="font-mono text-sm text-muted-foreground">/100</span>
-                  </p>
-                  <p className={cn("mt-1 text-sm font-medium", grade[score.grade])}>{score.grade}</p>
-                </>
-              )}
+              <h2 className="label-caps">Score breakdown</h2>
+              <p className="mt-2 flex items-baseline gap-2">
+                <span className="font-display text-4xl leading-none tracking-tight tabular-nums">
+                  {partial ? "n/a" : score.total}
+                </span>
+                {!partial && <span className="font-mono text-sm text-muted-foreground">/100</span>}
+              </p>
+              <p
+                className={cn(
+                  "mt-1 text-sm font-medium",
+                  partial ? "text-sev-medium" : grade[score.grade],
+                )}
+              >
+                {partial ? "Not scored" : score.grade}
+              </p>
             </div>
 
             <div className="text-right">
@@ -364,6 +360,7 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
               </p>
             </div>
           </div>
+
 
           {partial ? (
             <p className="mt-5 border-t border-border pt-4 text-sm leading-relaxed text-muted-foreground">
