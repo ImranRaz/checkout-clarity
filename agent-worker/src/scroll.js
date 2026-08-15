@@ -185,6 +185,31 @@ export async function scrollSweep(page, { emit } = {}) {
     return null;
   }
 
+  // Frames are spread across the sweep so the report can show the page as the
+  // shopper had it on screen at that depth, not a full-page composite.
+  const expectedSteps = Math.min(MAX_STEPS, Math.ceil(startHeight / (viewportHeight * 0.9)));
+  const stride = Math.max(1, Math.ceil(expectedSteps / MAX_FRAMES));
+  const frames = [];
+
+  const grabFrame = async () => {
+    if (frames.length >= MAX_FRAMES) return;
+    try {
+      const [shot, pos] = await Promise.all([
+        page.screenshot({ type: "jpeg", quality: FRAME_QUALITY }),
+        page.evaluate(`({ y: window.scrollY, h: ${height}, vp: window.innerHeight })`),
+      ]);
+      frames.push({
+        scroll_y: Math.round(pos.y),
+        depth_percentage: Math.round(Math.min(100, (pos.y / Math.max(1, pos.h - pos.vp)) * 100)),
+        top_percentage: Math.round((pos.y / Math.max(1, pos.h)) * 1000) / 10,
+        bottom_percentage: Math.round(((pos.y + pos.vp) / Math.max(1, pos.h)) * 1000) / 10,
+        src: `data:image/jpeg;base64,${shot.toString("base64")}`,
+      });
+    } catch {
+      /* a frame is nice to have, never worth failing the sweep for */
+    }
+  };
+
   let steps = 0;
   for (; steps < MAX_STEPS && Date.now() < deadline; steps += 1) {
     const atBottom = await page
@@ -196,8 +221,11 @@ export async function scrollSweep(page, { emit } = {}) {
       )
       .catch(() => true);
     await page.waitForTimeout(STEP_SETTLE_MS);
+    if (steps % stride === 0) await grabFrame();
     if (atBottom) break;
   }
+  // Always keep the bottom of the page, even if the stride missed it.
+  await grabFrame();
 
   // Height that keeps growing at the bottom means an infinite feed.
   let endHeight = startHeight;
@@ -216,14 +244,16 @@ export async function scrollSweep(page, { emit } = {}) {
     ...report,
     steps,
     swept: true,
+    frames,
     infinite_scroll: endHeight > startHeight * 1.4,
   };
   emit?.(
     "browser",
-    `Scrolled the full page (${profile.viewports} screens${profile.stalled_media_count ? `, ${profile.stalled_media_count} image${profile.stalled_media_count === 1 ? "" : "s"} still blank` : ""})`,
+    `Scrolled the full page (${profile.viewports} screens${frames.length ? `, ${frames.length} viewport frame${frames.length === 1 ? "" : "s"} captured` : ""}${profile.stalled_media_count ? `, ${profile.stalled_media_count} image${profile.stalled_media_count === 1 ? "" : "s"} still blank` : ""})`,
   );
   return profile;
 }
+
 
 /**
  * Measured findings derived from the sweep. These belong with the vitals and
