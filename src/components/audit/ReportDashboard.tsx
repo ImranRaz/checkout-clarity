@@ -132,7 +132,12 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
           <span className="font-display text-4xl leading-none tracking-tight tabular-nums">
             {partial ? "n/a" : score.total}
           </span>
-          {!partial && <span className="font-mono text-xs text-muted-foreground">/100</span>}
+          {!partial && (
+            <span className="flex items-center gap-1 font-mono text-xs text-muted-foreground">
+              /100
+              <Explain term="score" />
+            </span>
+          )}
           <span className="min-w-0">
             <span
               className={cn(
@@ -204,8 +209,10 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
           aria-label="Findings"
         >
           <header className="flex items-baseline justify-between gap-3 border-b border-border px-4 py-3">
-            <h2 className="label-caps">
+            <h2 className="label-caps flex items-center gap-1">
               Findings · {report.stages.reduce((n, s) => n + s.friction_points.length, 0)}
+              <Explain term="severity" />
+              <Explain term="impact" />
             </h2>
             <p className="font-mono text-[11px] text-muted-foreground">select to locate</p>
           </header>
