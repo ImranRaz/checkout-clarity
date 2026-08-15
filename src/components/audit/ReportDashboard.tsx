@@ -927,10 +927,14 @@ function Metric({
   label,
   value,
   term,
+  metric,
+  raw,
 }: {
   label: string;
   value: string;
   term?: GlossaryKey;
+  metric?: BenchmarkKey;
+  raw?: number;
 }) {
   return (
     <div>
@@ -939,6 +943,7 @@ function Metric({
         {term && <Explain term={term} />}
       </dt>
       <dd className="mt-0.5 font-mono text-lg tabular-nums text-foreground">{value}</dd>
+      {metric && raw !== undefined && <Gauge metric={metric} value={raw} />}
     </div>
   );
 }
