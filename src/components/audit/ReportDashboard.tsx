@@ -49,7 +49,7 @@ interface Cursor {
 }
 
 const contradictedImageFinding = (point: FrictionPoint) =>
-  /images? (?:never loaded|were still blank)|stalled images?/i.test(point.title);
+  /images?.*(?:never loaded|still blank)|stalled images?/i.test(point.title);
 
 /**
  * Older saved runs predate the strict visual-evidence rules. Repair their

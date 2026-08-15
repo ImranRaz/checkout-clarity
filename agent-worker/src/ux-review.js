@@ -216,6 +216,8 @@ export function createReviewer(provider, { vertical } = {}) {
       ``,
       `Interactive controls (ref, text, disabled, position as % of page): ${JSON.stringify(digest.controls)}`,
       ``,
+      `Visible copy blocks (ref, text, position as % of page): ${JSON.stringify(digest.copy || [])}`,
+      ``,
       `Page copy: ${digest.above_fold_text}`,
       ...(scroll_brief ? ["", scroll_brief] : []),
       ...(scroll_profile

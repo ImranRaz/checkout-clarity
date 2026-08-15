@@ -280,6 +280,20 @@ export const PAGE_DIGEST_SCRIPT = `(() => {
     text: (el.innerText || '').trim().slice(0, 100),
     ...box(el),
   }));
+  const copy = [...main.querySelectorAll('p,li,dd,dt,[role="note"],[role="status"],small')]
+    .filter((el) => {
+      if (!visible(el)) return false;
+      const value = (el.innerText || el.textContent || '').replace(/\\s+/g, ' ').trim();
+      if (value.length < 8 || value.length > 280) return false;
+      return ![...el.children].some((child) => visible(child) && (child.innerText || '').trim().length > 7);
+    })
+    .slice(0, 36)
+    .map((el) => ({
+      ref: ref(el, ++i),
+      tag: el.tagName.toLowerCase(),
+      text: (el.innerText || el.textContent || '').replace(/\\s+/g, ' ').trim().slice(0, 280),
+      ...box(el),
+    }));
   const bodyText = ((document.body && document.body.innerText) || '').replace(/\\s+/g, ' ').trim();
   return {
     url: location.href,
@@ -289,6 +303,7 @@ export const PAGE_DIGEST_SCRIPT = `(() => {
     page_text: bodyText.slice(0, 6000),
     headings,
     controls,
+    copy,
     geometry,
   };
 })()`;
