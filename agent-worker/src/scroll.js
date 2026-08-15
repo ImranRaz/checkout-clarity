@@ -88,15 +88,38 @@ export const SCROLL_REPORT = `(() => {
   };
 
   // Media that has been scrolled past and still has nothing to show.
+  //
+  // The bar here is deliberately high. A lazily-loaded image that decodes a
+  // beat late is normal engineering, not a defect, and reporting it produces
+  // the worst kind of finding: one the screenshot visibly contradicts. So an
+  // image only counts as stalled when it is on-screen area, has no painted
+  // pixels of its own, and has no background image standing in for it.
   const media = [...document.querySelectorAll('img,iframe')].filter((el) => {
     const r = el.getBoundingClientRect();
-    return r.width >= 80 && r.height >= 80;
+    if (r.width < 80 || r.height < 80) return false;
+    const st = getComputedStyle(el);
+    return st.visibility !== 'hidden' && st.display !== 'none' && Number(st.opacity) > 0.05;
   });
+  const painted = (el) => {
+    // Something behind the element is showing the picture instead.
+    let node = el;
+    for (let i = 0; i < 3 && node; i += 1) {
+      const bg = getComputedStyle(node).backgroundImage;
+      if (bg && bg !== 'none' && /url\\(/.test(bg)) return true;
+      node = node.parentElement;
+    }
+    return false;
+  };
   const stalled = media.filter((el) => {
-    if (el.tagName === 'IFRAME') return !el.src;
-    if (!el.currentSrc && !el.src) return true;
-    return el.complete === false || (el.naturalWidth === 0 && el.getAttribute('loading') !== 'eager');
+    if (el.tagName === 'IFRAME') return !el.src && !el.getAttribute('data-src');
+    const source = el.currentSrc || el.src || '';
+    // A 1px or inline placeholder with a real srcset still resolves later.
+    if (!source && !el.srcset && !el.getAttribute('data-src')) return !painted(el);
+    if (!el.complete) return false;            // still decoding — not a defect
+    if (el.naturalWidth > 1) return false;     // it painted
+    return !painted(el);
   });
+
 
   // Sticky / fixed furniture: helpful when it carries the primary action,
   // harmful when it merely eats the viewport or covers content.
@@ -145,11 +168,16 @@ export const SCROLL_REPORT = `(() => {
     worst_shift_scroll_y: s.worstShiftY,
     long_tasks: s.longTasks,
     longest_task_ms: s.longestTask,
-    stalled_media: stalled.slice(0, 6).map((el) => ({
-      selector: selectorFor(el),
-      alt: (el.getAttribute('alt') || '').slice(0, 60),
-      ...pct(el),
-    })),
+    stalled_media: stalled.slice(0, 6).map((el) => {
+      // Tagged so the same elements can be re-checked once the page settles.
+      el.setAttribute('data-fx-stalled', '1');
+      return {
+        selector: selectorFor(el),
+        alt: (el.getAttribute('alt') || '').slice(0, 60),
+        ...pct(el),
+      };
+    }),
+
     stalled_media_count: stalled.length,
     media_count: media.length,
     sticky,
@@ -158,7 +186,43 @@ export const SCROLL_REPORT = `(() => {
   };
 })()`;
 
+/**
+ * Re-examines the elements the sweep flagged as blank, after the page has had
+ * a moment to settle. Anything that painted in the meantime was lazy loading,
+ * not a broken image, and is dropped from the report.
+ */
+export const RECHECK_STALLED = `(() => {
+  const nodes = [...document.querySelectorAll('[data-fx-stalled]')];
+  const selectorFor = (el) => {
+    if (el.id) return '#' + el.id;
+    const cls = (el.className && typeof el.className === 'string' ? el.className.trim().split(/\\s+/)[0] : '');
+    return el.tagName.toLowerCase() + (cls ? '.' + cls : '');
+  };
+  const painted = (el) => {
+    let node = el;
+    for (let i = 0; i < 3 && node; i += 1) {
+      const bg = getComputedStyle(node).backgroundImage;
+      if (bg && bg !== 'none' && /url\\(/.test(bg)) return true;
+      node = node.parentElement;
+    }
+    return false;
+  };
+  const blank = nodes.filter((el) => {
+    if (el.tagName === 'IFRAME') return !el.src && !el.getAttribute('data-src');
+    if (!el.complete) return false;
+    if (el.naturalWidth > 1) return false;
+    return !painted(el);
+  });
+  nodes.forEach((el) => el.removeAttribute('data-fx-stalled'));
+  return {
+    count: blank.length,
+    recovered: nodes.length - blank.length,
+    selectors: blank.map(selectorFor),
+  };
+})()`;
+
 const height = `Math.max(document.documentElement.scrollHeight, window.innerHeight)`;
+
 
 /**
  * Scrolls the page the way a reviewer would, then returns to the top so the
@@ -242,6 +306,28 @@ export async function scrollSweep(page, { emit } = {}) {
   await page.waitForTimeout(350);
 
   if (!report) return null;
+
+  // Second look. Lazy loaders routinely finish a beat after the sweep passes,
+  // and the screenshot the report shows is taken after that. Re-checking the
+  // tagged elements keeps the finding honest: whatever painted in the meantime
+  // is dropped, so the report never claims an image is missing while the
+  // evidence image plainly shows it.
+  if (report.stalled_media_count > 0) {
+    await page.waitForTimeout(1200);
+    const stillBlank = await page.evaluate(RECHECK_STALLED).catch(() => null);
+    if (stillBlank) {
+      const kept = new Set(stillBlank.selectors);
+      report.stalled_media = (report.stalled_media || []).filter((m) => kept.has(m.selector));
+      report.stalled_media_count = stillBlank.count;
+      if (stillBlank.recovered > 0) {
+        emit?.(
+          "browser",
+          `${stillBlank.recovered} image${stillBlank.recovered === 1 ? "" : "s"} finished loading late — not reported as broken`,
+        );
+      }
+    }
+  }
+
   const profile = {
     ...report,
     steps,
@@ -304,19 +390,27 @@ export function scrollFindings(profile, kind = "other") {
   };
   const lastFrame = frames.length ? frames[frames.length - 1] : null;
 
-  if (profile.stalled_media_count >= 3) {
+  // Only claimed when the images were still blank on a second look, well after
+  // the sweep passed them. Lazy loading that finishes late is not a defect, and
+  // a finding the evidence image contradicts costs more trust than it earns.
+  if (profile.stalled_media_count >= 3 && profile.stalled_media?.length) {
+    const named = profile.stalled_media
+      .slice(0, 3)
+      .map((m) => m.alt || m.selector)
+      .filter(Boolean);
     out.push({
       ...at(profile.stalled_media[0]),
       ...frameAt(profile.stalled_media[0]?.y_percentage ?? 50),
       severity: profile.stalled_media_count >= 8 ? "high" : "medium",
       category: "performance",
-      title: `${profile.stalled_media_count} images never loaded while scrolling`,
+      title: `${profile.stalled_media_count} images were still blank after the page settled`,
       description:
-        "These images stayed blank even after being scrolled into view, so a shopper reading down the page sees empty boxes where product imagery should be.",
-      evidence: `${profile.stalled_media_count} of ${profile.media_count} large images had no rendered source after a full-page scroll.`,
+        "These images had painted nothing even a second after being scrolled into view and given time to load, so a shopper reading down the page sees empty boxes where product imagery should be. Images that simply loaded late are not counted here.",
+      evidence: `${profile.stalled_media_count} of ${profile.media_count} large images had no pixels after a full-page scroll and a settle${named.length ? ` — ${named.join(", ")}` : ""}.`,
       selector: profile.stalled_media[0]?.selector,
     });
   }
+
 
 
   if (profile.shift_after_load >= 0.1) {

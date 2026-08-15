@@ -463,6 +463,29 @@ async function clearOverlays(page, options) {
   return result;
 }
 
+/**
+ * Findings are numbered the way the page is read: top to bottom, then left to
+ * right. A pin labelled 2 must never sit above a pin labelled 1 — when the
+ * numbers disagree with the picture, the reader stops trusting both.
+ *
+ * Where a finding carries its own viewport frame, that frame's depth orders it,
+ * so the filmstrip and the list agree.
+ */
+function orderFindings(points) {
+  const depth = (p) => {
+    const y = typeof p.y_percentage === "number" ? p.y_percentage : 50;
+    const top = p.rect && typeof p.rect.y_percentage === "number" ? p.rect.y_percentage : y;
+    return Math.min(y, top);
+  };
+  return [...points]
+    .sort((a, b) => {
+      const dy = depth(a) - depth(b);
+      if (Math.abs(dy) > 1.5) return dy;
+      return (a.x_percentage ?? 50) - (b.x_percentage ?? 50);
+    })
+    .map((point, index) => ({ ...point, id: index + 1 }));
+}
+
 async function captureStage(page, { kind, label: rawLabel, transition, emit }) {
   const label = cleanLabel(rawLabel, kind);
 
@@ -486,7 +509,7 @@ async function captureStage(page, { kind, label: rawLabel, transition, emit }) {
   const interstitials = capturedInterstitials.splice(0, capturedInterstitials.length);
 
   const measured = [...friction, ...scrollFindings(scroll_profile, kind)];
-  const friction_points = measured.map((point, index) => ({ ...point, id: index + 1 }));
+  const friction_points = orderFindings(measured);
 
   const stage = {
     id: `${kind}-${Date.now()}`,
@@ -513,7 +536,7 @@ async function captureStage(page, { kind, label: rawLabel, transition, emit }) {
     pendingReviews.push(
       (async () => {
         try {
-          const judged = await reviewer(page, {
+          const verdict = await reviewer(page, {
             kind,
             label,
             screenshot: shot,
@@ -521,12 +544,33 @@ async function captureStage(page, { kind, label: rawLabel, transition, emit }) {
             scroll_profile,
             scroll_brief: scrollBrief(scroll_profile),
             interstitials,
+            measured: measured.map((point, index) => ({
+              id: `m${index + 1}`,
+              title: point.title,
+              evidence: point.evidence,
+            })),
           });
-          if (judged.length > 0) {
-            stage.friction_points = [...measured, ...judged].map((point, index) => ({
-              ...point,
-              id: index + 1,
-            }));
+          const judged = Array.isArray(verdict) ? verdict : verdict.findings;
+          const dismissed = Array.isArray(verdict?.dismissed) ? verdict.dismissed : [];
+
+          // A measured claim the council can see is untrue on this page never
+          // reaches the client. A screenshot that contradicts a finding is
+          // worse than no finding at all.
+          const dropped = new Set(
+            dismissed
+              .map((d) => Number(String(d.id).replace(/[^0-9]/g, "")) - 1)
+              .filter((i) => Number.isInteger(i) && i >= 0 && i < measured.length),
+          );
+          const kept = measured.filter((_, index) => !dropped.has(index));
+          if (dropped.size > 0) {
+            emit?.(
+              "vision",
+              `Dropped ${dropped.size} measured check${dropped.size === 1 ? "" : "s"} on ${label} that the screenshots contradict`,
+            );
+          }
+
+          if (judged.length > 0 || dropped.size > 0) {
+            stage.friction_points = orderFindings([...kept, ...judged]);
 
             emit?.(
               "vision",
@@ -981,10 +1025,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
           });
           const extra = await checkoutFindings(page);
           if (extra.length > 0) {
-            stage.friction_points = [...stage.friction_points, ...extra].map((point, index) => ({
-              ...point,
-              id: index + 1,
-            }));
+            stage.friction_points = orderFindings([...stage.friction_points, ...extra]);
           }
           stages.push(stage);
           emit(
@@ -1068,7 +1109,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
       seenFindings.add(key);
       kept.push(point);
     }
-    stage.friction_points = kept.map((point, index) => ({ ...point, id: index + 1 }));
+    stage.friction_points = orderFindings(kept);
   }
 
   const host = new URL(entryUrl).hostname.replace(/^www\./, "");
