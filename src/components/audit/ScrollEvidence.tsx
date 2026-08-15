@@ -104,9 +104,35 @@ export function ScrollPass({ profile }: { profile: ScrollProfile }) {
           </span>
         </p>
       )}
+
+      {/* The sweep itself, screen by screen: what was actually in front of the
+          shopper at each depth, rather than a flattened full-page composite. */}
+      {profile.frames?.length > 0 && (
+        <div className="mt-4">
+          <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+            What the shopper saw on the way down
+          </p>
+          <ul className="mt-2 flex gap-2 overflow-x-auto pb-1">
+            {profile.frames.map((frame, index) => (
+              <li key={`${frame.scroll_y}-${index}`} className="shrink-0">
+                <img
+                  src={frame.src}
+                  alt={`Viewport captured ${Math.round(frame.top_percentage)}% down the page`}
+                  loading="lazy"
+                  className="h-28 w-40 rounded-sm border border-border object-cover object-top"
+                />
+                <p className="mt-1 text-center font-mono text-[10px] tabular-nums text-muted-foreground">
+                  {Math.round(frame.top_percentage)}–{Math.round(frame.bottom_percentage)}%
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
+
 
 /**
  * The pop-up, judged rather than silently clicked away. Whatever a site says
