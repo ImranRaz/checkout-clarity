@@ -735,7 +735,7 @@ function EvidenceViewer({
       <div className="flex max-h-[40rem] flex-col overflow-y-auto bg-secondary p-4">
         <div className="relative mx-auto w-full max-w-[44rem]">
           <img
-            src={point.evidence_image}
+            src={point.evidence_image ?? stage.screenshot.src}
             alt={point.evidence_caption ?? `Viewport evidence for: ${point.title}`}
             className="w-full rounded border border-border bg-card"
           />
