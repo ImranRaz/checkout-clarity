@@ -791,32 +791,12 @@ function EvidenceViewer({
           height={stage.screenshot.height}
           className="w-full bg-card"
         />
-        {point && rect && (
-          <span
-            aria-hidden
-            className={cn(
-              "pointer-events-none absolute rounded-sm border-2 shadow-[0_0_0_9999px_rgba(20,20,20,0.45)]",
-              point.severity === "high" && "border-sev-high",
-              point.severity === "medium" && "border-sev-medium",
-              point.severity === "low" && "border-sev-low",
-            )}
-            style={{
-              left: `${rect.x}%`,
-              top: `${rect.y}%`,
-              width: `${rect.w}%`,
-              height: `${rect.h}%`,
-            }}
-          />
-        )}
-        {stage.friction_points.map((p) => (
-          <Pin
-            key={p.id}
-            point={p}
-            active={p.id === activeId}
-            dim={activeId !== null && p.id !== activeId}
-            onSelect={() => onSelect(p.id)}
-          />
-        ))}
+        {point && rect && <Spotlight point={point} rect={rect} />}
+        {stage.friction_points
+          .filter((p) => p.id !== activeId)
+          .map((p) => (
+            <Pin key={p.id} point={p} active={false} dim onSelect={() => onSelect(p.id)} />
+          ))}
       </motion.div>
     </div>
   );
