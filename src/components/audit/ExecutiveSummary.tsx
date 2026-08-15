@@ -56,14 +56,6 @@ export function ExecutiveSummary({
             </p>
           )}
         </div>
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="no-print inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-        >
-          <Printer className="size-3.5" aria-hidden />
-          Export PDF
-        </button>
       </header>
 
       {diagnosis && (
