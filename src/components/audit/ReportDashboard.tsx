@@ -213,8 +213,7 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
           <header className="flex items-baseline justify-between gap-3 border-b border-border px-4 py-3">
             <h2 className="label-caps flex items-center gap-1">
               Findings · {report.stages.reduce((n, s) => n + s.friction_points.length, 0)}
-              <Explain term="severity" />
-              <Explain term="impact" />
+              <Explain term="findings" />
             </h2>
             <p className="font-mono text-[11px] text-muted-foreground">select to locate</p>
           </header>
@@ -472,35 +471,47 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
             )}
           </div>
 
-          <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
+          <dl className="mt-4 grid grid-cols-2 gap-x-5 gap-y-5 sm:grid-cols-3">
             <Metric
               label="LCP"
               term="lcp"
+              metric="lcp"
+              raw={stage.technical_metrics.largest_contentful_paint_ms}
               value={formatMs(stage.technical_metrics.largest_contentful_paint_ms)}
             />
             <Metric
               label="CLS"
               term="cls"
+              metric="cls"
+              raw={stage.technical_metrics.cumulative_layout_shift}
               value={stage.technical_metrics.cumulative_layout_shift.toFixed(3)}
             />
             <Metric
               label="Blocking"
               term="tbt"
+              metric="tbt"
+              raw={stage.technical_metrics.total_blocking_time_ms}
               value={formatMs(stage.technical_metrics.total_blocking_time_ms)}
             />
             <Metric
               label="DOM ready"
               term="domReady"
+              metric="domReady"
+              raw={stage.technical_metrics.dom_content_loaded_ms}
               value={formatMs(stage.technical_metrics.dom_content_loaded_ms)}
             />
             <Metric
               label="Transferred"
               term="transferred"
+              metric="transferred"
+              raw={stage.technical_metrics.transfer_bytes}
               value={formatBytes(stage.technical_metrics.transfer_bytes)}
             />
             <Metric
               label="Requests"
               term="requests"
+              metric="requests"
+              raw={stage.technical_metrics.request_count}
               value={String(stage.technical_metrics.request_count)}
             />
           </dl>
