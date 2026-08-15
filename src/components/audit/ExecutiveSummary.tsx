@@ -1,7 +1,9 @@
 import { motion } from "motion/react";
 import { ArrowRight, Target } from "lucide-react";
 
+import { Explain } from "./Explain";
 import { SeverityChip } from "./SeverityChip";
+import type { GlossaryKey } from "@/lib/glossary";
 import { categoryLabel, impactLabel, type ForensicAuditReport } from "@/lib/audit-schema";
 import { buildPillarMatrix, pillarLabel, pillarQuestion, PILLARS, topFix } from "@/lib/pillars";
 import { cn } from "@/lib/utils";
@@ -40,7 +42,11 @@ export function ExecutiveSummary({
     >
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
         <div className="min-w-0">
-          <h2 className="label-caps">Experience summary</h2>
+          <h2 className="label-caps flex items-center gap-1">
+            Experience summary
+            <Explain term="pillars" />
+            <Explain term="cro" />
+          </h2>
           {diagnosis && (
             <p className="mt-1 text-sm font-medium text-foreground">{diagnosis.headline}</p>
           )}
