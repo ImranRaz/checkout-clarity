@@ -48,7 +48,38 @@ interface Cursor {
   pointId: number;
 }
 
-export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
+const contradictedImageFinding = (point: FrictionPoint) => {
+  const title = point.title.toLowerCase();
+  return (
+    title.includes("stalled image") ||
+    ((title.includes("image") || title.includes("images")) &&
+      (title.includes("never loaded") || title.includes("still blank")))
+  );
+};
+
+/**
+ * Older saved runs predate the strict visual-evidence rules. Repair their
+ * presentation at the boundary so they get the same top-to-bottom numbering
+ * and false lazy-image suppression as newly captured reports.
+ */
+function normalizeReportForDisplay(report: ForensicAuditReport): ForensicAuditReport {
+  return {
+    ...report,
+    stages: report.stages.map((stage) => ({
+      ...stage,
+      friction_points: stage.friction_points
+        .filter((point) => !contradictedImageFinding(point))
+        .sort((a, b) => {
+          const vertical = a.y_percentage - b.y_percentage;
+          return Math.abs(vertical) > 1.5 ? vertical : a.x_percentage - b.x_percentage;
+        })
+        .map((point, index) => ({ ...point, id: index + 1 })),
+    })),
+  };
+}
+
+export function ReportDashboard({ report: rawReport }: { report: ForensicAuditReport }) {
+  const report = useMemo(() => normalizeReportForDisplay(rawReport), [rawReport]);
   const [stageIndex, setStageIndex] = useState(0);
   const [activeId, setActiveId] = useState<number | null>(null);
   const [zoomed, setZoomed] = useState(true);
@@ -645,6 +676,32 @@ function pointRect(point: FrictionPoint) {
   };
 }
 
+/**
+ * Full-page pins are intentionally offset when their badges would occupy the
+ * same pixels. Their numbers stay near the measured elements, but never stack
+ * into one unreadable badge.
+ */
+function spreadPinRects(points: FrictionPoint[]) {
+  const placed: Array<{ x: number; y: number }> = [];
+  const result = new Map<number, { x: number; y: number; w: number; h: number }>();
+
+  for (const point of points) {
+    const rect = pointRect(point);
+    const anchor = { x: rect.x, y: rect.y };
+    let attempt = 0;
+    while (placed.some((other) => Math.abs(other.x - anchor.x) < 4.5 && Math.abs(other.y - anchor.y) < 1.8)) {
+      attempt += 1;
+      const lane = Math.ceil(attempt / 2);
+      anchor.x = clampNum(rect.x + (attempt % 2 === 1 ? lane * 5 : lane * -5), 1, 96);
+      anchor.y = clampNum(rect.y + lane * 0.8, 0.5, 98);
+    }
+    placed.push(anchor);
+    result.set(point.id, { ...rect, x: anchor.x, y: anchor.y });
+  }
+
+  return result;
+}
+
 const clampNum = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 function EvidenceViewer({
@@ -676,6 +733,7 @@ function EvidenceViewer({
   const point = stage.friction_points.find((p) => p.id === activeId) ?? null;
   const ratio = stage.screenshot.height / stage.screenshot.width;
   const rect = point ? pointRect(point) : null;
+  const pinRects = useMemo(() => spreadPinRects(stage.friction_points), [stage.friction_points]);
 
   // In full-page mode, bring the selected pin into view instead of leaving the
   // reader at the top of a very tall composite.
@@ -697,7 +755,9 @@ function EvidenceViewer({
     if (!rect || box.w === 0) return 2.4;
     const byWidth = 55 / rect.w;
     const byHeight = box.h === 0 ? byWidth : (55 / rect.h) * (box.h / box.w) / ratio;
-    return clampNum(Math.min(byWidth, byHeight), 1.4, 6);
+    // Keep enough surrounding page visible to preserve orientation. Extreme
+    // zoom made a technically correct target feel like the wrong section.
+    return clampNum(Math.min(byWidth, byHeight), 1.4, 3.4);
   };
   const zoom = zoomFor();
 
@@ -765,6 +825,7 @@ function EvidenceViewer({
             <Pin
               key={p.id}
               point={p}
+              displayRect={pinRects.get(p.id)}
               active={p.id === activeId}
               dim={activeId !== null && p.id !== activeId}
               onSelect={() => onSelect(p.id)}
@@ -795,7 +856,14 @@ function EvidenceViewer({
         {stage.friction_points
           .filter((p) => p.id !== activeId)
           .map((p) => (
-            <Pin key={p.id} point={p} active={false} dim onSelect={() => onSelect(p.id)} />
+            <Pin
+              key={p.id}
+              point={p}
+              displayRect={pinRects.get(p.id)}
+              active={false}
+              dim
+              onSelect={() => onSelect(p.id)}
+            />
           ))}
       </motion.div>
     </div>
@@ -886,16 +954,18 @@ function Spotlight({
  */
 function Pin({
   point,
+  displayRect,
   active,
   dim,
   onSelect,
 }: {
   point: FrictionPoint;
+  displayRect?: { x: number; y: number; w: number; h: number } | undefined;
   active: boolean;
   dim: boolean;
   onSelect: () => void;
 }) {
-  const rect = pointRect(point);
+  const rect = displayRect ?? pointRect(point);
   const flipRight = rect.x < 6;
   const flipDown = rect.y < 3;
   return (
