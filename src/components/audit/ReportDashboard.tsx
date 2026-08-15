@@ -802,6 +802,83 @@ function EvidenceViewer({
   );
 }
 
+const spotBorder = {
+  high: "border-sev-high",
+  medium: "border-sev-medium",
+  low: "border-sev-low",
+} as const;
+
+const spotChip = {
+  high: "bg-sev-high text-card",
+  medium: "bg-sev-medium text-card",
+  low: "bg-sev-low text-card",
+} as const;
+
+/**
+ * The highlight for the selected finding: a light scrim over everything else,
+ * a ring on the element itself, and a small caption tied to the ring so the
+ * number and the words it belongs to are read together rather than the badge
+ * floating somewhere near the top of the page.
+ */
+function Spotlight({
+  point,
+  rect,
+}: {
+  point: FrictionPoint;
+  rect: { x: number; y: number; w: number; h: number };
+}) {
+  const x = clampNum(rect.x, 0, 99);
+  const y = clampNum(rect.y, 0, 99);
+  const w = Math.max(1.5, Math.min(rect.w, 100 - x));
+  const h = Math.max(1.2, Math.min(rect.h, 100 - y));
+  const below = y < 12; // no room above the box — caption goes underneath
+
+  return (
+    <span aria-hidden className="pointer-events-none absolute inset-0">
+      {/* Scrim in four panels, so the element itself stays at full brightness. */}
+      <span className="absolute inset-x-0 top-0 bg-foreground/25" style={{ height: `${y}%` }} />
+      <span
+        className="absolute inset-x-0 bottom-0 bg-foreground/25"
+        style={{ height: `${Math.max(0, 100 - y - h)}%` }}
+      />
+      <span
+        className="absolute left-0 bg-foreground/25"
+        style={{ top: `${y}%`, height: `${h}%`, width: `${x}%` }}
+      />
+      <span
+        className="absolute right-0 bg-foreground/25"
+        style={{ top: `${y}%`, height: `${h}%`, width: `${Math.max(0, 100 - x - w)}%` }}
+      />
+
+      <span
+        className={cn("absolute rounded-sm border-2", spotBorder[point.severity])}
+        style={{ left: `${x}%`, top: `${y}%`, width: `${w}%`, height: `${h}%` }}
+      />
+
+      <span
+        className="absolute flex max-w-[70%] items-center gap-1.5"
+        style={{
+          left: `${x}%`,
+          top: below ? `calc(${y + h}% + 6px)` : `calc(${y}% - 6px)`,
+          transform: below ? "none" : "translateY(-100%)",
+        }}
+      >
+        <span
+          className={cn(
+            "flex size-5 shrink-0 items-center justify-center rounded-full font-mono text-[10px] font-semibold",
+            spotChip[point.severity],
+          )}
+        >
+          {point.id}
+        </span>
+        <span className="truncate rounded-sm bg-card/95 px-1.5 py-0.5 font-mono text-[10px] leading-tight text-foreground shadow-tile">
+          {point.title}
+        </span>
+      </span>
+    </span>
+  );
+}
+
 /**
  * The badge sits just outside the element it points at — above-left by
  * default, flipping to whichever side has room — so it never covers the very
