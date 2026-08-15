@@ -3,6 +3,8 @@ import { AlertTriangle, ArrowUpRight, Clock, Maximize2, ShieldAlert, ZoomIn } fr
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { ExecutiveSummary } from "./ExecutiveSummary";
+import { Explain } from "./Explain";
+import type { GlossaryKey } from "@/lib/glossary";
 import { Interstitials, ScrollPass } from "./ScrollEvidence";
 import { SeverityChip } from "./SeverityChip";
 
@@ -130,7 +132,12 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
           <span className="font-display text-4xl leading-none tracking-tight tabular-nums">
             {partial ? "n/a" : score.total}
           </span>
-          {!partial && <span className="font-mono text-xs text-muted-foreground">/100</span>}
+          {!partial && (
+            <span className="flex items-center gap-1 font-mono text-xs text-muted-foreground">
+              /100
+              <Explain term="score" />
+            </span>
+          )}
           <span className="min-w-0">
             <span
               className={cn(
@@ -202,8 +209,10 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
           aria-label="Findings"
         >
           <header className="flex items-baseline justify-between gap-3 border-b border-border px-4 py-3">
-            <h2 className="label-caps">
+            <h2 className="label-caps flex items-center gap-1">
               Findings · {report.stages.reduce((n, s) => n + s.friction_points.length, 0)}
+              <Explain term="severity" />
+              <Explain term="impact" />
             </h2>
             <p className="font-mono text-[11px] text-muted-foreground">select to locate</p>
           </header>
@@ -373,7 +382,10 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
         >
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="label-caps">Score breakdown</h2>
+              <h2 className="label-caps flex items-center gap-1">
+                Score breakdown
+                <Explain term="score" />
+              </h2>
               <p className="mt-2 flex items-baseline gap-2">
                 <span className="font-display text-4xl leading-none tracking-tight tabular-nums">
                   {partial ? "n/a" : score.total}
@@ -459,12 +471,36 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
           </div>
 
           <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
-            <Metric label="LCP" value={formatMs(stage.technical_metrics.largest_contentful_paint_ms)} />
-            <Metric label="CLS" value={stage.technical_metrics.cumulative_layout_shift.toFixed(3)} />
-            <Metric label="Blocking" value={formatMs(stage.technical_metrics.total_blocking_time_ms)} />
-            <Metric label="DOM ready" value={formatMs(stage.technical_metrics.dom_content_loaded_ms)} />
-            <Metric label="Transferred" value={formatBytes(stage.technical_metrics.transfer_bytes)} />
-            <Metric label="Requests" value={String(stage.technical_metrics.request_count)} />
+            <Metric
+              label="LCP"
+              term="lcp"
+              value={formatMs(stage.technical_metrics.largest_contentful_paint_ms)}
+            />
+            <Metric
+              label="CLS"
+              term="cls"
+              value={stage.technical_metrics.cumulative_layout_shift.toFixed(3)}
+            />
+            <Metric
+              label="Blocking"
+              term="tbt"
+              value={formatMs(stage.technical_metrics.total_blocking_time_ms)}
+            />
+            <Metric
+              label="DOM ready"
+              term="domReady"
+              value={formatMs(stage.technical_metrics.dom_content_loaded_ms)}
+            />
+            <Metric
+              label="Transferred"
+              term="transferred"
+              value={formatBytes(stage.technical_metrics.transfer_bytes)}
+            />
+            <Metric
+              label="Requests"
+              term="requests"
+              value={String(stage.technical_metrics.request_count)}
+            />
           </dl>
 
           {stage.scroll_profile && <ScrollPass profile={stage.scroll_profile} />}
@@ -473,7 +509,10 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
           )}
 
           <div className="mt-5 border-t border-border pt-4">
-            <p className="label-caps">Console · {stage.technical_metrics.console_errors.length}</p>
+            <p className="label-caps flex items-center gap-1">
+              Console · {stage.technical_metrics.console_errors.length}
+              <Explain term="consoleErrors" />
+            </p>
             {stage.technical_metrics.console_errors.length === 0 ? (
               <p className="mt-2 font-mono text-xs text-primary">no errors captured</p>
             ) : (
@@ -490,7 +529,10 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
 
           {stage.technical_metrics.slow_resources.length > 0 && (
             <div className="mt-4 border-t border-border pt-4">
-              <p className="label-caps">Slowest resources</p>
+              <p className="label-caps flex items-center gap-1">
+                Slowest resources
+                <Explain term="slowResources" />
+              </p>
               <ul className="mt-2 space-y-1.5">
                 {stage.technical_metrics.slow_resources.map((r) => (
                   <li
@@ -881,10 +923,21 @@ function NavButton({ onClick, children }: { onClick: () => void; children: React
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function Metric({
+  label,
+  value,
+  term,
+}: {
+  label: string;
+  value: string;
+  term?: GlossaryKey;
+}) {
   return (
     <div>
-      <dt className="label-caps">{label}</dt>
+      <dt className="label-caps flex items-center gap-1">
+        {label}
+        {term && <Explain term={term} />}
+      </dt>
       <dd className="mt-0.5 font-mono text-lg tabular-nums text-foreground">{value}</dd>
     </div>
   );

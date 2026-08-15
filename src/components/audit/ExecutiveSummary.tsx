@@ -1,7 +1,9 @@
 import { motion } from "motion/react";
 import { ArrowRight, Target } from "lucide-react";
 
+import { Explain } from "./Explain";
 import { SeverityChip } from "./SeverityChip";
+import type { GlossaryKey } from "@/lib/glossary";
 import { categoryLabel, impactLabel, type ForensicAuditReport } from "@/lib/audit-schema";
 import { buildPillarMatrix, pillarLabel, pillarQuestion, PILLARS, topFix } from "@/lib/pillars";
 import { cn } from "@/lib/utils";
@@ -11,6 +13,13 @@ import { cn } from "@/lib/utils";
  * sentence, and the single fix worth doing first. Everything here is derived
  * from findings already on the report — no extra measurement, no model call.
  */
+
+const PILLAR_TERM: Record<(typeof PILLARS)[number], GlossaryKey> = {
+  clarity: "clarity",
+  trust: "trust",
+  effort: "effortPillar",
+  speed: "speed",
+};
 
 function cellTone(score: number) {
   if (score >= 85) return "bg-primary/12 text-primary";
@@ -40,7 +49,11 @@ export function ExecutiveSummary({
     >
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
         <div className="min-w-0">
-          <h2 className="label-caps">Experience summary</h2>
+          <h2 className="label-caps flex items-center gap-1">
+            Experience summary
+            <Explain term="pillars" />
+            <Explain term="cro" />
+          </h2>
           {diagnosis && (
             <p className="mt-1 text-sm font-medium text-foreground">{diagnosis.headline}</p>
           )}
@@ -122,8 +135,9 @@ export function ExecutiveSummary({
             {PILLARS.map((pillar) => (
               <tr key={pillar}>
                 <th scope="row" className="max-w-[12rem] py-1 pl-1 align-middle font-normal">
-                  <span className="block text-sm font-medium text-foreground">
+                  <span className="flex items-center gap-1 text-sm font-medium text-foreground">
                     {pillarLabel[pillar]}
+                    <Explain term={PILLAR_TERM[pillar]} />
                   </span>
                   <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">
                     {pillarQuestion[pillar]}
@@ -171,8 +185,9 @@ export function ExecutiveSummary({
                 <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
                   {categoryLabel[fix.point.category]} · {fix.stageLabel}
                 </span>
-                <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-primary">
+                <span className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.12em] text-primary">
                   {fix.effortLabel} · +{fix.pointsRecovered} pts
+                  <Explain term="effort" />
                 </span>
               </p>
               <button

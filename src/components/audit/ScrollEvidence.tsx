@@ -1,5 +1,6 @@
 import { ArrowDownToLine, MousePointerClick, PanelTop, X } from "lucide-react";
 
+import { Explain } from "./Explain";
 import type { Interstitial, ScrollProfile } from "@/lib/audit-schema";
 
 /**
@@ -16,6 +17,8 @@ export function ScrollPass({ profile }: { profile: ScrollProfile }) {
       <p className="label-caps flex items-center gap-1.5">
         <ArrowDownToLine className="size-3" aria-hidden />
         Scroll pass
+        <Explain term="aboveFold" />
+        <Explain term="layoutShift" />
       </p>
 
       <div className="mt-3 flex items-start gap-4">
@@ -144,6 +147,7 @@ export function Interstitials({ items }: { items: Interstitial[] }) {
       <p className="label-caps flex items-center gap-1.5">
         <PanelTop className="size-3" aria-hidden />
         Interrupted by {items.length} pop-up{items.length === 1 ? "" : "s"}
+        <Explain term="interstitial" />
       </p>
 
       <ul className="mt-3 space-y-3">
