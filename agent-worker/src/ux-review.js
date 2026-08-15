@@ -229,14 +229,31 @@ export function createReviewer(provider, { vertical } = {}) {
       ]),
     ].join("\n");
 
+    // Viewport frames from the scroll sweep. The full-page capture flattens
+    // the page; these show what was actually on screen at each depth, which is
+    // what lets the council judge below-fold content at all.
+    const frames = Array.isArray(scroll_profile?.frames) ? scroll_profile.frames.slice(0, 3) : [];
+
     const content = [
       { type: "text", text: prompt },
       { type: "image", image: screenshot },
+      ...(frames.length
+        ? [
+            {
+              type: "text",
+              text: `The next ${frames.length} image${frames.length === 1 ? " is a viewport frame" : "s are viewport frames"} captured during the scroll, in order, covering ${frames
+                .map((f) => `${Math.round(f.top_percentage)}–${Math.round(f.bottom_percentage)}%`)
+                .join(", ")} of the page. Judge below-fold content from these.`,
+            },
+            ...frames.map((frame) => ({ type: "image", image: frame.src })),
+          ]
+        : []),
       ...interstitials
         .slice(0, 2)
         .filter((overlay) => overlay.image)
         .map((overlay) => ({ type: "image", image: overlay.image })),
     ];
+
 
     const withTimeout = (promise) => {
       let timer;
