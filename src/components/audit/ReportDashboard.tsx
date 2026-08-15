@@ -3,6 +3,8 @@ import { AlertTriangle, ArrowUpRight, Clock, Maximize2, ShieldAlert, ZoomIn } fr
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { ExecutiveSummary } from "./ExecutiveSummary";
+import { Explain } from "./Explain";
+import type { GlossaryKey } from "@/lib/glossary";
 import { Interstitials, ScrollPass } from "./ScrollEvidence";
 import { SeverityChip } from "./SeverityChip";
 
