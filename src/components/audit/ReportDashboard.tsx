@@ -676,6 +676,7 @@ function EvidenceViewer({
   const point = stage.friction_points.find((p) => p.id === activeId) ?? null;
   const ratio = stage.screenshot.height / stage.screenshot.width;
   const rect = point ? pointRect(point) : null;
+  const pinRects = useMemo(() => spreadPinRects(stage.friction_points), [stage.friction_points]);
 
   // In full-page mode, bring the selected pin into view instead of leaving the
   // reader at the top of a very tall composite.
@@ -697,7 +698,9 @@ function EvidenceViewer({
     if (!rect || box.w === 0) return 2.4;
     const byWidth = 55 / rect.w;
     const byHeight = box.h === 0 ? byWidth : (55 / rect.h) * (box.h / box.w) / ratio;
-    return clampNum(Math.min(byWidth, byHeight), 1.4, 6);
+    // Keep enough surrounding page visible to preserve orientation. Extreme
+    // zoom made a technically correct target feel like the wrong section.
+    return clampNum(Math.min(byWidth, byHeight), 1.4, 3.4);
   };
   const zoom = zoomFor();
 
@@ -765,6 +768,7 @@ function EvidenceViewer({
             <Pin
               key={p.id}
               point={p}
+              displayRect={pinRects.get(p.id)}
               active={p.id === activeId}
               dim={activeId !== null && p.id !== activeId}
               onSelect={() => onSelect(p.id)}
@@ -795,7 +799,14 @@ function EvidenceViewer({
         {stage.friction_points
           .filter((p) => p.id !== activeId)
           .map((p) => (
-            <Pin key={p.id} point={p} active={false} dim onSelect={() => onSelect(p.id)} />
+            <Pin
+              key={p.id}
+              point={p}
+              displayRect={pinRects.get(p.id)}
+              active={false}
+              dim
+              onSelect={() => onSelect(p.id)}
+            />
           ))}
       </motion.div>
     </div>
@@ -886,16 +897,18 @@ function Spotlight({
  */
 function Pin({
   point,
+  displayRect,
   active,
   dim,
   onSelect,
 }: {
   point: FrictionPoint;
+  displayRect?: { x: number; y: number; w: number; h: number };
   active: boolean;
   dim: boolean;
   onSelect: () => void;
 }) {
-  const rect = pointRect(point);
+  const rect = displayRect ?? pointRect(point);
   const flipRight = rect.x < 6;
   const flipDown = rect.y < 3;
   return (

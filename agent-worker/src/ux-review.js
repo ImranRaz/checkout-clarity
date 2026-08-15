@@ -360,9 +360,18 @@ export function createReviewer(provider, { vertical } = {}) {
       // Below-fold findings carry the frame the shopper would have been
       // looking at, so the card shows that screen rather than a pin on a
       // full-page composite the shopper never sees.
+      // Never attach the merely-nearest frame. Sparse capture intervals can
+      // make that frame a completely different section, which is worse than
+      // falling back to the full-page evidence. The frame must contain the
+      // centre of the cited element (with a tiny tolerance for rounding).
+      const containingFrames = frames.filter(
+        (candidate) =>
+          box.y_percentage >= candidate.top_percentage - 0.75 &&
+          box.y_percentage <= candidate.bottom_percentage + 0.75,
+      );
       const frame =
-        box.y_percentage > 12 && frames.length
-          ? frames.reduce((a, b) =>
+        box.y_percentage > 12 && containingFrames.length
+          ? containingFrames.reduce((a, b) =>
               Math.abs((a.top_percentage + a.bottom_percentage) / 2 - box.y_percentage) <=
               Math.abs((b.top_percentage + b.bottom_percentage) / 2 - box.y_percentage)
                 ? a

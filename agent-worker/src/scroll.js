@@ -390,26 +390,12 @@ export function scrollFindings(profile, kind = "other") {
   };
   const lastFrame = frames.length ? frames[frames.length - 1] : null;
 
-  // Only claimed when the images were still blank on a second look, well after
-  // the sweep passed them. Lazy loading that finishes late is not a defect, and
-  // a finding the evidence image contradicts costs more trust than it earns.
-  if (profile.stalled_media_count >= 3 && profile.stalled_media?.length) {
-    const named = profile.stalled_media
-      .slice(0, 3)
-      .map((m) => m.alt || m.selector)
-      .filter(Boolean);
-    out.push({
-      ...at(profile.stalled_media[0]),
-      ...frameAt(profile.stalled_media[0]?.y_percentage ?? 50),
-      severity: profile.stalled_media_count >= 8 ? "high" : "medium",
-      category: "performance",
-      title: `${profile.stalled_media_count} images were still blank after the page settled`,
-      description:
-        "These images had painted nothing even a second after being scrolled into view and given time to load, so a shopper reading down the page sees empty boxes where product imagery should be. Images that simply loaded late are not counted here.",
-      evidence: `${profile.stalled_media_count} of ${profile.media_count} large images had no pixels after a full-page scroll and a settle${named.length ? ` — ${named.join(", ")}` : ""}.`,
-      selector: profile.stalled_media[0]?.selector,
-    });
-  }
+  // Do not turn DOM image state into a client-facing finding. Modern catalogues
+  // routinely keep duplicate responsive/lazy image nodes unpainted while a
+  // sibling source or CSS background supplies the pixels visible to shoppers.
+  // The sweep still records this diagnostic for telemetry, but an image issue
+  // belongs in the report only when visual review can point to a visible broken
+  // placeholder. A screenshot that shows the product is the source of truth.
 
 
 
@@ -455,8 +441,25 @@ export function scrollFindings(profile, kind = "other") {
             evidence_caption: `${Math.round(lastFrame.top_percentage)}–${Math.round(lastFrame.bottom_percentage)}% down the page: “${profile.primary_cta.text}” is nowhere on screen and nothing is pinned in its place.`,
           }
         : {};
+      const proofDepth = lastFrame
+        ? (lastFrame.top_percentage + lastFrame.bottom_percentage) / 2
+        : profile.primary_cta.y_percentage;
       out.push({
-        ...at(profile.primary_cta),
+        // This finding is about the reading position where the action has been
+        // lost, not the button's original position near the top. Pin and order
+        // it at the evidence viewport so list numbers follow the page visually.
+        x_percentage: 50,
+        y_percentage: proofDepth,
+        ...(lastFrame
+          ? {
+              rect: {
+                x_percentage: 4,
+                y_percentage: lastFrame.top_percentage,
+                w_percentage: 92,
+                h_percentage: Math.max(1, lastFrame.bottom_percentage - lastFrame.top_percentage),
+              },
+            }
+          : at(profile.primary_cta)),
         ...proof,
         severity: "medium",
         category: "clarity",
