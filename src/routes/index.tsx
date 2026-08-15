@@ -393,13 +393,16 @@ function TargetSummary({
 function RecentCard({
   run,
   live = false,
+  thumb,
   onDelete,
   deleting = false,
 }: {
   run: RecentAudit;
   live?: boolean;
-  onDelete?: () => void;
-  deleting?: boolean;
+  /** First capture of the run, shown as a visual cue for the site audited. */
+  thumb?: string | undefined;
+  onDelete?: (() => void) | undefined;
+  deleting?: boolean | undefined;
 }) {
   return (
     <div className="relative h-full">
