@@ -52,7 +52,6 @@ export function ExecutiveSummary({
           <h2 className="label-caps flex items-center gap-1">
             Experience summary
             <Explain term="pillars" />
-            <Explain term="cro" />
           </h2>
           {diagnosis && (
             <p className="mt-1 text-sm font-medium text-foreground">{diagnosis.headline}</p>

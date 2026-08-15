@@ -4,6 +4,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 
 import { ExecutiveSummary } from "./ExecutiveSummary";
 import { Explain } from "./Explain";
+import { Gauge } from "./Gauge";
+import type { BenchmarkKey } from "@/lib/benchmarks";
 import type { GlossaryKey } from "@/lib/glossary";
 import { Interstitials, ScrollPass } from "./ScrollEvidence";
 import { SeverityChip } from "./SeverityChip";
