@@ -138,28 +138,20 @@ function Home() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.05 }}
-            className="mt-6 max-w-3xl font-display text-4xl leading-[1.05] tracking-tight sm:text-6xl"
+            className="mt-6 max-w-2xl font-display text-3xl leading-[1.1] tracking-tight sm:text-5xl"
           >
-            Shoppers don't abandon because of one bad metric.
-            <span className="text-muted-foreground">
-              {" "}
-              They leave when the words, the costs, the effort and the speed stop agreeing with each
-              other.
-            </span>
+            See exactly where shoppers give up.
+            <span className="text-muted-foreground"> Every cost, copy flaw, and slowdown — pinned to the pixel.</span>
           </motion.h1>
 
           <motion.p
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.12 }}
-            className="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg"
+            className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground"
           >
-            Give it any page — a category, a product, a homepage, a cruise itinerary. The agent
-            reads the context, finds its own way to the cart and, where guests are allowed, to
-            checkout. Then it hands back what a senior optimiser would: the copy that answers your
-            questions instead of the shopper's, the cost that appears too late, the effort you're
-            charging for, and the seconds you're spending — each one pinned to the exact pixels it
-            came from.
+            Point the agent at any page. It finds its own way to cart and checkout, then reports the
+            copy, costs, and friction costing you orders — pinned to the exact pixels.
           </motion.p>
 
           <motion.form
