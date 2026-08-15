@@ -287,6 +287,7 @@ function Home() {
                     consoleErrors: totalConsoleErrors(report),
                     createdAt: report.captured_at,
                   }}
+                  thumb={report.stages[0]?.screenshot.src}
                 />
               </li>
             );
