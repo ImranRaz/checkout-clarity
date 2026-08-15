@@ -584,6 +584,20 @@ function EvidenceViewer({
   const ratio = stage.screenshot.height / stage.screenshot.width;
   const rect = point ? pointRect(point) : null;
 
+  // In full-page mode, bring the selected pin into view instead of leaving the
+  // reader at the top of a very tall composite.
+  const rectY = rect?.y ?? null;
+  useEffect(() => {
+    if (zoomed || rectY === null) return;
+    const el = fullRef.current;
+    if (!el) return;
+    const img = el.querySelector("img");
+    const height = img?.clientHeight ?? el.scrollHeight;
+    el.scrollTo({ top: Math.max(0, (rectY / 100) * height - el.clientHeight / 3), behavior: "smooth" });
+  }, [rectY, zoomed, activeId]);
+
+
+
   // Scale so the offending element fills roughly half the frame in each axis,
   // rather than applying one blunt zoom to a full-page capture.
   const zoomFor = () => {
