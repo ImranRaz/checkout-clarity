@@ -881,10 +881,21 @@ function NavButton({ onClick, children }: { onClick: () => void; children: React
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function Metric({
+  label,
+  value,
+  term,
+}: {
+  label: string;
+  value: string;
+  term?: GlossaryKey;
+}) {
   return (
     <div>
-      <dt className="label-caps">{label}</dt>
+      <dt className="label-caps flex items-center gap-1">
+        {label}
+        {term && <Explain term={term} />}
+      </dt>
       <dd className="mt-0.5 font-mono text-lg tabular-nums text-foreground">{value}</dd>
     </div>
   );
