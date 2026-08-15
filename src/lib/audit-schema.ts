@@ -56,6 +56,14 @@ export const frictionPointSchema = z.object({
   recommendation: z.string().optional(),
   rewrite_before: z.string().optional(),
   rewrite_after: z.string().optional(),
+  /**
+   * The viewport frame the shopper actually had on screen where this happens,
+   * captured during the scroll sweep. A full-page composite cannot show that a
+   * button is off-screen at 60% depth; this can.
+   */
+  evidence_image: z.string().nullish().optional(),
+  evidence_caption: z.string().nullish().optional(),
+
   selector: z.string(),
 });
 export type FrictionPoint = z.infer<typeof frictionPointSchema>;
@@ -130,6 +138,23 @@ export const scrollProfileSchema = z.object({
   stalled_media_count: z.number().default(0),
   media_count: z.number().default(0),
   infinite_scroll: z.boolean().default(false),
+  /**
+   * Viewport screenshots taken at intervals during the sweep — the page as the
+   * shopper had it on screen at that depth, which is the evidence behind any
+   * below-fold finding.
+   */
+  frames: z
+    .array(
+      z.object({
+        scroll_y: z.number().default(0),
+        depth_percentage: z.number().default(0),
+        top_percentage: z.number().default(0),
+        bottom_percentage: z.number().default(0),
+        src: z.string(),
+      }),
+    )
+    .default([]),
+
   sticky: z
     .array(
       z.object({

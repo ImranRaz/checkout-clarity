@@ -17,6 +17,15 @@
 const MAX_STEPS = Number(process.env.AGENT_SCROLL_STEPS || 12);
 const STEP_SETTLE_MS = Number(process.env.AGENT_SCROLL_SETTLE_MS || 250);
 const BUDGET_MS = Number(process.env.AGENT_SCROLL_BUDGET_MS || 8000);
+/**
+ * Viewport frames captured during the sweep. A full-page screenshot proves a
+ * page exists; it does not show what the shopper actually has on screen at
+ * 60% depth — which is the whole point of findings like "the way to buy
+ * scrolls out of reach". These frames are the evidence for those.
+ */
+const MAX_FRAMES = Number(process.env.AGENT_SCROLL_FRAMES || 4);
+const FRAME_QUALITY = Number(process.env.AGENT_SCROLL_FRAME_QUALITY || 45);
+
 
 /**
  * Installed before the sweep. Layout shift *after* load is the interesting
@@ -164,17 +173,44 @@ export async function scrollSweep(page, { emit } = {}) {
   }
 
   let startHeight = 0;
+  let viewportHeight = 900;
   try {
     const box = await page.evaluate(`({ h: ${height}, vp: window.innerHeight })`);
     startHeight = box.h;
+    viewportHeight = box.vp || 900;
     // A page barely taller than the viewport has nothing to sweep.
     if (box.h < box.vp * 1.5) {
       const short = await page.evaluate(SCROLL_REPORT).catch(() => null);
-      return short ? { ...short, steps: 0, infinite_scroll: false, swept: false } : null;
+      return short ? { ...short, steps: 0, infinite_scroll: false, swept: false, frames: [] } : null;
     }
   } catch {
     return null;
   }
+
+  // Frames are spread across the sweep so the report can show the page as the
+  // shopper had it on screen at that depth, not a full-page composite.
+  const expectedSteps = Math.min(MAX_STEPS, Math.ceil(startHeight / (viewportHeight * 0.9)));
+  const stride = Math.max(1, Math.ceil(expectedSteps / MAX_FRAMES));
+  const frames = [];
+
+  const grabFrame = async () => {
+    if (frames.length >= MAX_FRAMES) return;
+    try {
+      const [shot, pos] = await Promise.all([
+        page.screenshot({ type: "jpeg", quality: FRAME_QUALITY }),
+        page.evaluate(`({ y: window.scrollY, h: ${height}, vp: window.innerHeight })`),
+      ]);
+      frames.push({
+        scroll_y: Math.round(pos.y),
+        depth_percentage: Math.round(Math.min(100, (pos.y / Math.max(1, pos.h - pos.vp)) * 100)),
+        top_percentage: Math.round((pos.y / Math.max(1, pos.h)) * 1000) / 10,
+        bottom_percentage: Math.round(((pos.y + pos.vp) / Math.max(1, pos.h)) * 1000) / 10,
+        src: `data:image/jpeg;base64,${shot.toString("base64")}`,
+      });
+    } catch {
+      /* a frame is nice to have, never worth failing the sweep for */
+    }
+  };
 
   let steps = 0;
   for (; steps < MAX_STEPS && Date.now() < deadline; steps += 1) {
@@ -187,8 +223,11 @@ export async function scrollSweep(page, { emit } = {}) {
       )
       .catch(() => true);
     await page.waitForTimeout(STEP_SETTLE_MS);
+    if (steps % stride === 0) await grabFrame();
     if (atBottom) break;
   }
+  // Always keep the bottom of the page, even if the stride missed it.
+  await grabFrame();
 
   // Height that keeps growing at the bottom means an infinite feed.
   let endHeight = startHeight;
@@ -207,14 +246,16 @@ export async function scrollSweep(page, { emit } = {}) {
     ...report,
     steps,
     swept: true,
+    frames,
     infinite_scroll: endHeight > startHeight * 1.4,
   };
   emit?.(
     "browser",
-    `Scrolled the full page (${profile.viewports} screens${profile.stalled_media_count ? `, ${profile.stalled_media_count} image${profile.stalled_media_count === 1 ? "" : "s"} still blank` : ""})`,
+    `Scrolled the full page (${profile.viewports} screens${frames.length ? `, ${frames.length} viewport frame${frames.length === 1 ? "" : "s"} captured` : ""}${profile.stalled_media_count ? `, ${profile.stalled_media_count} image${profile.stalled_media_count === 1 ? "" : "s"} still blank` : ""})`,
   );
   return profile;
 }
+
 
 /**
  * Measured findings derived from the sweep. These belong with the vitals and
@@ -239,9 +280,34 @@ export function scrollFindings(profile, kind = "other") {
       : {}),
   });
 
+  /**
+   * The viewport frame captured nearest a given page depth, so a finding about
+   * something below the fold can show what the shopper actually had on screen
+   * there instead of a pin on a full-page composite.
+   */
+  const frames = Array.isArray(profile.frames) ? profile.frames : [];
+  const frameAt = (depthPct, caption) => {
+    if (frames.length === 0) return {};
+    const target = Math.min(100, Math.max(0, depthPct));
+    const best = frames.reduce((a, b) =>
+      Math.abs((a.top_percentage + a.bottom_percentage) / 2 - target) <=
+      Math.abs((b.top_percentage + b.bottom_percentage) / 2 - target)
+        ? a
+        : b,
+    );
+    return {
+      evidence_image: best.src,
+      evidence_caption:
+        caption ||
+        `What the shopper sees between ${Math.round(best.top_percentage)}% and ${Math.round(best.bottom_percentage)}% down the page.`,
+    };
+  };
+  const lastFrame = frames.length ? frames[frames.length - 1] : null;
+
   if (profile.stalled_media_count >= 3) {
     out.push({
       ...at(profile.stalled_media[0]),
+      ...frameAt(profile.stalled_media[0]?.y_percentage ?? 50),
       severity: profile.stalled_media_count >= 8 ? "high" : "medium",
       category: "performance",
       title: `${profile.stalled_media_count} images never loaded while scrolling`,
@@ -252,12 +318,16 @@ export function scrollFindings(profile, kind = "other") {
     });
   }
 
+
   if (profile.shift_after_load >= 0.1) {
+    const shiftDepth =
+      profile.worst_shift_scroll_y && profile.document_height
+        ? Math.min(96, (profile.worst_shift_scroll_y / profile.document_height) * 100)
+        : 50;
     out.push({
       x_percentage: 50,
-      y_percentage: profile.worst_shift_scroll_y && profile.document_height
-        ? Math.min(96, (profile.worst_shift_scroll_y / profile.document_height) * 100)
-        : 50,
+      y_percentage: shiftDepth,
+      ...frameAt(shiftDepth, `The part of the page that moved, at ${Math.round(shiftDepth)}% depth.`),
       severity: profile.shift_after_load >= 0.25 ? "high" : "medium",
       category: "performance",
       title: "The page moves under you as you scroll",
@@ -284,25 +354,39 @@ export function scrollFindings(profile, kind = "other") {
   if (BUY_STAGES.indexOf(kind) !== -1 && profile.viewports >= 3 && profile.primary_cta) {
     const stickyCta = profile.sticky.some((el) => /add to|buy|book|reserve|checkout|continue|price/i.test(el.text));
     if (!stickyCta && profile.primary_cta.depth_percentage <= 40) {
+      // The proof is the deepest frame: the action is nowhere on that screen.
+      const proof = lastFrame
+        ? {
+            evidence_image: lastFrame.src,
+            evidence_caption: `${Math.round(lastFrame.top_percentage)}–${Math.round(lastFrame.bottom_percentage)}% down the page: “${profile.primary_cta.text}” is nowhere on screen and nothing is pinned in its place.`,
+          }
+        : {};
       out.push({
         ...at(profile.primary_cta),
+        ...proof,
         severity: "medium",
         category: "clarity",
         title: "The way to buy scrolls out of reach",
-        description: `The page is ${profile.viewports} screens long and the primary action stays put at the top, so a shopper who reads the detail below has to scroll back up to act.`,
+        description: `The page is ${profile.viewports} screens long and the primary action stays put at the top, so a shopper who reads the detail below has to scroll back up to act. Pinning a slim bar carrying “${profile.primary_cta.text}” (with price and the chosen variant) to the bottom of the viewport keeps the decision one tap away at every depth.`,
         evidence: `“${profile.primary_cta.text}” sits at ${profile.primary_cta.depth_percentage}% depth with no persistent bar on a ${profile.viewports}-screen page.`,
+        recommendation: `Add a sticky buy bar that appears once “${profile.primary_cta.text}” scrolls out of view, showing price, selected variant and the action itself.`,
         selector: profile.primary_cta.selector,
       });
     }
     if (profile.primary_cta.depth_percentage >= 55) {
       out.push({
         ...at(profile.primary_cta),
+        ...frameAt(
+          profile.primary_cta.depth_percentage,
+          `“${profile.primary_cta.text}” finally appears at ${profile.primary_cta.depth_percentage}% down the page.`,
+        ),
         severity: "medium",
         category: "clarity",
         title: "The buying decision is buried down the page",
         description:
           "The primary action sits past the halfway mark of a long page, behind marketing content, so the decision point arrives later than the intent to buy.",
         evidence: `“${profile.primary_cta.text}” is at ${profile.primary_cta.depth_percentage}% of a ${profile.viewports}-screen page.`,
+        recommendation: "Move price and the primary action into the first screen, and let the marketing modules follow it rather than precede it.",
         selector: profile.primary_cta.selector,
       });
     }
@@ -312,6 +396,7 @@ export function scrollFindings(profile, kind = "other") {
   if (hog) {
     out.push({
       ...at(hog),
+      ...frameAt(hog.y_percentage ?? 50),
       severity: "medium",
       category: "clarity",
       title: "A pinned bar eats the screen while scrolling",
@@ -326,6 +411,12 @@ export function scrollFindings(profile, kind = "other") {
     out.push({
       x_percentage: 50,
       y_percentage: 92,
+      ...(lastFrame
+        ? {
+            evidence_image: lastFrame.src,
+            evidence_caption: "The bottom of the page during the sweep — the footer keeps being pushed away.",
+          }
+        : {}),
       severity: "low",
       category: "clarity",
       title: "Infinite scroll with no reachable footer",
@@ -334,6 +425,7 @@ export function scrollFindings(profile, kind = "other") {
       evidence: "Document height kept growing after scrolling to the bottom.",
     });
   }
+
 
   return out;
 }
