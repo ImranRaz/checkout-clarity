@@ -270,6 +270,28 @@ export async function scrollSweep(page, { emit } = {}) {
   await page.waitForTimeout(350);
 
   if (!report) return null;
+
+  // Second look. Lazy loaders routinely finish a beat after the sweep passes,
+  // and the screenshot the report shows is taken after that. Re-checking the
+  // tagged elements keeps the finding honest: whatever painted in the meantime
+  // is dropped, so the report never claims an image is missing while the
+  // evidence image plainly shows it.
+  if (report.stalled_media_count > 0) {
+    await page.waitForTimeout(1200);
+    const stillBlank = await page.evaluate(RECHECK_STALLED).catch(() => null);
+    if (stillBlank) {
+      const kept = new Set(stillBlank.selectors);
+      report.stalled_media = (report.stalled_media || []).filter((m) => kept.has(m.selector));
+      report.stalled_media_count = stillBlank.count;
+      if (stillBlank.recovered > 0) {
+        emit?.(
+          "browser",
+          `${stillBlank.recovered} image${stillBlank.recovered === 1 ? "" : "s"} finished loading late — not reported as broken`,
+        );
+      }
+    }
+  }
+
   const profile = {
     ...report,
     steps,
