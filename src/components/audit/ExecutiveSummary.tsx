@@ -128,8 +128,9 @@ export function ExecutiveSummary({
             {PILLARS.map((pillar) => (
               <tr key={pillar}>
                 <th scope="row" className="max-w-[12rem] py-1 pl-1 align-middle font-normal">
-                  <span className="block text-sm font-medium text-foreground">
+                  <span className="flex items-center gap-1 text-sm font-medium text-foreground">
                     {pillarLabel[pillar]}
+                    <Explain term={PILLAR_TERM[pillar]} />
                   </span>
                   <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">
                     {pillarQuestion[pillar]}
@@ -177,8 +178,9 @@ export function ExecutiveSummary({
                 <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
                   {categoryLabel[fix.point.category]} · {fix.stageLabel}
                 </span>
-                <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-primary">
+                <span className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.12em] text-primary">
                   {fix.effortLabel} · +{fix.pointsRecovered} pts
+                  <Explain term="effort" />
                 </span>
               </p>
               <button
