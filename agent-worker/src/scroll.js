@@ -186,7 +186,43 @@ export const SCROLL_REPORT = `(() => {
   };
 })()`;
 
+/**
+ * Re-examines the elements the sweep flagged as blank, after the page has had
+ * a moment to settle. Anything that painted in the meantime was lazy loading,
+ * not a broken image, and is dropped from the report.
+ */
+export const RECHECK_STALLED = `(() => {
+  const nodes = [...document.querySelectorAll('[data-fx-stalled]')];
+  const selectorFor = (el) => {
+    if (el.id) return '#' + el.id;
+    const cls = (el.className && typeof el.className === 'string' ? el.className.trim().split(/\\s+/)[0] : '');
+    return el.tagName.toLowerCase() + (cls ? '.' + cls : '');
+  };
+  const painted = (el) => {
+    let node = el;
+    for (let i = 0; i < 3 && node; i += 1) {
+      const bg = getComputedStyle(node).backgroundImage;
+      if (bg && bg !== 'none' && /url\\(/.test(bg)) return true;
+      node = node.parentElement;
+    }
+    return false;
+  };
+  const blank = nodes.filter((el) => {
+    if (el.tagName === 'IFRAME') return !el.src && !el.getAttribute('data-src');
+    if (!el.complete) return false;
+    if (el.naturalWidth > 1) return false;
+    return !painted(el);
+  });
+  nodes.forEach((el) => el.removeAttribute('data-fx-stalled'));
+  return {
+    count: blank.length,
+    recovered: nodes.length - blank.length,
+    selectors: blank.map(selectorFor),
+  };
+})()`;
+
 const height = `Math.max(document.documentElement.scrollHeight, window.innerHeight)`;
+
 
 /**
  * Scrolls the page the way a reviewer would, then returns to the top so the
