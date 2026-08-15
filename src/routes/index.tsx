@@ -140,8 +140,12 @@ function Home() {
             transition={{ duration: 0.5, delay: 0.05 }}
             className="mt-6 max-w-3xl font-display text-4xl leading-[1.05] tracking-tight sm:text-6xl"
           >
-            Bad conversion isn't just UX, and it isn't just slow APIs.
-            <span className="text-muted-foreground"> It's the intersection.</span>
+            Shoppers don't abandon because of one bad metric.
+            <span className="text-muted-foreground">
+              {" "}
+              They leave when the words, the costs, the effort and the speed stop agreeing with each
+              other.
+            </span>
           </motion.h1>
 
           <motion.p

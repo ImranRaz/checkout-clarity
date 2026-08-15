@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuditRunIdRouteImport } from './routes/audit.$runId'
 import { Route as AuditLiveRouteImport } from './routes/audit.live'
 import { Route as ReportReportIdRouteImport } from './routes/report.$reportId'
+import { Route as ApiPublicThumbIdRouteImport } from './routes/api/public/thumb.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,18 +35,25 @@ const ReportReportIdRoute = ReportReportIdRouteImport.update({
   path: '/report/$reportId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicThumbIdRoute = ApiPublicThumbIdRouteImport.update({
+  id: '/api/public/thumb/$id',
+  path: '/api/public/thumb/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/audit/$runId': typeof AuditRunIdRoute
   '/audit/live': typeof AuditLiveRoute
   '/report/$reportId': typeof ReportReportIdRoute
+  '/api/public/thumb/$id': typeof ApiPublicThumbIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/audit/$runId': typeof AuditRunIdRoute
   '/audit/live': typeof AuditLiveRoute
   '/report/$reportId': typeof ReportReportIdRoute
+  '/api/public/thumb/$id': typeof ApiPublicThumbIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,30 @@ export interface FileRoutesById {
   '/audit/$runId': typeof AuditRunIdRoute
   '/audit/live': typeof AuditLiveRoute
   '/report/$reportId': typeof ReportReportIdRoute
+  '/api/public/thumb/$id': typeof ApiPublicThumbIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/audit/$runId' | '/audit/live' | '/report/$reportId'
+  fullPaths:
+    | '/'
+    | '/audit/$runId'
+    | '/audit/live'
+    | '/report/$reportId'
+    | '/api/public/thumb/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/audit/$runId' | '/audit/live' | '/report/$reportId'
-  id: '__root__' | '/' | '/audit/$runId' | '/audit/live' | '/report/$reportId'
+  to:
+    | '/'
+    | '/audit/$runId'
+    | '/audit/live'
+    | '/report/$reportId'
+    | '/api/public/thumb/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/audit/$runId'
+    | '/audit/live'
+    | '/report/$reportId'
+    | '/api/public/thumb/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,6 +92,7 @@ export interface RootRouteChildren {
   AuditRunIdRoute: typeof AuditRunIdRoute
   AuditLiveRoute: typeof AuditLiveRoute
   ReportReportIdRoute: typeof ReportReportIdRoute
+  ApiPublicThumbIdRoute: typeof ApiPublicThumbIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -99,6 +125,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReportReportIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/thumb/$id': {
+      id: '/api/public/thumb/$id'
+      path: '/api/public/thumb/$id'
+      fullPath: '/api/public/thumb/$id'
+      preLoaderRoute: typeof ApiPublicThumbIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -107,6 +140,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuditRunIdRoute: AuditRunIdRoute,
   AuditLiveRoute: AuditLiveRoute,
   ReportReportIdRoute: ReportReportIdRoute,
+  ApiPublicThumbIdRoute: ApiPublicThumbIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
