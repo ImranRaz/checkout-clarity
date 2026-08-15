@@ -600,7 +600,25 @@ function EvidenceViewer({
   const tx = rect ? clampNum(box.w / 2 - cx, Math.min(box.w - imgW, 0), 0) : 0;
   const ty = rect ? clampNum(box.h / 2 - cy, Math.min(box.h - imgH, 0), 0) : 0;
 
+  // A finding below the fold is proved by the screen the shopper was on, not
+  // by a pin on a full-page composite nobody ever sees at once.
+  if (zoomed && point?.evidence_image) {
+    return (
+      <div className="flex max-h-[40rem] flex-col overflow-y-auto bg-secondary p-4">
+        <img
+          src={point.evidence_image}
+          alt={point.evidence_caption ?? `Viewport evidence for: ${point.title}`}
+          className="mx-auto w-full max-w-[44rem] rounded border border-border bg-card"
+        />
+        <p className="mx-auto mt-2 max-w-[44rem] text-xs leading-relaxed text-muted-foreground">
+          {point.evidence_caption ?? "The viewport captured during the scroll pass."}
+        </p>
+      </div>
+    );
+  }
+
   if (!zoomed) {
+
     return (
       <div className="relative max-h-[40rem] overflow-y-auto bg-secondary p-4">
         <div className="relative mx-auto w-full max-w-[44rem]">
