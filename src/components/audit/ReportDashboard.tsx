@@ -461,12 +461,36 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
           </div>
 
           <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
-            <Metric label="LCP" value={formatMs(stage.technical_metrics.largest_contentful_paint_ms)} />
-            <Metric label="CLS" value={stage.technical_metrics.cumulative_layout_shift.toFixed(3)} />
-            <Metric label="Blocking" value={formatMs(stage.technical_metrics.total_blocking_time_ms)} />
-            <Metric label="DOM ready" value={formatMs(stage.technical_metrics.dom_content_loaded_ms)} />
-            <Metric label="Transferred" value={formatBytes(stage.technical_metrics.transfer_bytes)} />
-            <Metric label="Requests" value={String(stage.technical_metrics.request_count)} />
+            <Metric
+              label="LCP"
+              term="lcp"
+              value={formatMs(stage.technical_metrics.largest_contentful_paint_ms)}
+            />
+            <Metric
+              label="CLS"
+              term="cls"
+              value={stage.technical_metrics.cumulative_layout_shift.toFixed(3)}
+            />
+            <Metric
+              label="Blocking"
+              term="tbt"
+              value={formatMs(stage.technical_metrics.total_blocking_time_ms)}
+            />
+            <Metric
+              label="DOM ready"
+              term="domReady"
+              value={formatMs(stage.technical_metrics.dom_content_loaded_ms)}
+            />
+            <Metric
+              label="Transferred"
+              term="transferred"
+              value={formatBytes(stage.technical_metrics.transfer_bytes)}
+            />
+            <Metric
+              label="Requests"
+              term="requests"
+              value={String(stage.technical_metrics.request_count)}
+            />
           </dl>
 
           {stage.scroll_profile && <ScrollPass profile={stage.scroll_profile} />}
