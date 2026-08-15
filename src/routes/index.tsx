@@ -31,17 +31,17 @@ export const Route = createFileRoute("/")({
   ),
   head: () => ({
     meta: [
-      { title: "Checkout Forensic — Audit any store's cart flow" },
+      { title: "Checkout Forensic — Why shoppers leave, page by page" },
       {
         name: "description",
         content:
-          "An agent walks a real product page into the cart, measures load behaviour and console errors, then maps every conversion friction point onto the capture.",
+          "Point an agent at any store page. It finds its own way to cart and guest checkout, then reports the copy, cost, effort and speed problems costing you orders — pinned to the pixels.",
       },
-      { property: "og:title", content: "Checkout Forensic — Audit any store's cart flow" },
+      { property: "og:title", content: "Checkout Forensic — Why shoppers leave, page by page" },
       {
         property: "og:description",
         content:
-          "Technical friction and UX friction, measured in the same run and pinned to the same screenshot.",
+          "Copy, trust, effort and speed audited in one real browser run, pinned to the exact screenshot.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -140,8 +140,12 @@ function Home() {
             transition={{ duration: 0.5, delay: 0.05 }}
             className="mt-6 max-w-3xl font-display text-4xl leading-[1.05] tracking-tight sm:text-6xl"
           >
-            Bad conversion isn't just UX, and it isn't just slow APIs.
-            <span className="text-muted-foreground"> It's the intersection.</span>
+            Shoppers don't abandon because of one bad metric.
+            <span className="text-muted-foreground">
+              {" "}
+              They leave when the words, the costs, the effort and the speed stop agreeing with each
+              other.
+            </span>
           </motion.h1>
 
           <motion.p
@@ -150,8 +154,12 @@ function Home() {
             transition={{ duration: 0.5, delay: 0.12 }}
             className="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg"
           >
-            Point the agent at a product page. It walks the page into the cart, records what the
-            browser actually did, and pins every friction point it finds onto the capture.
+            Give it any page — a category, a product, a homepage, a cruise itinerary. The agent
+            reads the context, finds its own way to the cart and, where guests are allowed, to
+            checkout. Then it hands back what a senior optimiser would: the copy that answers your
+            questions instead of the shopper's, the cost that appears too late, the effort you're
+            charging for, and the seconds you're spending — each one pinned to the exact pixels it
+            came from.
           </motion.p>
 
           <motion.form
@@ -162,7 +170,7 @@ function Home() {
             className="mt-10"
           >
             <label htmlFor="target-url" className="label-caps">
-              Product page URL
+              Any page on the store — the agent finds the rest
             </label>
             <div className="mt-2 flex flex-col gap-3 sm:flex-row">
               <input
@@ -245,6 +253,7 @@ function Home() {
                 <RecentCard
                   run={run}
                   live
+                  thumb={`/api/public/thumb/${run.id}`}
                   {...(run.score === null || run.status !== "complete"
                     ? { onDelete: () => void handleDelete(run.id), deleting: removing.includes(run.id) }
                     : {})}
@@ -278,6 +287,7 @@ function Home() {
                     consoleErrors: totalConsoleErrors(report),
                     createdAt: report.captured_at,
                   }}
+                  thumb={report.stages[0]?.screenshot.src}
                 />
               </li>
             );
@@ -383,13 +393,16 @@ function TargetSummary({
 function RecentCard({
   run,
   live = false,
+  thumb,
   onDelete,
   deleting = false,
 }: {
   run: RecentAudit;
   live?: boolean;
-  onDelete?: () => void;
-  deleting?: boolean;
+  /** First capture of the run, shown as a visual cue for the site audited. */
+  thumb?: string | undefined;
+  onDelete?: (() => void) | undefined;
+  deleting?: boolean | undefined;
 }) {
   return (
     <div className="relative h-full">
@@ -411,8 +424,21 @@ function RecentCard({
     <Link
       to="/report/$reportId"
       params={{ reportId: run.id }}
-      className="tile group flex h-full flex-col p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-tile-hover"
+      className="tile group flex h-full flex-col overflow-hidden p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-tile-hover"
     >
+      {thumb ? (
+        <span className="relative -mx-4 -mt-4 mb-4 block h-28 overflow-hidden border-b border-border bg-secondary">
+          <img
+            src={thumb}
+            alt={`First capture of the ${run.domain} audit`}
+            loading="lazy"
+            decoding="async"
+            className="size-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.03]"
+          />
+          <span className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-card to-transparent" />
+        </span>
+      ) : null}
+
       <div className="flex items-baseline justify-between gap-3">
         <p className="truncate font-mono text-xs text-muted-foreground">{run.domain}</p>
         <span
