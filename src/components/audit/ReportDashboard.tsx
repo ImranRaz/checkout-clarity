@@ -322,6 +322,10 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
         </motion.section>
       </div>
 
+      <ExecutiveSummary report={report} onLocate={(s, id) => select(s, id)} />
+
+
+
       <div className="grid gap-4 lg:grid-cols-12">
         {/* Score */}
         <motion.section
