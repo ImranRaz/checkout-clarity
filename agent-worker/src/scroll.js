@@ -168,11 +168,16 @@ export const SCROLL_REPORT = `(() => {
     worst_shift_scroll_y: s.worstShiftY,
     long_tasks: s.longTasks,
     longest_task_ms: s.longestTask,
-    stalled_media: stalled.slice(0, 6).map((el) => ({
-      selector: selectorFor(el),
-      alt: (el.getAttribute('alt') || '').slice(0, 60),
-      ...pct(el),
-    })),
+    stalled_media: stalled.slice(0, 6).map((el) => {
+      // Tagged so the same elements can be re-checked once the page settles.
+      el.setAttribute('data-fx-stalled', '1');
+      return {
+        selector: selectorFor(el),
+        alt: (el.getAttribute('alt') || '').slice(0, 60),
+        ...pct(el),
+      };
+    }),
+
     stalled_media_count: stalled.length,
     media_count: media.length,
     sticky,
