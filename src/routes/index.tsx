@@ -31,17 +31,17 @@ export const Route = createFileRoute("/")({
   ),
   head: () => ({
     meta: [
-      { title: "Checkout Forensic — Audit any store's cart flow" },
+      { title: "Checkout Forensic — Why shoppers leave, page by page" },
       {
         name: "description",
         content:
-          "An agent walks a real product page into the cart, measures load behaviour and console errors, then maps every conversion friction point onto the capture.",
+          "Point an agent at any store page. It finds its own way to cart and guest checkout, then reports the copy, cost, effort and speed problems costing you orders — pinned to the pixels.",
       },
-      { property: "og:title", content: "Checkout Forensic — Audit any store's cart flow" },
+      { property: "og:title", content: "Checkout Forensic — Why shoppers leave, page by page" },
       {
         property: "og:description",
         content:
-          "Technical friction and UX friction, measured in the same run and pinned to the same screenshot.",
+          "Copy, trust, effort and speed audited in one real browser run, pinned to the exact screenshot.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
