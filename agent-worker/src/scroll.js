@@ -375,7 +375,11 @@ export function scrollFindings(profile, kind = "other") {
   const frameAt = (depthPct, caption) => {
     if (frames.length === 0) return {};
     const target = Math.min(100, Math.max(0, depthPct));
-    const best = frames.reduce((a, b) =>
+    const containing = frames.filter(
+      (frame) => target >= frame.top_percentage - 0.75 && target <= frame.bottom_percentage + 0.75,
+    );
+    if (containing.length === 0) return {};
+    const best = containing.reduce((a, b) =>
       Math.abs((a.top_percentage + a.bottom_percentage) / 2 - target) <=
       Math.abs((b.top_percentage + b.bottom_percentage) / 2 - target)
         ? a

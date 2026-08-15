@@ -645,6 +645,32 @@ function pointRect(point: FrictionPoint) {
   };
 }
 
+/**
+ * Full-page pins are intentionally offset when their badges would occupy the
+ * same pixels. Their numbers stay near the measured elements, but never stack
+ * into one unreadable badge.
+ */
+function spreadPinRects(points: FrictionPoint[]) {
+  const placed: Array<{ x: number; y: number }> = [];
+  const result = new Map<number, { x: number; y: number; w: number; h: number }>();
+
+  for (const point of points) {
+    const rect = pointRect(point);
+    const anchor = { x: rect.x, y: rect.y };
+    let attempt = 0;
+    while (placed.some((other) => Math.abs(other.x - anchor.x) < 4.5 && Math.abs(other.y - anchor.y) < 1.8)) {
+      attempt += 1;
+      const lane = Math.ceil(attempt / 2);
+      anchor.x = clampNum(rect.x + (attempt % 2 === 1 ? lane * 5 : lane * -5), 1, 96);
+      anchor.y = clampNum(rect.y + lane * 0.8, 0.5, 98);
+    }
+    placed.push(anchor);
+    result.set(point.id, { ...rect, x: anchor.x, y: anchor.y });
+  }
+
+  return result;
+}
+
 const clampNum = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 function EvidenceViewer({

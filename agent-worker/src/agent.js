@@ -473,9 +473,9 @@ async function clearOverlays(page, options) {
  */
 function orderFindings(points) {
   const depth = (p) => {
-    const y = typeof p.y_percentage === "number" ? p.y_percentage : 50;
-    const top = p.rect && typeof p.rect.y_percentage === "number" ? p.rect.y_percentage : y;
-    return Math.min(y, top);
+    // The centre is the canonical reading position. Sorting by the top edge of
+    // a tall section can put a lower finding ahead of one visibly above it.
+    return typeof p.y_percentage === "number" ? p.y_percentage : 50;
   };
   return [...points]
     .sort((a, b) => {
