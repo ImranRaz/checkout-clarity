@@ -566,7 +566,9 @@ function EvidenceViewer({
   onSelect: (id: number) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const fullRef = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState({ w: 0, h: 0 });
+
 
   useLayoutEffect(() => {
     const el = containerRef.current;
