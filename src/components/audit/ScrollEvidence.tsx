@@ -1,7 +1,36 @@
 import { ArrowDownToLine, MousePointerClick, PanelTop, X } from "lucide-react";
 
 import { Explain } from "./Explain";
+import { Gauge } from "./Gauge";
+import type { GlossaryKey } from "@/lib/glossary";
+import type { BenchmarkKey } from "@/lib/benchmarks";
 import type { Interstitial, ScrollProfile } from "@/lib/audit-schema";
+
+/** One measured field of the sweep: what it is, what it means, how it rates. */
+function Field({
+  label,
+  term,
+  metric,
+  raw,
+  children,
+}: {
+  label: string;
+  term: GlossaryKey;
+  metric: BenchmarkKey;
+  raw: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <dt className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+        {label}
+        <Explain term={term} />
+      </dt>
+      <dd className="mt-0.5 font-mono text-sm tabular-nums text-foreground">{children}</dd>
+      <Gauge metric={metric} value={raw} />
+    </div>
+  );
+}
 
 /**
  * What the scroll pass found, stated as a reading experience rather than a
