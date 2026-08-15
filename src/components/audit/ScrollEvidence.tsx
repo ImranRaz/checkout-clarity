@@ -64,63 +64,44 @@ export function ScrollPass({ profile }: { profile: ScrollProfile }) {
           )}
         </div>
 
-        <dl className="grid flex-1 grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
-          <div>
-            <dt className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-              Page length
-            </dt>
-            <dd className="mt-0.5 font-mono text-sm tabular-nums text-foreground">
-              {profile.viewports.toFixed(1)} screens
-            </dd>
-          </div>
-          <div>
-            <dt className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-              Action depth
-            </dt>
-            <dd className="mt-0.5 font-mono text-sm tabular-nums text-foreground">
-              {depth === null ? "none found" : `${depth}%`}
-            </dd>
-          </div>
-          <div>
-            <dt className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-              Shift while scrolling
-            </dt>
-            <dd
-              className={`mt-0.5 font-mono text-sm tabular-nums ${
-                profile.shift_after_load >= 0.1 ? "text-sev-high" : "text-foreground"
-              }`}
-            >
-              {profile.shift_after_load.toFixed(3)}
-            </dd>
-          </div>
-          <div>
-            <dt className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-              Images loaded
-            </dt>
-            <dd
-              className={`mt-0.5 font-mono text-sm tabular-nums ${
-                profile.stalled_media_count > 0 ? "text-sev-medium" : "text-foreground"
-              }`}
-            >
-              {profile.media_count - profile.stalled_media_count}/{profile.media_count}
-            </dd>
-          </div>
-          <div>
-            <dt className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-              Stutter
-            </dt>
-            <dd className="mt-0.5 font-mono text-sm tabular-nums text-foreground">
-              {profile.long_tasks} task{profile.long_tasks === 1 ? "" : "s"}
-            </dd>
-          </div>
-          <div>
-            <dt className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-              Pinned furniture
-            </dt>
-            <dd className="mt-0.5 font-mono text-sm tabular-nums text-foreground">
-              {profile.sticky.length || "none"}
-            </dd>
-          </div>
+        <dl className="grid flex-1 grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-3">
+          <Field label="Page length" term="pageLength" metric="pageLength" raw={profile.viewports}>
+            {profile.viewports.toFixed(1)} screens
+          </Field>
+          <Field label="Action depth" term="actionDepth" metric="actionDepth" raw={depth ?? 100}>
+            {depth === null ? "none found" : `${depth}%`}
+          </Field>
+          <Field
+            label="Shift while scrolling"
+            term="scrollShift"
+            metric="scrollShift"
+            raw={profile.shift_after_load}
+          >
+            {profile.shift_after_load.toFixed(3)}
+          </Field>
+          <Field
+            label="Images loaded"
+            term="imagesLoaded"
+            metric="imagesLoaded"
+            raw={
+              profile.media_count === 0
+                ? 100
+                : ((profile.media_count - profile.stalled_media_count) / profile.media_count) * 100
+            }
+          >
+            {profile.media_count - profile.stalled_media_count}/{profile.media_count}
+          </Field>
+          <Field label="Stutter" term="stutter" metric="stutter" raw={profile.long_tasks}>
+            {profile.long_tasks} task{profile.long_tasks === 1 ? "" : "s"}
+          </Field>
+          <Field
+            label="Pinned furniture"
+            term="stickyFurniture"
+            metric="sticky"
+            raw={profile.sticky.length}
+          >
+            {profile.sticky.length || "none"}
+          </Field>
         </dl>
       </div>
 
