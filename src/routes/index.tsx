@@ -141,7 +141,6 @@ function Home() {
             className="mt-6 max-w-2xl font-display text-3xl leading-[1.1] tracking-tight sm:text-5xl"
           >
             See exactly where shoppers give up.
-            <span className="text-muted-foreground"> Every cost, copy flaw, and slowdown — pinned to the pixel.</span>
           </motion.h1>
 
           <motion.p
