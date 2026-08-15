@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { ArrowRight, Printer, Target } from "lucide-react";
+import { ArrowRight, Target } from "lucide-react";
 
 import { SeverityChip } from "./SeverityChip";
 import { categoryLabel, impactLabel, type ForensicAuditReport } from "@/lib/audit-schema";
