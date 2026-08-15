@@ -53,8 +53,25 @@ const reviewFinding = z.object({
   rewrite_after: z.string().describe("Copy findings only: your replacement wording. Otherwise empty."),
 });
 
+/**
+ * Adjudication of the measured checks.
+ *
+ * The instrumented checks are fast and literal, and a literal check can be
+ * wrong in a way the picture obviously contradicts — "6 images never loaded"
+ * on a page whose screenshot is full of product photos. The council sees both
+ * the claim and the pixels, so it gets a vote: any measured claim it can see
+ * is untrue on this page is dropped before the report is written.
+ */
 const reviewSchema = z.object({
   findings: z.array(reviewFinding),
+  dismissed: z
+    .array(
+      z.object({
+        id: z.string().describe("The id of the measured claim being dismissed, e.g. 'm2'."),
+        reason: z.string().describe("What you can see that contradicts the claim."),
+      }),
+    )
+    .describe("Measured claims the screenshots contradict. Empty when they all hold."),
 });
 
 function clamp(value, limit) {
@@ -169,9 +186,9 @@ export function createReviewer(provider, { vertical } = {}) {
 
   return async function review(
     _page,
-    { kind, label, screenshot, digest, scroll_profile, scroll_brief, interstitials = [], timeoutMs = 60000 },
+    { kind, label, screenshot, digest, scroll_profile, scroll_brief, interstitials = [], measured = [], timeoutMs = 60000 },
   ) {
-    if (!digest) return [];
+    if (!digest) return { findings: [], dismissed: [] };
     const geometry = { ...(digest.geometry || {}) };
 
     // Pop-ups get their own refs. Their geometry is viewport-relative at the
@@ -211,6 +228,14 @@ export function createReviewer(provider, { vertical } = {}) {
             })}`,
             "",
             `Full page copy after scrolling (this is everything the page says): ${scroll_profile.page_text}`,
+          ]
+        : []),
+      ...(measured.length
+        ? [
+            "",
+            "MEASURED CLAIMS ALREADY IN THIS REPORT — check each one against the images before it is shown to the client:",
+            ...measured.map((claim) => `${claim.id}: ${claim.title} — ${claim.evidence || ""}`),
+            "If an image plainly contradicts a claim (for example it says images never loaded, but the frames show them loaded — lazy loading that finished counts as loaded), list that id in \"dismissed\" with what you can see. Say nothing about claims that hold; do not repeat them as findings.",
           ]
         : []),
       ...interstitials.slice(0, 2).flatMap((overlay, index) => [
@@ -266,6 +291,7 @@ export function createReviewer(provider, { vertical } = {}) {
     };
 
     let raw = null;
+    let dismissed = [];
     try {
       const result = await withTimeout(
         generateObject({
@@ -276,6 +302,7 @@ export function createReviewer(provider, { vertical } = {}) {
         }),
       );
       raw = result.object?.findings;
+      dismissed = Array.isArray(result.object?.dismissed) ? result.object.dismissed : [];
     } catch (error) {
       if (/timed out/i.test(error?.message || "")) throw error;
       // Structured mode failed (the classic "response did not match schema").
@@ -284,14 +311,22 @@ export function createReviewer(provider, { vertical } = {}) {
       const retry = await withTimeout(
         generateText({
           model: provider(modelId),
-          system: `${system}\n\nReply with JSON only, no prose: {"findings":[{"ref":"e12","persona":"strategist","severity":"high","category":"clarity","title":"...","description":"...","evidence":"...","recommendation":"...","impact":"material","rewrite_before":"","rewrite_after":""}]}`,
+          system: `${system}\n\nReply with JSON only, no prose: {"findings":[{"ref":"e12","persona":"strategist","severity":"high","category":"clarity","title":"...","description":"...","evidence":"...","recommendation":"...","impact":"material","rewrite_before":"","rewrite_after":""}],"dismissed":[{"id":"m1","reason":"..."}]}`,
           messages: [{ role: "user", content }],
         }),
       );
-      raw = parseLoose(retry.text)?.findings;
+      const parsed = parseLoose(retry.text);
+      raw = parsed?.findings;
+      dismissed = Array.isArray(parsed?.dismissed) ? parsed.dismissed : [];
     }
 
-    if (!Array.isArray(raw)) return [];
+    const verdict = {
+      dismissed: dismissed
+        .filter((d) => d && typeof d.id === "string")
+        .map((d) => ({ id: d.id.trim(), reason: clamp(d.reason, 200) })),
+    };
+
+    if (!Array.isArray(raw)) return { findings: [], ...verdict };
 
     const findings = [];
     const seenTitles = new Set();
@@ -363,6 +398,6 @@ export function createReviewer(provider, { vertical } = {}) {
       });
 
     }
-    return findings.slice(0, 4);
+    return { findings: findings.slice(0, 4), ...verdict };
   };
 }
