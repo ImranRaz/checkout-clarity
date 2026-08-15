@@ -119,7 +119,44 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
         </motion.div>
       )}
 
-      <ExecutiveSummary report={report} onLocate={(s, id) => select(s, id)} />
+      {/* Verdict bar — the number and the export live where an executive lands first. */}
+      <motion.section
+        variants={tileMotion}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="tile flex flex-wrap items-center justify-between gap-4 p-4"
+        aria-label="Verdict"
+      >
+        <div className="flex min-w-0 items-baseline gap-3">
+          <span className="font-display text-4xl leading-none tracking-tight tabular-nums">
+            {partial ? "n/a" : score.total}
+          </span>
+          {!partial && <span className="font-mono text-xs text-muted-foreground">/100</span>}
+          <span className="min-w-0">
+            <span
+              className={cn(
+                "block text-sm font-medium",
+                partial ? "text-sev-medium" : grade[score.grade],
+              )}
+            >
+              {partial ? "Not scored" : score.grade}
+            </span>
+            <span className="block truncate font-mono text-[11px] text-muted-foreground">
+              {report.domain} · {report.stages.length} stages ·{" "}
+              {report.stages.reduce((n, s) => n + s.friction_points.length, 0)} findings ·{" "}
+              {formatMs(report.run_duration_ms)}
+            </span>
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => window.print()}
+          className="no-print inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border px-3 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+        >
+          <ArrowUpRight className="size-3.5" aria-hidden />
+          Export PDF
+        </button>
+      </motion.section>
+
 
       {/* Journey strip */}
 
