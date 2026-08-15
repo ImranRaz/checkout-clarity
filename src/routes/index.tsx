@@ -253,6 +253,7 @@ function Home() {
                 <RecentCard
                   run={run}
                   live
+                  thumb={`/api/public/thumb/${run.id}`}
                   {...(run.score === null || run.status !== "complete"
                     ? { onDelete: () => void handleDelete(run.id), deleting: removing.includes(run.id) }
                     : {})}
