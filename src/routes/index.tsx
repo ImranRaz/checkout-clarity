@@ -154,8 +154,12 @@ function Home() {
             transition={{ duration: 0.5, delay: 0.12 }}
             className="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg"
           >
-            Point the agent at a product page. It walks the page into the cart, records what the
-            browser actually did, and pins every friction point it finds onto the capture.
+            Give it any page — a category, a product, a homepage, a cruise itinerary. The agent
+            reads the context, finds its own way to the cart and, where guests are allowed, to
+            checkout. Then it hands back what a senior optimiser would: the copy that answers your
+            questions instead of the shopper's, the cost that appears too late, the effort you're
+            charging for, and the seconds you're spending — each one pinned to the exact pixels it
+            came from.
           </motion.p>
 
           <motion.form
