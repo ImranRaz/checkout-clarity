@@ -4,6 +4,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 
 import { ExecutiveSummary } from "./ExecutiveSummary";
 import { Explain } from "./Explain";
+import { Gauge } from "./Gauge";
+import type { BenchmarkKey } from "@/lib/benchmarks";
 import type { GlossaryKey } from "@/lib/glossary";
 import { Interstitials, ScrollPass } from "./ScrollEvidence";
 import { SeverityChip } from "./SeverityChip";
@@ -211,8 +213,7 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
           <header className="flex items-baseline justify-between gap-3 border-b border-border px-4 py-3">
             <h2 className="label-caps flex items-center gap-1">
               Findings · {report.stages.reduce((n, s) => n + s.friction_points.length, 0)}
-              <Explain term="severity" />
-              <Explain term="impact" />
+              <Explain term="findings" />
             </h2>
             <p className="font-mono text-[11px] text-muted-foreground">select to locate</p>
           </header>
@@ -470,35 +471,47 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
             )}
           </div>
 
-          <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
+          <dl className="mt-4 grid grid-cols-2 gap-x-5 gap-y-5 sm:grid-cols-3">
             <Metric
               label="LCP"
               term="lcp"
+              metric="lcp"
+              raw={stage.technical_metrics.largest_contentful_paint_ms}
               value={formatMs(stage.technical_metrics.largest_contentful_paint_ms)}
             />
             <Metric
               label="CLS"
               term="cls"
+              metric="cls"
+              raw={stage.technical_metrics.cumulative_layout_shift}
               value={stage.technical_metrics.cumulative_layout_shift.toFixed(3)}
             />
             <Metric
               label="Blocking"
               term="tbt"
+              metric="tbt"
+              raw={stage.technical_metrics.total_blocking_time_ms}
               value={formatMs(stage.technical_metrics.total_blocking_time_ms)}
             />
             <Metric
               label="DOM ready"
               term="domReady"
+              metric="domReady"
+              raw={stage.technical_metrics.dom_content_loaded_ms}
               value={formatMs(stage.technical_metrics.dom_content_loaded_ms)}
             />
             <Metric
               label="Transferred"
               term="transferred"
+              metric="transferred"
+              raw={stage.technical_metrics.transfer_bytes}
               value={formatBytes(stage.technical_metrics.transfer_bytes)}
             />
             <Metric
               label="Requests"
               term="requests"
+              metric="requests"
+              raw={stage.technical_metrics.request_count}
               value={String(stage.technical_metrics.request_count)}
             />
           </dl>
@@ -697,69 +710,40 @@ function EvidenceViewer({
   const ty = rect ? clampNum(box.h / 2 - cy, Math.min(box.h - imgH, 0), 0) : 0;
 
   // A finding below the fold is proved by the screen the shopper was on, not
-  // by a pin on a full-page composite nobody ever sees at once.
-  if (zoomed && point?.evidence_image) {
-    const frame = stage.scroll_profile?.frames?.find((f) => f.src === point.evidence_image) ?? null;
-    // Re-express the element's page-level box inside this viewport frame.
-    const span = frame ? Math.max(0.1, frame.bottom_percentage - frame.top_percentage) : 0;
-    const local =
-      frame && rect
-        ? {
-            x: rect.x,
-            y: ((rect.y - frame.top_percentage) / span) * 100,
-            w: rect.w,
-            h: (rect.h / span) * 100,
-          }
-        : null;
-    const inFrame = local !== null && local.y > -10 && local.y < 105;
+  // by a pin on a full-page composite nobody ever sees at once. But that only
+  // holds when the offending element is genuinely inside the frame — a badge
+  // stranded at the top of a screenshot that does not contain the element is
+  // worse than no badge, so those fall through to the zoomed composite below.
+  const frame =
+    point?.evidence_image
+      ? (stage.scroll_profile?.frames?.find((f) => f.src === point.evidence_image) ?? null)
+      : null;
+  const span = frame ? Math.max(0.1, frame.bottom_percentage - frame.top_percentage) : 0;
+  const local =
+    frame && rect
+      ? {
+          x: rect.x,
+          y: ((rect.y - frame.top_percentage) / span) * 100,
+          w: rect.w,
+          h: (rect.h / span) * 100,
+        }
+      : null;
+  const inFrame = local !== null && local.y > -2 && local.y + local.h < 102;
+
+  if (zoomed && point && local && inFrame) {
     return (
       <div className="flex max-h-[40rem] flex-col overflow-y-auto bg-secondary p-4">
         <div className="relative mx-auto w-full max-w-[44rem]">
           <img
-            src={point.evidence_image}
+            src={point.evidence_image ?? stage.screenshot.src}
             alt={point.evidence_caption ?? `Viewport evidence for: ${point.title}`}
             className="w-full rounded border border-border bg-card"
           />
-          {inFrame && local && (
-            <>
-              <span
-                aria-hidden
-                className={cn(
-                  "pointer-events-none absolute rounded-sm border-2",
-                  point.severity === "high" && "border-sev-high",
-                  point.severity === "medium" && "border-sev-medium",
-                  point.severity === "low" && "border-sev-low",
-                )}
-                style={{
-                  left: `${clampNum(local.x, 0, 98)}%`,
-                  top: `${clampNum(local.y, 0, 98)}%`,
-                  width: `${Math.min(local.w, 100 - clampNum(local.x, 0, 98))}%`,
-                  height: `${Math.max(1.5, Math.min(local.h, 100 - clampNum(local.y, 0, 98)))}%`,
-                }}
-              />
-              <span
-                aria-hidden
-                style={{
-                  left: `${clampNum(local.x, 0, 96)}%`,
-                  top: `${clampNum(local.y, 0, 96)}%`,
-                  transform: `translate(${local.x < 6 ? "8%" : "-108%"}, ${local.y < 6 ? "8%" : "-108%"})`,
-                }}
-                className={cn(
-                  "absolute flex size-7 items-center justify-center rounded-full border-2 border-card font-mono text-xs font-semibold ring-2",
-                  point.severity === "high" && "bg-sev-high text-card ring-sev-high/35",
-                  point.severity === "medium" && "bg-sev-medium text-card ring-sev-medium/35",
-                  point.severity === "low" && "bg-sev-low text-card ring-sev-low/35",
-                )}
-              >
-                {point.id}
-              </span>
-            </>
-          )}
+          <Spotlight point={point} rect={local} />
         </div>
         <p className="mx-auto mt-2 max-w-[44rem] text-xs leading-relaxed text-muted-foreground">
           {point.evidence_caption ?? "The viewport captured during the scroll pass."}
           {frame ? ` · ${Math.round(frame.depth_percentage)}% down the page` : ""}
-          {!inFrame && " · exact element sits outside this frame"}
         </p>
       </div>
     );
@@ -807,34 +791,91 @@ function EvidenceViewer({
           height={stage.screenshot.height}
           className="w-full bg-card"
         />
-        {point && rect && (
-          <span
-            aria-hidden
-            className={cn(
-              "pointer-events-none absolute rounded-sm border-2 shadow-[0_0_0_9999px_rgba(20,20,20,0.45)]",
-              point.severity === "high" && "border-sev-high",
-              point.severity === "medium" && "border-sev-medium",
-              point.severity === "low" && "border-sev-low",
-            )}
-            style={{
-              left: `${rect.x}%`,
-              top: `${rect.y}%`,
-              width: `${rect.w}%`,
-              height: `${rect.h}%`,
-            }}
-          />
-        )}
-        {stage.friction_points.map((p) => (
-          <Pin
-            key={p.id}
-            point={p}
-            active={p.id === activeId}
-            dim={activeId !== null && p.id !== activeId}
-            onSelect={() => onSelect(p.id)}
-          />
-        ))}
+        {point && rect && <Spotlight point={point} rect={rect} />}
+        {stage.friction_points
+          .filter((p) => p.id !== activeId)
+          .map((p) => (
+            <Pin key={p.id} point={p} active={false} dim onSelect={() => onSelect(p.id)} />
+          ))}
       </motion.div>
     </div>
+  );
+}
+
+const spotBorder = {
+  high: "border-sev-high",
+  medium: "border-sev-medium",
+  low: "border-sev-low",
+} as const;
+
+const spotChip = {
+  high: "bg-sev-high text-card",
+  medium: "bg-sev-medium text-card",
+  low: "bg-sev-low text-card",
+} as const;
+
+/**
+ * The highlight for the selected finding: a light scrim over everything else,
+ * a ring on the element itself, and a small caption tied to the ring so the
+ * number and the words it belongs to are read together rather than the badge
+ * floating somewhere near the top of the page.
+ */
+function Spotlight({
+  point,
+  rect,
+}: {
+  point: FrictionPoint;
+  rect: { x: number; y: number; w: number; h: number };
+}) {
+  const x = clampNum(rect.x, 0, 99);
+  const y = clampNum(rect.y, 0, 99);
+  const w = Math.max(1.5, Math.min(rect.w, 100 - x));
+  const h = Math.max(1.2, Math.min(rect.h, 100 - y));
+  const below = y < 12; // no room above the box — caption goes underneath
+
+  return (
+    <span aria-hidden className="pointer-events-none absolute inset-0">
+      {/* Scrim in four panels, so the element itself stays at full brightness. */}
+      <span className="absolute inset-x-0 top-0 bg-foreground/25" style={{ height: `${y}%` }} />
+      <span
+        className="absolute inset-x-0 bottom-0 bg-foreground/25"
+        style={{ height: `${Math.max(0, 100 - y - h)}%` }}
+      />
+      <span
+        className="absolute left-0 bg-foreground/25"
+        style={{ top: `${y}%`, height: `${h}%`, width: `${x}%` }}
+      />
+      <span
+        className="absolute right-0 bg-foreground/25"
+        style={{ top: `${y}%`, height: `${h}%`, width: `${Math.max(0, 100 - x - w)}%` }}
+      />
+
+      <span
+        className={cn("absolute rounded-sm border-2", spotBorder[point.severity])}
+        style={{ left: `${x}%`, top: `${y}%`, width: `${w}%`, height: `${h}%` }}
+      />
+
+      <span
+        className="absolute flex max-w-[70%] items-center gap-1.5"
+        style={{
+          left: `${x}%`,
+          top: below ? `calc(${y + h}% + 6px)` : `calc(${y}% - 6px)`,
+          transform: below ? "none" : "translateY(-100%)",
+        }}
+      >
+        <span
+          className={cn(
+            "flex size-5 shrink-0 items-center justify-center rounded-full font-mono text-[10px] font-semibold",
+            spotChip[point.severity],
+          )}
+        >
+          {point.id}
+        </span>
+        <span className="truncate rounded-sm bg-card/95 px-1.5 py-0.5 font-mono text-[10px] leading-tight text-foreground shadow-tile">
+          {point.title}
+        </span>
+      </span>
+    </span>
   );
 }
 
@@ -927,10 +968,14 @@ function Metric({
   label,
   value,
   term,
+  metric,
+  raw,
 }: {
   label: string;
   value: string;
   term?: GlossaryKey;
+  metric?: BenchmarkKey;
+  raw?: number;
 }) {
   return (
     <div>
@@ -939,6 +984,7 @@ function Metric({
         {term && <Explain term={term} />}
       </dt>
       <dd className="mt-0.5 font-mono text-lg tabular-nums text-foreground">{value}</dd>
+      {metric && raw !== undefined && <Gauge metric={metric} value={raw} />}
     </div>
   );
 }

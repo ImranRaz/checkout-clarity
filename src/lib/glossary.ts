@@ -132,6 +132,52 @@ export const GLOSSARY = {
     what: "Whether the page loads quickly and holds still once it does.",
     why: "Combines LCP, CLS and blocking time into the one thing shoppers actually notice: does this feel broken?",
   },
+  findings: {
+    term: "Findings",
+    what: "Each issue the agent measured or observed, tagged with how badly it hurts (severity) and how much conversion a fix should return (impact).",
+    why: "Severity tells you what is bleeding today; impact tells you what is worth fixing first. Together they give you a work order, not a wish list.",
+  },
+  scrollPass: {
+    term: "Scroll pass",
+    what: "A deliberate top-to-bottom sweep of the page, recording what appears at each depth, what moves after it has been drawn, and what never loads.",
+    why: "Most shopping happens below the fold. A page can score well on load metrics and still fall apart the moment a shopper starts scrolling.",
+  },
+  pageLength: {
+    term: "Page length",
+    what: "How tall the page is, counted in phone-or-desktop screenfuls rather than pixels.",
+    why: "Every extra screen between arrival and the buy action is a chance to leave. Long pages are not wrong, but they must earn each screen.",
+    benchmark: "Tight under 4 screens · long over 8",
+  },
+  actionDepth: {
+    term: "Action depth",
+    what: "How far down the page the primary action — Add to Cart, Book, Continue — first becomes reachable.",
+    why: "If the way to buy sits halfway down, a share of shoppers never see it. Depth is the cheapest thing on this list to fix.",
+    benchmark: "Good in the top 25% · poor below 60%",
+  },
+  scrollShift: {
+    term: "Shift while scrolling",
+    what: "Layout movement recorded after the page had already loaded, while the agent scrolled.",
+    why: "This is the mis-tap machine: content settles late, the button moves, the shopper hits the wrong thing. It is invisible in standard load metrics.",
+    benchmark: "Good under 0.1 · poor over 0.25",
+  },
+  imagesLoaded: {
+    term: "Images loaded",
+    what: "How many pictures actually painted during the sweep, out of those the page asked for.",
+    why: "A product image that never arrives is a product that cannot be judged. Missing media below the fold is a common, silent revenue leak.",
+    benchmark: "Anything short of all of them warrants a look",
+  },
+  stutter: {
+    term: "Stutter (long tasks)",
+    what: "Moments during scrolling when scripts held the browser's main thread long enough to drop frames.",
+    why: "Stutter is what makes a store feel cheap on a mid-range phone even when the numbers elsewhere look fine.",
+    benchmark: "Smooth under 2 tasks · janky over 6",
+  },
+  stickyFurniture: {
+    term: "Pinned furniture",
+    what: "Bars and widgets that stay fixed on screen as you scroll — headers, promo strips, chat bubbles, cookie footers.",
+    why: "Each one permanently eats screen the shopper paid for with their attention. Two or three stacked can cost a third of a phone viewport.",
+    benchmark: "One pinned bar is fine · three or more crowds the screen",
+  },
 } satisfies Record<string, GlossaryEntry>;
 
 export type GlossaryKey = keyof typeof GLOSSARY;
