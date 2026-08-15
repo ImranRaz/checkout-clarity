@@ -710,21 +710,27 @@ function EvidenceViewer({
   const ty = rect ? clampNum(box.h / 2 - cy, Math.min(box.h - imgH, 0), 0) : 0;
 
   // A finding below the fold is proved by the screen the shopper was on, not
-  // by a pin on a full-page composite nobody ever sees at once.
-  if (zoomed && point?.evidence_image) {
-    const frame = stage.scroll_profile?.frames?.find((f) => f.src === point.evidence_image) ?? null;
-    // Re-express the element's page-level box inside this viewport frame.
-    const span = frame ? Math.max(0.1, frame.bottom_percentage - frame.top_percentage) : 0;
-    const local =
-      frame && rect
-        ? {
-            x: rect.x,
-            y: ((rect.y - frame.top_percentage) / span) * 100,
-            w: rect.w,
-            h: (rect.h / span) * 100,
-          }
-        : null;
-    const inFrame = local !== null && local.y > -10 && local.y < 105;
+  // by a pin on a full-page composite nobody ever sees at once. But that only
+  // holds when the offending element is genuinely inside the frame — a badge
+  // stranded at the top of a screenshot that does not contain the element is
+  // worse than no badge, so those fall through to the zoomed composite below.
+  const frame =
+    point?.evidence_image
+      ? (stage.scroll_profile?.frames?.find((f) => f.src === point.evidence_image) ?? null)
+      : null;
+  const span = frame ? Math.max(0.1, frame.bottom_percentage - frame.top_percentage) : 0;
+  const local =
+    frame && rect
+      ? {
+          x: rect.x,
+          y: ((rect.y - frame.top_percentage) / span) * 100,
+          w: rect.w,
+          h: (rect.h / span) * 100,
+        }
+      : null;
+  const inFrame = local !== null && local.y > -2 && local.y + local.h < 102;
+
+  if (zoomed && point && local && inFrame) {
     return (
       <div className="flex max-h-[40rem] flex-col overflow-y-auto bg-secondary p-4">
         <div className="relative mx-auto w-full max-w-[44rem]">
@@ -733,46 +739,11 @@ function EvidenceViewer({
             alt={point.evidence_caption ?? `Viewport evidence for: ${point.title}`}
             className="w-full rounded border border-border bg-card"
           />
-          {inFrame && local && (
-            <>
-              <span
-                aria-hidden
-                className={cn(
-                  "pointer-events-none absolute rounded-sm border-2",
-                  point.severity === "high" && "border-sev-high",
-                  point.severity === "medium" && "border-sev-medium",
-                  point.severity === "low" && "border-sev-low",
-                )}
-                style={{
-                  left: `${clampNum(local.x, 0, 98)}%`,
-                  top: `${clampNum(local.y, 0, 98)}%`,
-                  width: `${Math.min(local.w, 100 - clampNum(local.x, 0, 98))}%`,
-                  height: `${Math.max(1.5, Math.min(local.h, 100 - clampNum(local.y, 0, 98)))}%`,
-                }}
-              />
-              <span
-                aria-hidden
-                style={{
-                  left: `${clampNum(local.x, 0, 96)}%`,
-                  top: `${clampNum(local.y, 0, 96)}%`,
-                  transform: `translate(${local.x < 6 ? "8%" : "-108%"}, ${local.y < 6 ? "8%" : "-108%"})`,
-                }}
-                className={cn(
-                  "absolute flex size-7 items-center justify-center rounded-full border-2 border-card font-mono text-xs font-semibold ring-2",
-                  point.severity === "high" && "bg-sev-high text-card ring-sev-high/35",
-                  point.severity === "medium" && "bg-sev-medium text-card ring-sev-medium/35",
-                  point.severity === "low" && "bg-sev-low text-card ring-sev-low/35",
-                )}
-              >
-                {point.id}
-              </span>
-            </>
-          )}
+          <Spotlight point={point} rect={local} />
         </div>
         <p className="mx-auto mt-2 max-w-[44rem] text-xs leading-relaxed text-muted-foreground">
           {point.evidence_caption ?? "The viewport captured during the scroll pass."}
           {frame ? ` · ${Math.round(frame.depth_percentage)}% down the page` : ""}
-          {!inFrame && " · exact element sits outside this frame"}
         </p>
       </div>
     );
