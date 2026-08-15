@@ -1025,10 +1025,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
           });
           const extra = await checkoutFindings(page);
           if (extra.length > 0) {
-            stage.friction_points = [...stage.friction_points, ...extra].map((point, index) => ({
-              ...point,
-              id: index + 1,
-            }));
+            stage.friction_points = orderFindings([...stage.friction_points, ...extra]);
           }
           stages.push(stage);
           emit(
