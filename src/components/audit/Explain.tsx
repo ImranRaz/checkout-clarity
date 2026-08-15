@@ -2,7 +2,7 @@ import { HelpCircle } from "lucide-react";
 import { useId, useState } from "react";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { GLOSSARY, type GlossaryKey } from "@/lib/glossary";
+import { GLOSSARY, type GlossaryEntry, type GlossaryKey } from "@/lib/glossary";
 import { cn } from "@/lib/utils";
 
 /**
@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
  */
 export function Explain({ term, className }: { term: GlossaryKey; className?: string }) {
   const [open, setOpen] = useState(false);
-  const entry = GLOSSARY[term];
+  const entry: GlossaryEntry = GLOSSARY[term];
   const id = useId();
 
   return (
