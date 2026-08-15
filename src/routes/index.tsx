@@ -170,7 +170,7 @@ function Home() {
             className="mt-10"
           >
             <label htmlFor="target-url" className="label-caps">
-              Product page URL
+              Any page on the store — the agent finds the rest
             </label>
             <div className="mt-2 flex flex-col gap-3 sm:flex-row">
               <input
