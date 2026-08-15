@@ -56,6 +56,14 @@ export const frictionPointSchema = z.object({
   recommendation: z.string().optional(),
   rewrite_before: z.string().optional(),
   rewrite_after: z.string().optional(),
+  /**
+   * The viewport frame the shopper actually had on screen where this happens,
+   * captured during the scroll sweep. A full-page composite cannot show that a
+   * button is off-screen at 60% depth; this can.
+   */
+  evidence_image: z.string().nullish().optional(),
+  evidence_caption: z.string().nullish().optional(),
+
   selector: z.string(),
 });
 export type FrictionPoint = z.infer<typeof frictionPointSchema>;
