@@ -17,6 +17,15 @@
 const MAX_STEPS = Number(process.env.AGENT_SCROLL_STEPS || 12);
 const STEP_SETTLE_MS = Number(process.env.AGENT_SCROLL_SETTLE_MS || 250);
 const BUDGET_MS = Number(process.env.AGENT_SCROLL_BUDGET_MS || 8000);
+/**
+ * Viewport frames captured during the sweep. A full-page screenshot proves a
+ * page exists; it does not show what the shopper actually has on screen at
+ * 60% depth — which is the whole point of findings like "the way to buy
+ * scrolls out of reach". These frames are the evidence for those.
+ */
+const MAX_FRAMES = Number(process.env.AGENT_SCROLL_FRAMES || 4);
+const FRAME_QUALITY = Number(process.env.AGENT_SCROLL_FRAME_QUALITY || 45);
+
 
 /**
  * Installed before the sweep. Layout shift *after* load is the interesting
