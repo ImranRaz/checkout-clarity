@@ -320,11 +320,14 @@ export function scrollFindings(profile, kind = "other") {
 
 
   if (profile.shift_after_load >= 0.1) {
+    const shiftDepth =
+      profile.worst_shift_scroll_y && profile.document_height
+        ? Math.min(96, (profile.worst_shift_scroll_y / profile.document_height) * 100)
+        : 50;
     out.push({
       x_percentage: 50,
-      y_percentage: profile.worst_shift_scroll_y && profile.document_height
-        ? Math.min(96, (profile.worst_shift_scroll_y / profile.document_height) * 100)
-        : 50,
+      y_percentage: shiftDepth,
+      ...frameAt(shiftDepth, `The part of the page that moved, at ${Math.round(shiftDepth)}% depth.`),
       severity: profile.shift_after_load >= 0.25 ? "high" : "medium",
       category: "performance",
       title: "The page moves under you as you scroll",
@@ -351,25 +354,39 @@ export function scrollFindings(profile, kind = "other") {
   if (BUY_STAGES.indexOf(kind) !== -1 && profile.viewports >= 3 && profile.primary_cta) {
     const stickyCta = profile.sticky.some((el) => /add to|buy|book|reserve|checkout|continue|price/i.test(el.text));
     if (!stickyCta && profile.primary_cta.depth_percentage <= 40) {
+      // The proof is the deepest frame: the action is nowhere on that screen.
+      const proof = lastFrame
+        ? {
+            evidence_image: lastFrame.src,
+            evidence_caption: `${Math.round(lastFrame.top_percentage)}–${Math.round(lastFrame.bottom_percentage)}% down the page: “${profile.primary_cta.text}” is nowhere on screen and nothing is pinned in its place.`,
+          }
+        : {};
       out.push({
         ...at(profile.primary_cta),
+        ...proof,
         severity: "medium",
         category: "clarity",
         title: "The way to buy scrolls out of reach",
-        description: `The page is ${profile.viewports} screens long and the primary action stays put at the top, so a shopper who reads the detail below has to scroll back up to act.`,
+        description: `The page is ${profile.viewports} screens long and the primary action stays put at the top, so a shopper who reads the detail below has to scroll back up to act. Pinning a slim bar carrying “${profile.primary_cta.text}” (with price and the chosen variant) to the bottom of the viewport keeps the decision one tap away at every depth.`,
         evidence: `“${profile.primary_cta.text}” sits at ${profile.primary_cta.depth_percentage}% depth with no persistent bar on a ${profile.viewports}-screen page.`,
+        recommendation: `Add a sticky buy bar that appears once “${profile.primary_cta.text}” scrolls out of view, showing price, selected variant and the action itself.`,
         selector: profile.primary_cta.selector,
       });
     }
     if (profile.primary_cta.depth_percentage >= 55) {
       out.push({
         ...at(profile.primary_cta),
+        ...frameAt(
+          profile.primary_cta.depth_percentage,
+          `“${profile.primary_cta.text}” finally appears at ${profile.primary_cta.depth_percentage}% down the page.`,
+        ),
         severity: "medium",
         category: "clarity",
         title: "The buying decision is buried down the page",
         description:
           "The primary action sits past the halfway mark of a long page, behind marketing content, so the decision point arrives later than the intent to buy.",
         evidence: `“${profile.primary_cta.text}” is at ${profile.primary_cta.depth_percentage}% of a ${profile.viewports}-screen page.`,
+        recommendation: "Move price and the primary action into the first screen, and let the marketing modules follow it rather than precede it.",
         selector: profile.primary_cta.selector,
       });
     }
@@ -379,6 +396,7 @@ export function scrollFindings(profile, kind = "other") {
   if (hog) {
     out.push({
       ...at(hog),
+      ...frameAt(hog.y_percentage ?? 50),
       severity: "medium",
       category: "clarity",
       title: "A pinned bar eats the screen while scrolling",
@@ -393,6 +411,12 @@ export function scrollFindings(profile, kind = "other") {
     out.push({
       x_percentage: 50,
       y_percentage: 92,
+      ...(lastFrame
+        ? {
+            evidence_image: lastFrame.src,
+            evidence_caption: "The bottom of the page during the sweep — the footer keeps being pushed away.",
+          }
+        : {}),
       severity: "low",
       category: "clarity",
       title: "Infinite scroll with no reachable footer",
@@ -401,6 +425,7 @@ export function scrollFindings(profile, kind = "other") {
       evidence: "Document height kept growing after scrolling to the bottom.",
     });
   }
+
 
   return out;
 }
