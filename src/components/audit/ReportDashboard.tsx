@@ -48,8 +48,14 @@ interface Cursor {
   pointId: number;
 }
 
-const contradictedImageFinding = (point: FrictionPoint) =>
-  /images?.*(?:never loaded|still blank)|stalled images?/i.test(point.title);
+const contradictedImageFinding = (point: FrictionPoint) => {
+  const title = point.title.toLowerCase();
+  return (
+    title.includes("stalled image") ||
+    ((title.includes("image") || title.includes("images")) &&
+      (title.includes("never loaded") || title.includes("still blank")))
+  );
+};
 
 /**
  * Older saved runs predate the strict visual-evidence rules. Repair their
