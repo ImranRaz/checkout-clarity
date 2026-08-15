@@ -10,6 +10,7 @@ import { VITALS_INIT, VITALS_READ } from "./vitals.js";
 import { dismissOverlays } from "./overlays.js";
 import { scrollBrief, scrollFindings, scrollSweep } from "./scroll.js";
 import { isExhaustedStatus, keyLabel, loadKeys, rotationOrder } from "./keys.js";
+import { checkoutFindings, pushToCheckout } from "./checkout.js";
 
 /**
  * Drives a real cloud browser from an entry URL through to the cart, emitting
@@ -949,6 +950,71 @@ export async function runJourney(entryUrl, { onLog } = {}) {
         /* no conventional cart URL — handled below */
       }
     }
+
+    // ---- Checkout pass -------------------------------------------------
+    // Where a store lets a guest reach the checkout, that page is audited too:
+    // it is where surprise line items, pre-ticked paid add-ons and late fees
+    // live. Nothing is ever submitted, and a hard sign-in wall ends the run
+    // cleanly rather than being scored as a defect.
+    if (reachedGoal && !wall && !botBlocked) {
+      try {
+        const tCheckout = Date.now();
+        const hop = await withTimeout(
+          pushToCheckout(page, { emit }),
+          75000,
+          "Continuing to checkout",
+        );
+
+        const botAtCheckout = await detectBotWall(page);
+        if (botAtCheckout) {
+          emit("system", BOT_WALL_MESSAGE[botAtCheckout.kind], "warn");
+        } else if (hop.reached) {
+          await clearOverlays(page, { emit });
+          const stage = await captureStage(page, {
+            kind: "checkout",
+            label: "Checkout",
+            transition: {
+              action: hop.moved ? "continue to checkout as a guest" : "open the checkout page directly",
+              duration_ms: Date.now() - tCheckout,
+            },
+            emit,
+          });
+          const extra = await checkoutFindings(page);
+          if (extra.length > 0) {
+            stage.friction_points = [...stage.friction_points, ...extra].map((point, index) => ({
+              ...point,
+              id: index + 1,
+            }));
+          }
+          stages.push(stage);
+          emit(
+            "browser",
+            `Checkout captured in ${Date.now() - tCheckout}ms${extra.length ? ` — ${extra.length} checkout issue${extra.length === 1 ? "" : "s"} measured` : ""}`,
+            "success",
+          );
+
+          if (hop.login?.hard) {
+            emit(
+              "system",
+              "Checkout requires a sign-in, so the run stops here — everything up to the account wall is captured and scored.",
+              "warn",
+            );
+          }
+        } else if (hop.login?.hard) {
+          emit(
+            "system",
+            "The store requires an account before checkout, so the run stops at the cart.",
+            "warn",
+          );
+        } else {
+          emit("system", "No guest checkout was reachable from the cart — the run stops at the cart.");
+        }
+      } catch (error) {
+        emit("system", `Checkout step skipped (${error.message})`, "warn");
+      }
+    }
+
+
 
     if (!reachedGoal && !blockedReason) {
       status = "partial";
