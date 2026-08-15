@@ -48,7 +48,32 @@ interface Cursor {
   pointId: number;
 }
 
-export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
+const contradictedImageFinding = (point: FrictionPoint) =>
+  /images? (?:never loaded|were still blank)|stalled images?/i.test(point.title);
+
+/**
+ * Older saved runs predate the strict visual-evidence rules. Repair their
+ * presentation at the boundary so they get the same top-to-bottom numbering
+ * and false lazy-image suppression as newly captured reports.
+ */
+function normalizeReportForDisplay(report: ForensicAuditReport): ForensicAuditReport {
+  return {
+    ...report,
+    stages: report.stages.map((stage) => ({
+      ...stage,
+      friction_points: stage.friction_points
+        .filter((point) => !contradictedImageFinding(point))
+        .sort((a, b) => {
+          const vertical = a.y_percentage - b.y_percentage;
+          return Math.abs(vertical) > 1.5 ? vertical : a.x_percentage - b.x_percentage;
+        })
+        .map((point, index) => ({ ...point, id: index + 1 })),
+    })),
+  };
+}
+
+export function ReportDashboard({ report: rawReport }: { report: ForensicAuditReport }) {
+  const report = useMemo(() => normalizeReportForDisplay(rawReport), [rawReport]);
   const [stageIndex, setStageIndex] = useState(0);
   const [activeId, setActiveId] = useState<number | null>(null);
   const [zoomed, setZoomed] = useState(true);
