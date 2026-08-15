@@ -463,6 +463,29 @@ async function clearOverlays(page, options) {
   return result;
 }
 
+/**
+ * Findings are numbered the way the page is read: top to bottom, then left to
+ * right. A pin labelled 2 must never sit above a pin labelled 1 — when the
+ * numbers disagree with the picture, the reader stops trusting both.
+ *
+ * Where a finding carries its own viewport frame, that frame's depth orders it,
+ * so the filmstrip and the list agree.
+ */
+function orderFindings(points) {
+  const depth = (p) => {
+    const y = typeof p.y_percentage === "number" ? p.y_percentage : 50;
+    const top = p.rect && typeof p.rect.y_percentage === "number" ? p.rect.y_percentage : y;
+    return Math.min(y, top);
+  };
+  return [...points]
+    .sort((a, b) => {
+      const dy = depth(a) - depth(b);
+      if (Math.abs(dy) > 1.5) return dy;
+      return (a.x_percentage ?? 50) - (b.x_percentage ?? 50);
+    })
+    .map((point, index) => ({ ...point, id: index + 1 }));
+}
+
 async function captureStage(page, { kind, label: rawLabel, transition, emit }) {
   const label = cleanLabel(rawLabel, kind);
 
@@ -1089,7 +1112,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
       seenFindings.add(key);
       kept.push(point);
     }
-    stage.friction_points = kept.map((point, index) => ({ ...point, id: index + 1 }));
+    stage.friction_points = orderFindings(kept);
   }
 
   const host = new URL(entryUrl).hostname.replace(/^www\./, "");
