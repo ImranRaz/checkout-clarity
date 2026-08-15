@@ -280,9 +280,34 @@ export function scrollFindings(profile, kind = "other") {
       : {}),
   });
 
+  /**
+   * The viewport frame captured nearest a given page depth, so a finding about
+   * something below the fold can show what the shopper actually had on screen
+   * there instead of a pin on a full-page composite.
+   */
+  const frames = Array.isArray(profile.frames) ? profile.frames : [];
+  const frameAt = (depthPct, caption) => {
+    if (frames.length === 0) return {};
+    const target = Math.min(100, Math.max(0, depthPct));
+    const best = frames.reduce((a, b) =>
+      Math.abs((a.top_percentage + a.bottom_percentage) / 2 - target) <=
+      Math.abs((b.top_percentage + b.bottom_percentage) / 2 - target)
+        ? a
+        : b,
+    );
+    return {
+      evidence_image: best.src,
+      evidence_caption:
+        caption ||
+        `What the shopper sees between ${Math.round(best.top_percentage)}% and ${Math.round(best.bottom_percentage)}% down the page.`,
+    };
+  };
+  const lastFrame = frames.length ? frames[frames.length - 1] : null;
+
   if (profile.stalled_media_count >= 3) {
     out.push({
       ...at(profile.stalled_media[0]),
+      ...frameAt(profile.stalled_media[0]?.y_percentage ?? 50),
       severity: profile.stalled_media_count >= 8 ? "high" : "medium",
       category: "performance",
       title: `${profile.stalled_media_count} images never loaded while scrolling`,
@@ -292,6 +317,7 @@ export function scrollFindings(profile, kind = "other") {
       selector: profile.stalled_media[0]?.selector,
     });
   }
+
 
   if (profile.shift_after_load >= 0.1) {
     out.push({
