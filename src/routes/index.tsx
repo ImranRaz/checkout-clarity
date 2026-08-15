@@ -424,8 +424,21 @@ function RecentCard({
     <Link
       to="/report/$reportId"
       params={{ reportId: run.id }}
-      className="tile group flex h-full flex-col p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-tile-hover"
+      className="tile group flex h-full flex-col overflow-hidden p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-tile-hover"
     >
+      {thumb ? (
+        <span className="relative -mx-4 -mt-4 mb-4 block h-28 overflow-hidden border-b border-border bg-secondary">
+          <img
+            src={thumb}
+            alt={`First capture of the ${run.domain} audit`}
+            loading="lazy"
+            decoding="async"
+            className="size-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.03]"
+          />
+          <span className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-card to-transparent" />
+        </span>
+      ) : null}
+
       <div className="flex items-baseline justify-between gap-3">
         <p className="truncate font-mono text-xs text-muted-foreground">{run.domain}</p>
         <span
