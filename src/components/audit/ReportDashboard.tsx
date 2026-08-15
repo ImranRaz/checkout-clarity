@@ -929,7 +929,7 @@ function Pin({
   onSelect,
 }: {
   point: FrictionPoint;
-  displayRect?: { x: number; y: number; w: number; h: number };
+  displayRect?: { x: number; y: number; w: number; h: number } | undefined;
   active: boolean;
   dim: boolean;
   onSelect: () => void;
