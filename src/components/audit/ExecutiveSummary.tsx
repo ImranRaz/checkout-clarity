@@ -14,6 +14,13 @@ import { cn } from "@/lib/utils";
  * from findings already on the report — no extra measurement, no model call.
  */
 
+const PILLAR_TERM: Record<(typeof PILLARS)[number], GlossaryKey> = {
+  clarity: "clarity",
+  trust: "trust",
+  effort: "effortPillar",
+  speed: "speed",
+};
+
 function cellTone(score: number) {
   if (score >= 85) return "bg-primary/12 text-primary";
   if (score >= 70) return "bg-secondary text-foreground";
