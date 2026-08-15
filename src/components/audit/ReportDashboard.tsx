@@ -375,7 +375,10 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
         >
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="label-caps">Score breakdown</h2>
+              <h2 className="label-caps flex items-center gap-1">
+                Score breakdown
+                <Explain term="score" />
+              </h2>
               <p className="mt-2 flex items-baseline gap-2">
                 <span className="font-display text-4xl leading-none tracking-tight tabular-nums">
                   {partial ? "n/a" : score.total}
@@ -499,7 +502,10 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
           )}
 
           <div className="mt-5 border-t border-border pt-4">
-            <p className="label-caps">Console · {stage.technical_metrics.console_errors.length}</p>
+            <p className="label-caps flex items-center gap-1">
+              Console · {stage.technical_metrics.console_errors.length}
+              <Explain term="consoleErrors" />
+            </p>
             {stage.technical_metrics.console_errors.length === 0 ? (
               <p className="mt-2 font-mono text-xs text-primary">no errors captured</p>
             ) : (
@@ -516,7 +522,10 @@ export function ReportDashboard({ report }: { report: ForensicAuditReport }) {
 
           {stage.technical_metrics.slow_resources.length > 0 && (
             <div className="mt-4 border-t border-border pt-4">
-              <p className="label-caps">Slowest resources</p>
+              <p className="label-caps flex items-center gap-1">
+                Slowest resources
+                <Explain term="slowResources" />
+              </p>
               <ul className="mt-2 space-y-1.5">
                 {stage.technical_metrics.slow_resources.map((r) => (
                   <li
