@@ -322,6 +322,19 @@ export function createReviewer(provider, { vertical } = {}) {
       if (seenTitles.has(key)) continue;
       seenTitles.add(key);
 
+      // Below-fold findings carry the frame the shopper would have been
+      // looking at, so the card shows that screen rather than a pin on a
+      // full-page composite the shopper never sees.
+      const frame =
+        box.y_percentage > 12 && frames.length
+          ? frames.reduce((a, b) =>
+              Math.abs((a.top_percentage + a.bottom_percentage) / 2 - box.y_percentage) <=
+              Math.abs((b.top_percentage + b.bottom_percentage) / 2 - box.y_percentage)
+                ? a
+                : b,
+            )
+          : null;
+
       findings.push({
         x_percentage: box.x_percentage,
         y_percentage: box.y_percentage,
@@ -331,6 +344,12 @@ export function createReviewer(provider, { vertical } = {}) {
           w_percentage: Math.max(1, box.w_percentage),
           h_percentage: Math.max(0.5, box.h_percentage),
         },
+        ...(frame
+          ? {
+              evidence_image: frame.src,
+              evidence_caption: `On screen between ${Math.round(frame.top_percentage)}% and ${Math.round(frame.bottom_percentage)}% down the page.`,
+            }
+          : {}),
         persona: f.persona,
         severity: f.severity,
         category: f.category,
@@ -342,6 +361,7 @@ export function createReviewer(provider, { vertical } = {}) {
         ...(f.rewrite_after ? { rewrite_before: f.rewrite_before, rewrite_after: f.rewrite_after } : {}),
         selector: box.selector,
       });
+
     }
     return findings.slice(0, 4);
   };
