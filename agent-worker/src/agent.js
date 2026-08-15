@@ -10,6 +10,7 @@ import { VITALS_INIT, VITALS_READ } from "./vitals.js";
 import { dismissOverlays } from "./overlays.js";
 import { scrollBrief, scrollFindings, scrollSweep } from "./scroll.js";
 import { isExhaustedStatus, keyLabel, loadKeys, rotationOrder } from "./keys.js";
+import { checkoutFindings, pushToCheckout } from "./checkout.js";
 
 /**
  * Drives a real cloud browser from an entry URL through to the cart, emitting
