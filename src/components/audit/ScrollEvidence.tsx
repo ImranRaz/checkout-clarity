@@ -46,8 +46,7 @@ export function ScrollPass({ profile }: { profile: ScrollProfile }) {
       <p className="label-caps flex items-center gap-1.5">
         <ArrowDownToLine className="size-3" aria-hidden />
         Scroll pass
-        <Explain term="aboveFold" />
-        <Explain term="layoutShift" />
+        <Explain term="scrollPass" />
       </p>
 
       <div className="mt-3 flex items-start gap-4">
