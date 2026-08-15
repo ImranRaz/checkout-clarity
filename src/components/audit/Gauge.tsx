@@ -3,6 +3,7 @@ import {
   position,
   rate,
   ratingLabel,
+  type Benchmark,
   type BenchmarkKey,
   type Rating,
 } from "@/lib/benchmarks";
@@ -26,7 +27,7 @@ const dot: Record<Rating, string> = {
  * amber-in-the-middle before anyone hovers anything.
  */
 export function Gauge({ metric, value }: { metric: BenchmarkKey; value: number }) {
-  const b = BENCHMARKS[metric];
+  const b: Benchmark = BENCHMARKS[metric];
   const r = rate(metric, value);
   const left = position(metric, value) * 100;
   // Zone widths along the track, expressed as percentages of the max.
