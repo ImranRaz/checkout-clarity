@@ -390,19 +390,27 @@ export function scrollFindings(profile, kind = "other") {
   };
   const lastFrame = frames.length ? frames[frames.length - 1] : null;
 
-  if (profile.stalled_media_count >= 3) {
+  // Only claimed when the images were still blank on a second look, well after
+  // the sweep passed them. Lazy loading that finishes late is not a defect, and
+  // a finding the evidence image contradicts costs more trust than it earns.
+  if (profile.stalled_media_count >= 3 && profile.stalled_media?.length) {
+    const named = profile.stalled_media
+      .slice(0, 3)
+      .map((m) => m.alt || m.selector)
+      .filter(Boolean);
     out.push({
       ...at(profile.stalled_media[0]),
       ...frameAt(profile.stalled_media[0]?.y_percentage ?? 50),
       severity: profile.stalled_media_count >= 8 ? "high" : "medium",
       category: "performance",
-      title: `${profile.stalled_media_count} images never loaded while scrolling`,
+      title: `${profile.stalled_media_count} images were still blank after the page settled`,
       description:
-        "These images stayed blank even after being scrolled into view, so a shopper reading down the page sees empty boxes where product imagery should be.",
-      evidence: `${profile.stalled_media_count} of ${profile.media_count} large images had no rendered source after a full-page scroll.`,
+        "These images had painted nothing even a second after being scrolled into view and given time to load, so a shopper reading down the page sees empty boxes where product imagery should be. Images that simply loaded late are not counted here.",
+      evidence: `${profile.stalled_media_count} of ${profile.media_count} large images had no pixels after a full-page scroll and a settle${named.length ? ` — ${named.join(", ")}` : ""}.`,
       selector: profile.stalled_media[0]?.selector,
     });
   }
+
 
 
   if (profile.shift_after_load >= 0.1) {
