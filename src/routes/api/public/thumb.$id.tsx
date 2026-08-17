@@ -22,20 +22,21 @@ export const Route = createFileRoute("/api/public/thumb/$id")({
         // console hands out alongside each run summary.
         const token = new URL(request.url).searchParams.get("t") ?? "";
         const { verifyThumbToken } = await import("@/lib/thumb-token.server");
-        if (!(await verifyThumbToken(id, token))) {
-          return new Response("Not found", { status: 404 });
-        }
+        const signed = await verifyThumbToken(id, token);
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const supabase = supabaseAdmin;
 
         const { data, error } = await supabase
           .from("audit_runs")
-          .select("report")
+          .select("report, featured")
           .eq("id", id)
           .maybeSingle();
 
         if (error || !data) return new Response("Not found", { status: 404 });
+
+        // Unsigned requests only ever see runs we publish as public samples.
+        if (!signed && !data.featured) return new Response("Not found", { status: 404 });
 
         const report = data.report as
           | { stages?: Array<{ screenshot?: { src?: string } }> }
