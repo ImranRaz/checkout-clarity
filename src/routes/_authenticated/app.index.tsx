@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 
 
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authenticated/app/")({
   loader: async () => ({ recent: await listRecentAudits() }),
   errorComponent: ({ error }) => (
     <main className="mx-auto max-w-3xl px-6 py-20">

@@ -12,7 +12,7 @@ import type { ForensicAuditReport } from "@/lib/audit-schema";
 import { saveLiveReport } from "@/lib/live-store";
 import { saveAuditRun } from "@/lib/reports.functions";
 
-export const Route = createFileRoute("/audit/live")({
+export const Route = createFileRoute("/_authenticated/app/audit/live")({
   validateSearch: (search: Record<string, unknown>) => ({
     url: typeof search["url"] === "string" ? search["url"] : "",
   }),

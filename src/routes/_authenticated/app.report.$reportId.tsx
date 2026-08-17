@@ -12,7 +12,7 @@ import type { ForensicAuditReport } from "@/lib/audit-schema";
 import { scoreReport } from "@/lib/scoring";
 
 
-export const Route = createFileRoute("/report/$reportId")({
+export const Route = createFileRoute("/_authenticated/app/report/$reportId")({
   loader: ({ params }) => {
     const report = getReportById(params.reportId);
     if (!report) {

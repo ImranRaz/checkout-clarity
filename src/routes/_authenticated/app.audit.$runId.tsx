@@ -9,7 +9,7 @@ import { getReportById } from "@/lib/audit-runner";
 import { isLiveId, loadLiveReport } from "@/lib/live-store";
 import type { ForensicAuditReport } from "@/lib/audit-schema";
 
-export const Route = createFileRoute("/audit/$runId")({
+export const Route = createFileRoute("/_authenticated/app/audit/$runId")({
   loader: ({ params }) => {
     const report = getReportById(params.runId);
     if (!report) {
