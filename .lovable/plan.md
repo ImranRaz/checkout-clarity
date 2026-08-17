@@ -23,7 +23,7 @@ Copy rules: one idea per section, verbs over adjectives, no "AI-powered" filler,
 - Signed-in header shows the account email and a sign-out button.
 
 
-## 2. Shareable read-only report link
+## 3. Shareable read-only report link
 
 - From any finished report, a **Share** button mints a link like `/r/9f3c2a…` (random, unguessable token). You copy it and send it.
 - What the recipient sees at that link:
