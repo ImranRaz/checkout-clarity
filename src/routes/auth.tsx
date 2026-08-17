@@ -128,7 +128,7 @@ function AuthPage() {
               id="password"
               type="password"
               required
-              autoComplete="current-password"
+              autoComplete={setupMode ? "new-password" : "current-password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="mt-2 w-full rounded-md border border-input bg-card px-3.5 py-3 font-mono text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/25"
@@ -141,6 +141,10 @@ function AuthPage() {
             </p>
           ) : null}
 
+          {notice && !error ? (
+            <p className="text-[13px] text-muted-foreground">{notice}</p>
+          ) : null}
+
           <button
             type="submit"
             disabled={busy}
@@ -151,14 +155,17 @@ function AuthPage() {
             )}
           >
             {busy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
-            Sign in
+            {setupMode ? "Create account & sign in" : "Sign in"}
           </button>
         </form>
 
         <p className="mt-6 font-mono text-[11px] text-muted-foreground">
-          Need an account? Reply to the report we sent you and we'll set one up.
+          {setupMode
+            ? "This one-time setup disappears the moment the first account exists."
+            : "Need an account? Reply to the report we sent you and we'll set one up."}
         </p>
       </div>
+
     </main>
   );
 }
