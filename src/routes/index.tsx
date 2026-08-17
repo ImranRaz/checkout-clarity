@@ -263,7 +263,7 @@ function Marketing() {
 
       {/* Hero */}
       <section className="rule-grid border-b border-border">
-        <div className="mx-auto grid w-full max-w-6xl gap-12 px-6 pb-20 pt-16 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:pb-28 lg:pt-24">
+        <div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-6 pb-14 pt-12 lg:grid-cols-[0.95fr_1.05fr] lg:gap-14 lg:pb-16 lg:pt-14">
           <div>
             <motion.p
               initial={{ opacity: 0, y: 8 }}
@@ -278,7 +278,7 @@ function Marketing() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.05 }}
-              className="mt-5 max-w-xl font-display text-4xl leading-[1.05] tracking-tight sm:text-5xl"
+              className="mt-4 max-w-lg font-display text-[2.1rem] leading-[1.04] tracking-tight sm:text-[2.75rem]"
             >
               Your checkout is leaking revenue. We show you where.
             </motion.h1>
@@ -287,30 +287,29 @@ function Marketing() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.12 }}
-              className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground"
+              className="mt-4 max-w-md text-[15px] leading-relaxed text-muted-foreground"
             >
-              An agent shops your store the way a customer does — category, product, cart, guest
-              checkout — then hands back every hesitation it hit, pinned to the exact pixels that
-              caused it.
+              An agent shops your store like a customer — category to guest checkout — and hands
+              back every hesitation it hit, pinned to the exact pixels that caused it.
             </motion.p>
 
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.18 }}
-              className="mt-8 flex flex-wrap items-center gap-3"
+              className="mt-7 flex flex-wrap items-center gap-3"
             >
               <Link
                 to="/report/$reportId"
                 params={{ reportId: hero.id }}
-                className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-3 text-sm font-medium text-primary-foreground shadow-tile transition-all duration-200 hover:-translate-y-0.5 hover:shadow-tile-hover"
+                className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-tile transition-all duration-200 hover:-translate-y-0.5 hover:shadow-tile-hover"
               >
                 See a full sample report
                 <ArrowRight className="size-3.5" aria-hidden />
               </Link>
               <a
                 href="mailto:hello@checkoutforensic.com?subject=Audit%20my%20store"
-                className="inline-flex items-center gap-2 rounded-md border border-border px-5 py-3 text-sm font-medium transition-colors hover:bg-muted"
+                className="inline-flex items-center gap-2 rounded-md border border-border px-5 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
               >
                 Request an audit
               </a>
@@ -325,49 +324,11 @@ function Marketing() {
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6, delay: 0.15 }}
-            className="tile relative overflow-hidden p-0"
           >
-            <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
-              <span className="size-2 rounded-full bg-sev-high/70" />
-              <span className="size-2 rounded-full bg-sev-medium/70" />
-              <span className="size-2 rounded-full bg-primary/60" />
-              <span className="ml-2 truncate font-mono text-[11px] text-muted-foreground">
-                {hero.domain}
-              </span>
-            </div>
-            <div className="relative">
-              <img
-                src={heroStage.screenshot.src}
-                alt={`Audited capture of the ${hero.domain} storefront with numbered findings`}
-                className="block w-full"
-                loading="eager"
-                decoding="async"
-              />
-              {heroPins.map((point, i) => (
-                <motion.span
-                  key={point.id}
-                  initial={{ opacity: 0, scale: 0.6 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.35, delay: 0.5 + i * 0.18 }}
-                  style={{
-                    left: `${Math.min(92, Math.max(4, point.x_percentage))}%`,
-                    top: `${Math.min(92, Math.max(4, point.y_percentage))}%`,
-                  }}
-                  className={cn(
-                    "absolute -translate-x-1/2 -translate-y-1/2 rounded-full px-2 py-0.5 font-mono text-[10px] font-semibold text-background shadow-tile",
-                    point.severity === "high"
-                      ? "bg-sev-high"
-                      : point.severity === "medium"
-                        ? "bg-sev-medium"
-                        : "bg-sev-low",
-                  )}
-                >
-                  {i + 1}
-                </motion.span>
-              ))}
-            </div>
+            <HeroEvidence report={hero} stage={heroStage} pins={heroPins} />
           </motion.div>
         </div>
+
       </section>
 
       {/* Proof strip */}
