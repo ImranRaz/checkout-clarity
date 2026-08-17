@@ -33,7 +33,7 @@ Copy rules: one idea per section, verbs over adjectives, no "AI-powered" filler,
 - Link management (on the report page, signed in): copy link, see view count and last viewed, set optional expiry, revoke.
 - Shared pages are `noindex` and carry per-report title/description so a pasted link previews with the domain audited.
 
-## 3. Data + security
+## 4. Data + security
 
 - `share_links` table: `token` (primary), `run_id`, `created_by`, `created_at`, `expires_at`, `revoked`, `view_count`, `last_viewed_at`.
 - Tighten `audit_runs`: today anyone can read, insert and delete it. New policies — read/write only for authenticated users; anonymous access removed entirely.
