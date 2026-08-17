@@ -53,12 +53,45 @@ export type Database = {
         }
         Relationships: []
       }
+      share_links: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          last_viewed_at: string | null
+          revoked: boolean
+          run_id: string
+          token: string
+          view_count: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          last_viewed_at?: string | null
+          revoked?: boolean
+          run_id: string
+          token: string
+          view_count?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          last_viewed_at?: string | null
+          revoked?: boolean
+          run_id?: string
+          token?: string
+          view_count?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_shared_report: { Args: { _token: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never
