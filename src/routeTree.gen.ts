@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as RTokenRouteImport } from './routes/r.$token'
+import { Route as ReportReportIdRouteImport } from './routes/report.$reportId'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
 import { Route as AuthenticatedAppAuditRunIdRouteImport } from './routes/_authenticated/app.audit.$runId'
 import { Route as AuthenticatedAppAuditLiveRouteImport } from './routes/_authenticated/app.audit.live'
@@ -30,6 +31,11 @@ const AuthRoute = AuthRouteImport.update({
 const RTokenRoute = RTokenRouteImport.update({
   id: '/r/$token',
   path: '/r/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportReportIdRoute = ReportReportIdRouteImport.update({
+  id: '/report/$reportId',
+  path: '/report/$reportId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/r/$token': typeof RTokenRoute
+  '/report/$reportId': typeof ReportReportIdRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/audit/$runId': typeof AuthenticatedAppAuditRunIdRoute
   '/app/audit/live': typeof AuthenticatedAppAuditLiveRoute
@@ -75,6 +82,7 @@ export interface FileRoutesByTo {
   '/': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/r/$token': typeof RTokenRoute
+  '/report/$reportId': typeof ReportReportIdRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/audit/$runId': typeof AuthenticatedAppAuditRunIdRoute
   '/app/audit/live': typeof AuthenticatedAppAuditLiveRoute
@@ -86,6 +94,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/r/$token': typeof RTokenRoute
+  '/report/$reportId': typeof ReportReportIdRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/audit/$runId': typeof AuthenticatedAppAuditRunIdRoute
   '/_authenticated/app/audit/live': typeof AuthenticatedAppAuditLiveRoute
@@ -98,6 +107,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/r/$token'
+    | '/report/$reportId'
     | '/app/'
     | '/app/audit/$runId'
     | '/app/audit/live'
@@ -108,6 +118,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/r/$token'
+    | '/report/$reportId'
     | '/app'
     | '/app/audit/$runId'
     | '/app/audit/live'
@@ -118,6 +129,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/r/$token'
+    | '/report/$reportId'
     | '/_authenticated/app/'
     | '/_authenticated/app/audit/$runId'
     | '/_authenticated/app/audit/live'
@@ -129,6 +141,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   RTokenRoute: typeof RTokenRoute
+  ReportReportIdRoute: typeof ReportReportIdRoute
   ApiPublicThumbIdRoute: typeof ApiPublicThumbIdRoute
 }
 
@@ -153,6 +166,13 @@ declare module '@tanstack/react-router' {
       path: '/r/$token'
       fullPath: '/r/$token'
       preLoaderRoute: typeof RTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/report/$reportId': {
+      id: '/report/$reportId'
+      path: '/report/$reportId'
+      fullPath: '/report/$reportId'
+      preLoaderRoute: typeof ReportReportIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/app/': {
@@ -214,6 +234,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   RTokenRoute: RTokenRoute,
+  ReportReportIdRoute: ReportReportIdRoute,
   ApiPublicThumbIdRoute: ApiPublicThumbIdRoute,
 }
 export const routeTree = rootRouteImport
