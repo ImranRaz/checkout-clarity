@@ -9,7 +9,7 @@ import { getReportById } from "@/lib/audit-runner";
 import { isLiveId, loadLiveReport } from "@/lib/live-store";
 import type { ForensicAuditReport } from "@/lib/audit-schema";
 
-export const Route = createFileRoute("/audit/$runId")({
+export const Route = createFileRoute("/_authenticated/app/audit/$runId")({
   loader: ({ params }) => {
     const report = getReportById(params.runId);
     if (!report) {
@@ -63,7 +63,7 @@ function AuditRun() {
     return (
       <main className="min-h-screen">
         <div className="mx-auto w-full max-w-6xl px-6 py-20">
-          <Link to="/" className="label-caps inline-flex items-center gap-1.5">
+          <Link to="/app" className="label-caps inline-flex items-center gap-1.5">
             <ArrowLeft className="size-3" aria-hidden />
             New audit
           </Link>
@@ -83,7 +83,7 @@ function AuditRun() {
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <div className="min-w-0">
             <Link
-              to="/"
+              to="/app"
               className="label-caps inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
             >
               <ArrowLeft className="size-3" aria-hidden />
@@ -96,7 +96,7 @@ function AuditRun() {
           </div>
           {phase === "done" && (
             <Link
-              to="/report/$reportId"
+              to="/app/report/$reportId"
               params={{ reportId: report.id }}
               className="font-mono text-xs text-primary underline-offset-4 hover:underline"
             >

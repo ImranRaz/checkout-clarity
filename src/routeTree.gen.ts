@@ -10,9 +10,14 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuditRunIdRouteImport } from './routes/audit.$runId'
-import { Route as AuditLiveRouteImport } from './routes/audit.live'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as RTokenRouteImport } from './routes/r.$token'
 import { Route as ReportReportIdRouteImport } from './routes/report.$reportId'
+import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
+import { Route as AuthenticatedAppAuditRunIdRouteImport } from './routes/_authenticated/app.audit.$runId'
+import { Route as AuthenticatedAppAuditLiveRouteImport } from './routes/_authenticated/app.audit.live'
+import { Route as AuthenticatedAppReportReportIdRouteImport } from './routes/_authenticated/app.report.$reportId'
 import { Route as ApiPublicThumbIdRouteImport } from './routes/api/public/thumb.$id'
 
 const IndexRoute = IndexRouteImport.update({
@@ -20,14 +25,18 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuditRunIdRoute = AuditRunIdRouteImport.update({
-  id: '/audit/$runId',
-  path: '/audit/$runId',
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuditLiveRoute = AuditLiveRouteImport.update({
-  id: '/audit/live',
-  path: '/audit/live',
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RTokenRoute = RTokenRouteImport.update({
+  id: '/r/$token',
+  path: '/r/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReportReportIdRoute = ReportReportIdRouteImport.update({
@@ -35,6 +44,29 @@ const ReportReportIdRoute = ReportReportIdRouteImport.update({
   path: '/report/$reportId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
+  id: '/app/',
+  path: '/app/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAppAuditRunIdRoute =
+  AuthenticatedAppAuditRunIdRouteImport.update({
+    id: '/app/audit/$runId',
+    path: '/app/audit/$runId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAppAuditLiveRoute =
+  AuthenticatedAppAuditLiveRouteImport.update({
+    id: '/app/audit/live',
+    path: '/app/audit/live',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAppReportReportIdRoute =
+  AuthenticatedAppReportReportIdRouteImport.update({
+    id: '/app/report/$reportId',
+    path: '/app/report/$reportId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiPublicThumbIdRoute = ApiPublicThumbIdRouteImport.update({
   id: '/api/public/thumb/$id',
   path: '/api/public/thumb/$id',
@@ -43,54 +75,81 @@ const ApiPublicThumbIdRoute = ApiPublicThumbIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/audit/$runId': typeof AuditRunIdRoute
-  '/audit/live': typeof AuditLiveRoute
+  '/auth': typeof AuthRoute
+  '/r/$token': typeof RTokenRoute
   '/report/$reportId': typeof ReportReportIdRoute
+  '/app/': typeof AuthenticatedAppIndexRoute
+  '/app/audit/$runId': typeof AuthenticatedAppAuditRunIdRoute
+  '/app/audit/live': typeof AuthenticatedAppAuditLiveRoute
+  '/app/report/$reportId': typeof AuthenticatedAppReportReportIdRoute
   '/api/public/thumb/$id': typeof ApiPublicThumbIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/audit/$runId': typeof AuditRunIdRoute
-  '/audit/live': typeof AuditLiveRoute
+  '/auth': typeof AuthRoute
+  '/r/$token': typeof RTokenRoute
   '/report/$reportId': typeof ReportReportIdRoute
+  '/app': typeof AuthenticatedAppIndexRoute
+  '/app/audit/$runId': typeof AuthenticatedAppAuditRunIdRoute
+  '/app/audit/live': typeof AuthenticatedAppAuditLiveRoute
+  '/app/report/$reportId': typeof AuthenticatedAppReportReportIdRoute
   '/api/public/thumb/$id': typeof ApiPublicThumbIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/audit/$runId': typeof AuditRunIdRoute
-  '/audit/live': typeof AuditLiveRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/r/$token': typeof RTokenRoute
   '/report/$reportId': typeof ReportReportIdRoute
+  '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
+  '/_authenticated/app/audit/$runId': typeof AuthenticatedAppAuditRunIdRoute
+  '/_authenticated/app/audit/live': typeof AuthenticatedAppAuditLiveRoute
+  '/_authenticated/app/report/$reportId': typeof AuthenticatedAppReportReportIdRoute
   '/api/public/thumb/$id': typeof ApiPublicThumbIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/audit/$runId'
-    | '/audit/live'
+    | '/auth'
+    | '/r/$token'
     | '/report/$reportId'
+    | '/app/'
+    | '/app/audit/$runId'
+    | '/app/audit/live'
+    | '/app/report/$reportId'
     | '/api/public/thumb/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/audit/$runId'
-    | '/audit/live'
+    | '/auth'
+    | '/r/$token'
     | '/report/$reportId'
+    | '/app'
+    | '/app/audit/$runId'
+    | '/app/audit/live'
+    | '/app/report/$reportId'
     | '/api/public/thumb/$id'
   id:
     | '__root__'
     | '/'
-    | '/audit/$runId'
-    | '/audit/live'
+    | '/_authenticated'
+    | '/auth'
+    | '/r/$token'
     | '/report/$reportId'
+    | '/_authenticated/app/'
+    | '/_authenticated/app/audit/$runId'
+    | '/_authenticated/app/audit/live'
+    | '/_authenticated/app/report/$reportId'
     | '/api/public/thumb/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AuditRunIdRoute: typeof AuditRunIdRoute
-  AuditLiveRoute: typeof AuditLiveRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  RTokenRoute: typeof RTokenRoute
   ReportReportIdRoute: typeof ReportReportIdRoute
   ApiPublicThumbIdRoute: typeof ApiPublicThumbIdRoute
 }
@@ -104,18 +163,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/audit/$runId': {
-      id: '/audit/$runId'
-      path: '/audit/$runId'
-      fullPath: '/audit/$runId'
-      preLoaderRoute: typeof AuditRunIdRouteImport
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/audit/live': {
-      id: '/audit/live'
-      path: '/audit/live'
-      fullPath: '/audit/live'
-      preLoaderRoute: typeof AuditLiveRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/r/$token': {
+      id: '/r/$token'
+      path: '/r/$token'
+      fullPath: '/r/$token'
+      preLoaderRoute: typeof RTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/report/$reportId': {
@@ -124,6 +190,34 @@ declare module '@tanstack/react-router' {
       fullPath: '/report/$reportId'
       preLoaderRoute: typeof ReportReportIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/app/': {
+      id: '/_authenticated/app/'
+      path: '/app'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/audit/$runId': {
+      id: '/_authenticated/app/audit/$runId'
+      path: '/app/audit/$runId'
+      fullPath: '/app/audit/$runId'
+      preLoaderRoute: typeof AuthenticatedAppAuditRunIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/audit/live': {
+      id: '/_authenticated/app/audit/live'
+      path: '/app/audit/live'
+      fullPath: '/app/audit/live'
+      preLoaderRoute: typeof AuthenticatedAppAuditLiveRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/report/$reportId': {
+      id: '/_authenticated/app/report/$reportId'
+      path: '/app/report/$reportId'
+      fullPath: '/app/report/$reportId'
+      preLoaderRoute: typeof AuthenticatedAppReportReportIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/api/public/thumb/$id': {
       id: '/api/public/thumb/$id'
@@ -135,10 +229,28 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
+  AuthenticatedAppAuditRunIdRoute: typeof AuthenticatedAppAuditRunIdRoute
+  AuthenticatedAppAuditLiveRoute: typeof AuthenticatedAppAuditLiveRoute
+  AuthenticatedAppReportReportIdRoute: typeof AuthenticatedAppReportReportIdRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
+  AuthenticatedAppAuditRunIdRoute: AuthenticatedAppAuditRunIdRoute,
+  AuthenticatedAppAuditLiveRoute: AuthenticatedAppAuditLiveRoute,
+  AuthenticatedAppReportReportIdRoute: AuthenticatedAppReportReportIdRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AuditRunIdRoute: AuditRunIdRoute,
-  AuditLiveRoute: AuditLiveRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
+  RTokenRoute: RTokenRoute,
   ReportReportIdRoute: ReportReportIdRoute,
   ApiPublicThumbIdRoute: ApiPublicThumbIdRoute,
 }
