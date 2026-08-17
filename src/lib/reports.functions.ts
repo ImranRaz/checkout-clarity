@@ -49,7 +49,7 @@ export const saveAuditRun = createServerFn({ method: "POST" })
       domain: report.domain,
       status: report.status,
       score,
-      report: report as unknown as Record<string, unknown>,
+      report: JSON.parse(JSON.stringify(report)),
       stages_count: report.stages.length,
       friction_count: allFrictionPoints(report).length,
       console_errors: totalConsoleErrors(report),

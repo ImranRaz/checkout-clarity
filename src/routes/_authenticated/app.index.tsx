@@ -244,7 +244,7 @@ function Home() {
                 <RecentCard
                   run={run}
                   live
-                  thumb={`/api/public/thumb/${run.id}`}
+                  thumb={`/api/public/thumb/${run.id}?t=${run.thumbToken}`}
                   {...(run.score === null || run.status !== "complete"
                     ? { onDelete: () => void handleDelete(run.id), deleting: removing.includes(run.id) }
                     : {})}
@@ -277,6 +277,7 @@ function Home() {
                     friction: allFrictionPoints(report).length,
                     consoleErrors: totalConsoleErrors(report),
                     createdAt: report.captured_at,
+                    thumbToken: "",
                   }}
                   thumb={report.stages[0]?.screenshot.src}
                 />
