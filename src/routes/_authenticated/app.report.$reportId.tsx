@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { ReportDashboard } from "@/components/audit/ReportDashboard";
+import { ShareBar } from "@/components/audit/ShareBar";
 import { allFrictionPoints, reachedStep, totalConsoleErrors } from "@/lib/audit-schema";
 import { getReportById } from "@/lib/audit-runner";
 import { isLiveId, loadLiveReport } from "@/lib/live-store";
@@ -118,6 +119,12 @@ function ReportPage() {
           captured {captured.toISOString().replace("T", " ").slice(0, 16)} UTC · reached{" "}
           {reachedStep(report)}
         </p>
+
+        {!fixtureReport ? (
+          <div className="mt-8">
+            <ShareBar runId={reportId} />
+          </div>
+        ) : null}
 
         <div className="mt-8">
           <ReportDashboard report={report} />
