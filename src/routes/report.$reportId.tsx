@@ -3,6 +3,7 @@ import { createFileRoute, notFound } from "@tanstack/react-router";
 import { SharedReportView } from "@/components/audit/SharedReportView";
 import { allFrictionPoints, totalConsoleErrors } from "@/lib/audit-schema";
 import { getReportById } from "@/lib/audit-runner";
+import { getFeaturedReport } from "@/lib/featured.functions";
 import { scoreReport } from "@/lib/scoring";
 
 /**
@@ -10,8 +11,10 @@ import { scoreReport } from "@/lib/scoring";
  * runs are private and reachable through `/r/$token` or the console.
  */
 export const Route = createFileRoute("/report/$reportId")({
-  loader: ({ params }) => {
-    const report = getReportById(params.reportId);
+  loader: async ({ params }) => {
+    // Bundled samples first, then any real run we've explicitly featured.
+    const report =
+      getReportById(params.reportId) ?? (await getFeaturedReport({ data: { id: params.reportId } }));
     if (!report) throw notFound();
     return { report };
   },
