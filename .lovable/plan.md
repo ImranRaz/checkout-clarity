@@ -1,14 +1,27 @@
-# Gated app + shareable read-only reports
+# Public marketing site + gated console + shareable read-only reports
 
-Two things: lock the product behind a login only you can hand out, and add a public "here's what I found on your site" link that shows one report and nothing else.
+Three parts: a real marketing home page anyone can see, the working product moved behind an invite-only login, and a send-anywhere read-only report link you use as the door-opener.
 
-## 1. Login (invite-only, simple)
+## 1. Marketing page at `/` (public)
 
-- New public `/auth` page: email + password sign-in, plus Google. No public sign-up form — accounts are created by you from the backend, so nobody can self-register.
-- Everything that is the product moves behind the gate: the home page (run form, recent audits, samples) and the live run page.
-  - `/` becomes a small public marketing landing with a "Sign in" button.
-  - The real console moves to `/app` (dashboard), `/app/audit/$runId`, `/app/audit/live`, all under the protected layout.
+Same visual language as the console — mono labels, tiles, severity colors — so the marketing page *is* the proof. Sections, in order:
+
+1. **Hero.** Positioning line: *"Your checkout is leaking revenue. We'll show you where — pixel by pixel."* Sub: an agent walks your store the way a shopper does — category, product, cart, guest checkout — and reports the copy, cost surprises, effort and speed problems that kill orders. Primary CTA "See a live sample report", secondary "Request access". Right side: a real captured screenshot with the numbered finding pins animating in — the money shot, taken from an existing run.
+2. **The problem, in one line of proof.** Three stat tiles from actual runs (stages walked, findings surfaced, console errors caught) — not invented benchmarks.
+3. **What we look at.** Four cards mapped to the real pillars: Copy & clarity, Cost & surprise (late fees, pre-ticked add-ons), Effort (steps, forms, variant traps), Speed & stability (LCP/CLS, errors) — each with one concrete example finding pulled from the fixtures.
+4. **How it works.** Three steps: point at any page → the agent finds its own way to cart and guest checkout → you get a scored report pinned to the pixels. Emphasize: no tag, no code, no access to your site needed.
+5. **Sample reports.** The existing fixture rail, restyled as feature cards with the site capture; each opens a read-only report view so a visitor can explore a full audit without an account.
+6. **Why it's different.** Short contrast block: page-speed tools grade a URL; this walks the purchase. Scores come from a fixed rubric, not a model's opinion; every finding is anchored to the exact element in the exact screenshot.
+7. **CTA band.** "Want this run on your store?" → email/contact CTA. Footer with the rubric/pins honesty line already on the site.
+
+Copy rules: one idea per section, verbs over adjectives, no "AI-powered" filler, no invented customer logos, testimonials, or metrics.
+
+## 2. Login (invite-only, simple)
+
+- New public `/auth` page: email + password sign-in, plus Google. No sign-up form — you create accounts from the backend, so nobody can self-register.
+- The console moves behind the gate: `/app` (run form + recent audits), `/app/audit/$runId`, `/app/audit/live`.
 - Signed-in header shows the account email and a sign-out button.
+
 
 ## 2. Shareable read-only report link
 
