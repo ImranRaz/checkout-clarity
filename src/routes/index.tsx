@@ -79,6 +79,151 @@ function exampleFinding(pillar: string): FrictionPoint | null {
   return null;
 }
 
+function HeroEvidence({
+  report,
+  stage,
+  pins,
+}: {
+  report: ForensicAuditReport;
+  stage: ForensicAuditReport["stages"][number];
+  pins: FrictionPoint[];
+}) {
+  const [active, setActive] = useState(0);
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    if (paused || pins.length < 2) return;
+    const t = setInterval(() => setActive((i) => (i + 1) % pins.length), 3200);
+    return () => clearInterval(t);
+  }, [paused, pins.length]);
+
+  const current = pins[active];
+
+  return (
+    <div
+      className="tile relative overflow-hidden p-0"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
+        <span className="size-2 rounded-full bg-sev-high/70" />
+        <span className="size-2 rounded-full bg-sev-medium/70" />
+        <span className="size-2 rounded-full bg-primary/60" />
+        <span className="ml-2 truncate font-mono text-[11px] text-muted-foreground">
+          {report.domain}
+        </span>
+        <span className="ml-auto font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+          live capture
+        </span>
+      </div>
+
+      <div className="relative">
+        <img
+          src={stage.screenshot.src}
+          alt={`Audited capture of the ${report.domain} storefront with numbered findings`}
+          className="block w-full"
+          loading="eager"
+          decoding="async"
+        />
+
+        {pins.map((point, i) => {
+          const isActive = i === active;
+          return (
+            <button
+              key={point.id}
+              type="button"
+              onClick={() => setActive(i)}
+              aria-label={point.title}
+              style={{
+                left: `${Math.min(92, Math.max(5, point.x_percentage))}%`,
+                top: `${Math.min(88, Math.max(6, point.y_percentage))}%`,
+              }}
+              className="absolute -translate-x-1/2 -translate-y-1/2"
+            >
+              {isActive ? (
+                <motion.span
+                  layoutId="hero-pin-halo"
+                  className={cn(
+                    "absolute -inset-2 rounded-full opacity-40",
+                    point.severity === "high"
+                      ? "bg-sev-high"
+                      : point.severity === "medium"
+                        ? "bg-sev-medium"
+                        : "bg-sev-low",
+                  )}
+                />
+              ) : null}
+              <motion.span
+                initial={{ opacity: 0, scale: 0.6 }}
+                animate={{ opacity: isActive ? 1 : 0.55, scale: isActive ? 1.08 : 1 }}
+                transition={{ duration: 0.3, delay: 0.4 + i * 0.15 }}
+                className={cn(
+                  "relative flex size-5 items-center justify-center rounded-full font-mono text-[10px] font-semibold text-background shadow-tile",
+                  point.severity === "high"
+                    ? "bg-sev-high"
+                    : point.severity === "medium"
+                      ? "bg-sev-medium"
+                      : "bg-sev-low",
+                )}
+              >
+                {i + 1}
+              </motion.span>
+            </button>
+          );
+        })}
+
+        {/* Cycling finding card */}
+        <div className="pointer-events-none absolute inset-x-3 bottom-3">
+          <AnimatePresence mode="wait">
+            {current ? (
+              <motion.div
+                key={current.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.28 }}
+                className="rounded-lg border border-border bg-background/95 p-3.5 shadow-tile-hover backdrop-blur"
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    className={cn(
+                      "flex size-4 items-center justify-center rounded-full font-mono text-[9px] font-semibold text-background",
+                      current.severity === "high"
+                        ? "bg-sev-high"
+                        : current.severity === "medium"
+                          ? "bg-sev-medium"
+                          : "bg-sev-low",
+                    )}
+                  >
+                    {active + 1}
+                  </span>
+                  <span className="label-caps">{current.severity} friction</span>
+                </div>
+                <p className="mt-2 text-sm font-medium leading-snug">{current.title}</p>
+                <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                  {current.evidence}
+                </p>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+
+          <div className="mt-2 flex gap-1.5">
+            {pins.map((p, i) => (
+              <span
+                key={p.id}
+                className={cn(
+                  "h-0.5 flex-1 rounded-full transition-colors",
+                  i === active ? "bg-foreground/70" : "bg-foreground/20",
+                )}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Marketing() {
   const complete = fixtureReports.filter((r) => r.status === "complete");
   const hero = complete[0] ?? fixtureReports[0]!;
@@ -88,6 +233,7 @@ function Marketing() {
   const stages = fixtureReports.reduce((n, r) => n + r.stages.length, 0);
   const findings = fixtureReports.reduce((n, r) => n + allFrictionPoints(r).length, 0);
   const errors = fixtureReports.reduce((n, r) => n + totalConsoleErrors(r), 0);
+
 
   return (
     <main className="min-h-screen">
