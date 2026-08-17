@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
 import { Route as AuthenticatedAppAuditRunIdRouteImport } from './routes/_authenticated/app.audit.$runId'
 import { Route as AuthenticatedAppAuditLiveRouteImport } from './routes/_authenticated/app.audit.live'
@@ -18,6 +19,11 @@ import { Route as ApiPublicThumbIdRouteImport } from './routes/api/public/thumb.
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
@@ -51,6 +57,7 @@ const ApiPublicThumbIdRoute = ApiPublicThumbIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/audit/$runId': typeof AuthenticatedAppAuditRunIdRoute
   '/app/audit/live': typeof AuthenticatedAppAuditLiveRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/audit/$runId': typeof AuthenticatedAppAuditRunIdRoute
   '/app/audit/live': typeof AuthenticatedAppAuditLiveRoute
@@ -68,6 +76,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/audit/$runId': typeof AuthenticatedAppAuditRunIdRoute
   '/_authenticated/app/audit/live': typeof AuthenticatedAppAuditLiveRoute
@@ -78,6 +87,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/auth'
     | '/app/'
     | '/app/audit/$runId'
     | '/app/audit/live'
@@ -86,6 +96,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/auth'
     | '/app'
     | '/app/audit/$runId'
     | '/app/audit/live'
@@ -94,6 +105,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_authenticated'
+    | '/auth'
     | '/_authenticated/app/'
     | '/_authenticated/app/audit/$runId'
     | '/_authenticated/app/audit/live'
@@ -103,6 +115,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
   ApiPublicThumbIdRoute: typeof ApiPublicThumbIdRoute
 }
 
@@ -113,6 +126,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/app/': {
@@ -172,6 +192,7 @@ const AuthenticatedRouteRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
   ApiPublicThumbIdRoute: ApiPublicThumbIdRoute,
 }
 export const routeTree = rootRouteImport
