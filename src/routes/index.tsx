@@ -13,6 +13,7 @@ import {
 import { allFrictionPoints, totalConsoleErrors } from "@/lib/audit-schema";
 import type { ForensicAuditReport, FrictionPoint } from "@/lib/audit-schema";
 import { fixtureReports } from "@/lib/audit-runner";
+import { listFeaturedReports, type FeaturedSummary } from "@/lib/featured.functions";
 import { scoreReport } from "@/lib/scoring";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +41,7 @@ export const Route = createFileRoute("/")({
     ],
     links: [{ rel: "canonical", href: "https://checkout-specter.lovable.app/" }],
   }),
+  loader: async () => ({ featured: await listFeaturedReports() }),
   component: Marketing,
 });
 
@@ -253,6 +255,7 @@ function HeroEvidence({
 }
 
 function Marketing() {
+  const { featured } = Route.useLoaderData();
   const complete = fixtureReports.filter((r) => r.status === "complete");
   const hero = complete[0] ?? fixtureReports[0]!;
   const heroStage = hero.stages[0]!;
@@ -441,11 +444,17 @@ function Marketing() {
         </div>
 
         <ul className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {fixtureReports.map((report) => (
-            <li key={report.id}>
-              <SampleCard report={report} />
-            </li>
-          ))}
+          {featured.length > 0
+            ? featured.map((run) => (
+                <li key={run.id}>
+                  <RealSampleCard run={run} />
+                </li>
+              ))
+            : complete.map((report) => (
+                <li key={report.id}>
+                  <SampleCard report={report} />
+                </li>
+              ))}
         </ul>
       </section>
 
@@ -520,6 +529,48 @@ function Stat({ value, label }: { value: number; label: string }) {
         {label}
       </p>
     </div>
+  );
+}
+
+/** A published audit of a real, named store — the strongest proof we have. */
+function RealSampleCard({ run }: { run: FeaturedSummary }) {
+  return (
+    <Link
+      to="/report/$reportId"
+      params={{ reportId: run.id }}
+      className="tile group flex h-full flex-col overflow-hidden p-0 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-tile-hover"
+    >
+      <span className="relative block h-36 overflow-hidden border-b border-border bg-secondary">
+        <img
+          src={`/api/public/thumb/${run.id}`}
+          alt={`Capture from the ${run.domain} audit`}
+          loading="lazy"
+          decoding="async"
+          className="size-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.03]"
+        />
+      </span>
+      <span className="flex flex-1 flex-col p-5">
+        <span className="flex items-baseline justify-between gap-3">
+          <span className="truncate font-mono text-xs text-muted-foreground">{run.domain}</span>
+          <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+            {run.stages} stages
+          </span>
+        </span>
+        <span className="mt-4 flex items-baseline gap-1.5">
+          <span className="font-display text-4xl leading-none tabular-nums">{run.score ?? "—"}</span>
+          {run.score !== null ? (
+            <span className="font-mono text-xs text-muted-foreground">/100</span>
+          ) : null}
+        </span>
+        <span className="mt-3 flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
+          {run.findings} findings
+          <ArrowRight
+            className="size-3 transition-transform duration-200 group-hover:translate-x-0.5"
+            aria-hidden
+          />
+        </span>
+      </span>
+    </Link>
   );
 }
 
