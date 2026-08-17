@@ -91,14 +91,32 @@ function HeroEvidence({
 }) {
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [imgH, setImgH] = useState(0);
+  const imgRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
     if (paused || pins.length < 2) return;
-    const t = setInterval(() => setActive((i) => (i + 1) % pins.length), 3200);
+    const t = setInterval(() => setActive((i) => (i + 1) % pins.length), 3800);
     return () => clearInterval(t);
   }, [paused, pins.length]);
 
+  useEffect(() => {
+    const measure = () => setImgH(imgRef.current?.clientHeight ?? 0);
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+
   const current = pins[active];
+  const windowH = typeof window !== "undefined" && window.innerWidth < 640 ? 380 : 440;
+  const offset =
+    imgH > windowH && current
+      ? Math.max(
+          -(imgH - windowH),
+          Math.min(0, -((current.y_percentage / 100) * imgH - windowH / 2)),
+        )
+      : 0;
+
 
   return (
     <div
