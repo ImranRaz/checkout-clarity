@@ -170,7 +170,7 @@ function LiveRun() {
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <div className="min-w-0">
             <Link
-              to="/"
+              to="/app"
               className="label-caps inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
             >
               <ArrowLeft className="size-3" aria-hidden />
@@ -185,7 +185,7 @@ function LiveRun() {
           </div>
           {report && revealed ? (
             <Link
-              to="/audit/$runId"
+              to="/app/audit/$runId"
               params={{ runId: report.id }}
               className="font-mono text-xs text-primary underline-offset-4 hover:underline"
             >
@@ -223,7 +223,7 @@ function LiveRun() {
                 />
                 {status === "error" ? (
                   <Link
-                    to="/"
+                    to="/app"
                     className="mt-4 inline-flex items-center gap-2 rounded-md border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
                   >
                     Try another URL

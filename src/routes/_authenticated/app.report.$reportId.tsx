@@ -85,7 +85,7 @@ function ReportPage() {
     return (
       <main className="min-h-screen">
         <div className="mx-auto w-full max-w-6xl px-6 py-20">
-          <Link to="/" className="label-caps inline-flex items-center gap-1.5">
+          <Link to="/app" className="label-caps inline-flex items-center gap-1.5">
             <ArrowLeft className="size-3" aria-hidden />
             New audit
           </Link>
@@ -105,7 +105,7 @@ function ReportPage() {
     <main className="min-h-screen">
       <div className="mx-auto w-full max-w-6xl px-6 py-10">
         <Link
-          to="/"
+          to="/app"
           className="label-caps inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
         >
           <ArrowLeft className="size-3" aria-hidden />

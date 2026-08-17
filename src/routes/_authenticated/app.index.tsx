@@ -109,14 +109,14 @@ function Home() {
    * terminal the recorded runs replay in.
    */
   function runRealAgent() {
-    void navigate({ to: "/audit/live", search: { url: normalizeUrl(url) } });
+    void navigate({ to: "/app/audit/live", search: { url: normalizeUrl(url) } });
   }
 
 
 
   function continueToAudit() {
     const report = resolveReportForUrl(url);
-    void navigate({ to: "/audit/$runId", params: { runId: report.id } });
+    void navigate({ to: "/app/audit/$runId", params: { runId: report.id } });
   }
 
 
@@ -413,7 +413,7 @@ function RecentCard({
         </button>
       ) : null}
     <Link
-      to="/report/$reportId"
+      to="/app/report/$reportId"
       params={{ reportId: run.id }}
       className="tile group flex h-full flex-col overflow-hidden p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-tile-hover"
     >
