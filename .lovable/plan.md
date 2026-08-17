@@ -49,3 +49,6 @@ This shape leaves room for plans without rework: `share_links` already ties a re
 - Supabase email/password + Google provider; the managed `_authenticated` layout gates the subtree client-side.
 - Share reads go through a public `createServerFn` using the publishable key with a token-scoped policy; report writes and the run list use `requireSupabaseAuth`.
 - `ReportDashboard` gains a `readOnly` prop that hides interactive/navigational chrome; the evidence viewer and findings rail stay fully interactive.
+- Marketing page is a public SSR route with its own `head()` metadata and OG tags; fixture sample reports render through the same read-only view as shared links, so there is one report surface to maintain.
+- Existing `/audit/*` paths keep working via redirects into `/app/audit/*` so nothing you've already sent breaks.
+
