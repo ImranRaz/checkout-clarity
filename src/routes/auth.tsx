@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Loader2, Lock } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
+import { createFirstAccount, needsFirstAccount } from "@/lib/bootstrap.functions";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/auth")({
