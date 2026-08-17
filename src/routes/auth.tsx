@@ -32,6 +32,8 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [setupMode, setSetupMode] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   // Already signed in? Go straight to the console.
   useEffect(() => {
@@ -41,11 +43,34 @@ function AuthPage() {
     })();
   }, [navigate]);
 
+  // On a brand new project there is no owner account yet; offer to create it.
+  useEffect(() => {
+    void (async () => {
+      try {
+        setSetupMode(await needsFirstAccount());
+      } catch {
+        setSetupMode(false);
+      }
+    })();
+  }, []);
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (busy) return;
     setBusy(true);
     setError(null);
+
+    if (setupMode) {
+      const result = await createFirstAccount({ data: { email, password } });
+      if (!result.ok) {
+        setError(result.error ?? "Could not create the account.");
+        setBusy(false);
+        return;
+      }
+      setSetupMode(false);
+      setNotice("Account created. Signing you in…");
+    }
+
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
     if (signInError) {
       setError(
@@ -58,6 +83,7 @@ function AuthPage() {
     }
     void navigate({ to: "/app" });
   }
+
 
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-16">
