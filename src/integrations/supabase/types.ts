@@ -19,6 +19,7 @@ export type Database = {
           console_errors: number
           created_at: string
           domain: string
+          featured: boolean
           friction_count: number
           id: string
           report: Json
@@ -31,6 +32,7 @@ export type Database = {
           console_errors?: number
           created_at?: string
           domain: string
+          featured?: boolean
           friction_count?: number
           id: string
           report: Json
@@ -43,6 +45,7 @@ export type Database = {
           console_errors?: number
           created_at?: string
           domain?: string
+          featured?: boolean
           friction_count?: number
           id?: string
           report?: Json
