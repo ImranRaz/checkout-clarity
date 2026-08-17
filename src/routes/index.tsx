@@ -118,60 +118,68 @@ function HeroEvidence({
         </span>
       </div>
 
-      <div className="relative">
-        <img
-          src={stage.screenshot.src}
-          alt={`Audited capture of the ${report.domain} storefront with numbered findings`}
-          className="block w-full"
-          loading="eager"
-          decoding="async"
-        />
+      <div className="relative h-[380px] overflow-hidden sm:h-[440px]">
+        <motion.div
+          className="absolute inset-x-0 top-0"
+          animate={{ y: offset }}
+          transition={{ type: "spring", stiffness: 60, damping: 18 }}
+        >
+          <img
+            ref={imgRef}
+            src={stage.screenshot.src}
+            alt={`Audited capture of the ${report.domain} storefront with numbered findings`}
+            className="block w-full"
+            loading="eager"
+            decoding="async"
+            onLoad={(e) => setImgH(e.currentTarget.clientHeight)}
+          />
 
-        {pins.map((point, i) => {
-          const isActive = i === active;
-          return (
-            <button
-              key={point.id}
-              type="button"
-              onClick={() => setActive(i)}
-              aria-label={point.title}
-              style={{
-                left: `${Math.min(92, Math.max(5, point.x_percentage))}%`,
-                top: `${Math.min(88, Math.max(6, point.y_percentage))}%`,
-              }}
-              className="absolute -translate-x-1/2 -translate-y-1/2"
-            >
-              {isActive ? (
+          {pins.map((point, i) => {
+            const isActive = i === active;
+            return (
+              <button
+                key={point.id}
+                type="button"
+                onClick={() => setActive(i)}
+                aria-label={point.title}
+                style={{
+                  left: `${Math.min(94, Math.max(4, point.x_percentage))}%`,
+                  top: `${point.y_percentage}%`,
+                }}
+                className="absolute -translate-x-1/2 -translate-y-1/2"
+              >
+                {isActive ? (
+                  <motion.span
+                    layoutId="hero-pin-halo"
+                    className={cn(
+                      "absolute -inset-2 rounded-full opacity-35",
+                      point.severity === "high"
+                        ? "bg-sev-high"
+                        : point.severity === "medium"
+                          ? "bg-sev-medium"
+                          : "bg-sev-low",
+                    )}
+                  />
+                ) : null}
                 <motion.span
-                  layoutId="hero-pin-halo"
+                  initial={{ opacity: 0, scale: 0.6 }}
+                  animate={{ opacity: isActive ? 1 : 0.5, scale: isActive ? 1.1 : 1 }}
+                  transition={{ duration: 0.3, delay: 0.4 + i * 0.15 }}
                   className={cn(
-                    "absolute -inset-2 rounded-full opacity-40",
+                    "relative flex size-5 items-center justify-center rounded-full font-mono text-[10px] font-semibold text-background shadow-tile",
                     point.severity === "high"
                       ? "bg-sev-high"
                       : point.severity === "medium"
                         ? "bg-sev-medium"
                         : "bg-sev-low",
                   )}
-                />
-              ) : null}
-              <motion.span
-                initial={{ opacity: 0, scale: 0.6 }}
-                animate={{ opacity: isActive ? 1 : 0.55, scale: isActive ? 1.08 : 1 }}
-                transition={{ duration: 0.3, delay: 0.4 + i * 0.15 }}
-                className={cn(
-                  "relative flex size-5 items-center justify-center rounded-full font-mono text-[10px] font-semibold text-background shadow-tile",
-                  point.severity === "high"
-                    ? "bg-sev-high"
-                    : point.severity === "medium"
-                      ? "bg-sev-medium"
-                      : "bg-sev-low",
-                )}
-              >
-                {i + 1}
-              </motion.span>
-            </button>
-          );
-        })}
+                >
+                  {i + 1}
+                </motion.span>
+              </button>
+            );
+          })}
+        </motion.div>
 
         {/* Cycling finding card */}
         <div className="pointer-events-none absolute inset-x-3 bottom-3">
@@ -221,6 +229,7 @@ function HeroEvidence({
           </div>
         </div>
       </div>
+
     </div>
   );
 }
