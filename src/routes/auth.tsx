@@ -94,10 +94,15 @@ function AuthPage() {
           Checkout Forensic
         </Link>
 
-        <h1 className="mt-6 font-display text-2xl tracking-tight">Sign in to the console</h1>
+        <h1 className="mt-6 font-display text-2xl tracking-tight">
+          {setupMode ? "Create the owner account" : "Sign in to the console"}
+        </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Access is invite-only while we're in private beta.
+          {setupMode
+            ? "No account exists yet. Set your email and password — after this, sign-ups stay closed."
+            : "Access is invite-only while we're in private beta."}
         </p>
+
 
         <form onSubmit={(e) => void submit(e)} className="mt-8 space-y-4">
           <div>
