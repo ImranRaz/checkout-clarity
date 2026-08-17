@@ -1,5 +1,6 @@
+import { useEffect, useRef, useState } from "react";
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowRight,
   Banknote,
@@ -79,6 +80,178 @@ function exampleFinding(pillar: string): FrictionPoint | null {
   return null;
 }
 
+function HeroEvidence({
+  report,
+  stage,
+  pins,
+}: {
+  report: ForensicAuditReport;
+  stage: ForensicAuditReport["stages"][number];
+  pins: FrictionPoint[];
+}) {
+  const [active, setActive] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [imgH, setImgH] = useState(0);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    if (paused || pins.length < 2) return;
+    const t = setInterval(() => setActive((i) => (i + 1) % pins.length), 3800);
+    return () => clearInterval(t);
+  }, [paused, pins.length]);
+
+  useEffect(() => {
+    const measure = () => setImgH(imgRef.current?.clientHeight ?? 0);
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+
+  const current = pins[active];
+  const windowH = typeof window !== "undefined" && window.innerWidth < 640 ? 380 : 440;
+  const offset =
+    imgH > windowH && current
+      ? Math.max(
+          -(imgH - windowH),
+          Math.min(0, -((current.y_percentage / 100) * imgH - windowH / 2)),
+        )
+      : 0;
+
+
+  return (
+    <div
+      className="tile relative overflow-hidden p-0"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
+        <span className="size-2 rounded-full bg-sev-high/70" />
+        <span className="size-2 rounded-full bg-sev-medium/70" />
+        <span className="size-2 rounded-full bg-primary/60" />
+        <span className="ml-2 truncate font-mono text-[11px] text-muted-foreground">
+          {report.domain}
+        </span>
+        <span className="ml-auto font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+          live capture
+        </span>
+      </div>
+
+      <div className="relative h-[380px] overflow-hidden sm:h-[440px]">
+        <motion.div
+          className="absolute inset-x-0 top-0"
+          animate={{ y: offset }}
+          transition={{ type: "spring", stiffness: 60, damping: 18 }}
+        >
+          <img
+            ref={imgRef}
+            src={stage.screenshot.src}
+            alt={`Audited capture of the ${report.domain} storefront with numbered findings`}
+            className="block w-full"
+            loading="eager"
+            decoding="async"
+            onLoad={(e) => setImgH(e.currentTarget.clientHeight)}
+          />
+
+          {pins.map((point, i) => {
+            const isActive = i === active;
+            return (
+              <button
+                key={point.id}
+                type="button"
+                onClick={() => setActive(i)}
+                aria-label={point.title}
+                style={{
+                  left: `${Math.min(94, Math.max(4, point.x_percentage))}%`,
+                  top: `${point.y_percentage}%`,
+                }}
+                className="absolute -translate-x-1/2 -translate-y-1/2"
+              >
+                {isActive ? (
+                  <motion.span
+                    layoutId="hero-pin-halo"
+                    className={cn(
+                      "absolute -inset-2 rounded-full opacity-35",
+                      point.severity === "high"
+                        ? "bg-sev-high"
+                        : point.severity === "medium"
+                          ? "bg-sev-medium"
+                          : "bg-sev-low",
+                    )}
+                  />
+                ) : null}
+                <motion.span
+                  initial={{ opacity: 0, scale: 0.6 }}
+                  animate={{ opacity: isActive ? 1 : 0.5, scale: isActive ? 1.1 : 1 }}
+                  transition={{ duration: 0.3, delay: 0.4 + i * 0.15 }}
+                  className={cn(
+                    "relative flex size-5 items-center justify-center rounded-full font-mono text-[10px] font-semibold text-background shadow-tile",
+                    point.severity === "high"
+                      ? "bg-sev-high"
+                      : point.severity === "medium"
+                        ? "bg-sev-medium"
+                        : "bg-sev-low",
+                  )}
+                >
+                  {i + 1}
+                </motion.span>
+              </button>
+            );
+          })}
+        </motion.div>
+
+        {/* Cycling finding card */}
+        <div className="pointer-events-none absolute inset-x-3 bottom-3">
+          <AnimatePresence mode="wait">
+            {current ? (
+              <motion.div
+                key={current.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.28 }}
+                className="rounded-lg border border-border bg-background/95 p-3.5 shadow-tile-hover backdrop-blur"
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    className={cn(
+                      "flex size-4 items-center justify-center rounded-full font-mono text-[9px] font-semibold text-background",
+                      current.severity === "high"
+                        ? "bg-sev-high"
+                        : current.severity === "medium"
+                          ? "bg-sev-medium"
+                          : "bg-sev-low",
+                    )}
+                  >
+                    {active + 1}
+                  </span>
+                  <span className="label-caps">{current.severity} friction</span>
+                </div>
+                <p className="mt-2 text-sm font-medium leading-snug">{current.title}</p>
+                <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                  {current.evidence}
+                </p>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+
+          <div className="mt-2 flex gap-1.5">
+            {pins.map((p, i) => (
+              <span
+                key={p.id}
+                className={cn(
+                  "h-0.5 flex-1 rounded-full transition-colors",
+                  i === active ? "bg-foreground/70" : "bg-foreground/20",
+                )}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
 function Marketing() {
   const complete = fixtureReports.filter((r) => r.status === "complete");
   const hero = complete[0] ?? fixtureReports[0]!;
@@ -88,6 +261,7 @@ function Marketing() {
   const stages = fixtureReports.reduce((n, r) => n + r.stages.length, 0);
   const findings = fixtureReports.reduce((n, r) => n + allFrictionPoints(r).length, 0);
   const errors = fixtureReports.reduce((n, r) => n + totalConsoleErrors(r), 0);
+
 
   return (
     <main className="min-h-screen">
@@ -116,7 +290,7 @@ function Marketing() {
 
       {/* Hero */}
       <section className="rule-grid border-b border-border">
-        <div className="mx-auto grid w-full max-w-6xl gap-12 px-6 pb-20 pt-16 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:pb-28 lg:pt-24">
+        <div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-6 pb-14 pt-12 lg:grid-cols-[0.95fr_1.05fr] lg:gap-14 lg:pb-16 lg:pt-14">
           <div>
             <motion.p
               initial={{ opacity: 0, y: 8 }}
@@ -131,7 +305,7 @@ function Marketing() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.05 }}
-              className="mt-5 max-w-xl font-display text-4xl leading-[1.05] tracking-tight sm:text-5xl"
+              className="mt-4 max-w-lg font-display text-[2.1rem] leading-[1.04] tracking-tight sm:text-[2.75rem]"
             >
               Your checkout is leaking revenue. We show you where.
             </motion.h1>
@@ -140,30 +314,29 @@ function Marketing() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.12 }}
-              className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground"
+              className="mt-4 max-w-md text-[15px] leading-relaxed text-muted-foreground"
             >
-              An agent shops your store the way a customer does — category, product, cart, guest
-              checkout — then hands back every hesitation it hit, pinned to the exact pixels that
-              caused it.
+              An agent shops your store like a customer — category to guest checkout — and hands
+              back every hesitation it hit, pinned to the exact pixels that caused it.
             </motion.p>
 
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.18 }}
-              className="mt-8 flex flex-wrap items-center gap-3"
+              className="mt-7 flex flex-wrap items-center gap-3"
             >
               <Link
                 to="/report/$reportId"
                 params={{ reportId: hero.id }}
-                className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-3 text-sm font-medium text-primary-foreground shadow-tile transition-all duration-200 hover:-translate-y-0.5 hover:shadow-tile-hover"
+                className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-tile transition-all duration-200 hover:-translate-y-0.5 hover:shadow-tile-hover"
               >
                 See a full sample report
                 <ArrowRight className="size-3.5" aria-hidden />
               </Link>
               <a
                 href="mailto:hello@checkoutforensic.com?subject=Audit%20my%20store"
-                className="inline-flex items-center gap-2 rounded-md border border-border px-5 py-3 text-sm font-medium transition-colors hover:bg-muted"
+                className="inline-flex items-center gap-2 rounded-md border border-border px-5 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
               >
                 Request an audit
               </a>
@@ -178,49 +351,11 @@ function Marketing() {
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6, delay: 0.15 }}
-            className="tile relative overflow-hidden p-0"
           >
-            <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
-              <span className="size-2 rounded-full bg-sev-high/70" />
-              <span className="size-2 rounded-full bg-sev-medium/70" />
-              <span className="size-2 rounded-full bg-primary/60" />
-              <span className="ml-2 truncate font-mono text-[11px] text-muted-foreground">
-                {hero.domain}
-              </span>
-            </div>
-            <div className="relative">
-              <img
-                src={heroStage.screenshot.src}
-                alt={`Audited capture of the ${hero.domain} storefront with numbered findings`}
-                className="block w-full"
-                loading="eager"
-                decoding="async"
-              />
-              {heroPins.map((point, i) => (
-                <motion.span
-                  key={point.id}
-                  initial={{ opacity: 0, scale: 0.6 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.35, delay: 0.5 + i * 0.18 }}
-                  style={{
-                    left: `${Math.min(92, Math.max(4, point.x_percentage))}%`,
-                    top: `${Math.min(92, Math.max(4, point.y_percentage))}%`,
-                  }}
-                  className={cn(
-                    "absolute -translate-x-1/2 -translate-y-1/2 rounded-full px-2 py-0.5 font-mono text-[10px] font-semibold text-background shadow-tile",
-                    point.severity === "high"
-                      ? "bg-sev-high"
-                      : point.severity === "medium"
-                        ? "bg-sev-medium"
-                        : "bg-sev-low",
-                  )}
-                >
-                  {i + 1}
-                </motion.span>
-              ))}
-            </div>
+            <HeroEvidence report={hero} stage={heroStage} pins={heroPins} />
           </motion.div>
         </div>
+
       </section>
 
       {/* Proof strip */}
