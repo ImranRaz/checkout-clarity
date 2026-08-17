@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createClient } from "@supabase/supabase-js";
 
 /**
  * Serves the first capture of a saved run as a real image response.
@@ -7,7 +6,7 @@ import { createClient } from "@supabase/supabase-js";
  * Screenshots are stored inside the report JSON as base64 data URLs, several
  * hundred kilobytes each. Sending them through the landing-page loader would
  * add megabytes to the HTML; serving them here lets the browser lazy-load and
- * cache each thumbnail like any other image. Read-only, id-scoped, no PII.
+ * cache each thumbnail like any other image. Signature-gated, id-scoped, no PII.
  */
 
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
@@ -15,24 +14,20 @@ const ID = /^[A-Za-z0-9_-]{1,64}$/;
 export const Route = createFileRoute("/api/public/thumb/$id")({
   server: {
     handlers: {
-      GET: async ({ params }) => {
+      GET: async ({ params, request }) => {
         const id = params.id;
         if (!ID.test(id)) return new Response("Bad id", { status: 400 });
 
-        const key = process.env["SUPABASE_PUBLISHABLE_KEY"]!;
-        const supabase = createClient(process.env["SUPABASE_URL"]!, key, {
-          auth: { persistSession: false, autoRefreshToken: false },
-          global: {
-            fetch: (input, init) => {
-              const headers = new Headers(init?.headers);
-              if (key.startsWith("sb_") && headers.get("Authorization") === `Bearer ${key}`) {
-                headers.delete("Authorization");
-              }
-              headers.set("apikey", key);
-              return fetch(input, { ...init, headers });
-            },
-          },
-        });
+        // Saved runs are private, so the thumbnail needs the signature the
+        // console hands out alongside each run summary.
+        const token = new URL(request.url).searchParams.get("t") ?? "";
+        const { verifyThumbToken } = await import("@/lib/thumb-token.server");
+        if (!(await verifyThumbToken(id, token))) {
+          return new Response("Not found", { status: 404 });
+        }
+
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const supabase = supabaseAdmin;
 
         const { data, error } = await supabase
           .from("audit_runs")
