@@ -10,7 +10,9 @@ import {
   Type as TypeIcon,
 } from "lucide-react";
 
-import { allFrictionPoints, totalConsoleErrors } from "@/lib/audit-schema";
+import { Gauge } from "@/components/audit/Gauge";
+import { allFrictionPoints } from "@/lib/audit-schema";
+
 import type { ForensicAuditReport, FrictionPoint } from "@/lib/audit-schema";
 import { fixtureReports } from "@/lib/audit-runner";
 import { listFeaturedReports, type FeaturedSummary } from "@/lib/featured.functions";
