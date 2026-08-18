@@ -96,6 +96,7 @@ function HeroEvidence({
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
   const [imgH, setImgH] = useState(0);
+  const [windowH, setWindowH] = useState(440);
   const imgRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
@@ -105,14 +106,16 @@ function HeroEvidence({
   }, [paused, pins.length]);
 
   useEffect(() => {
-    const measure = () => setImgH(imgRef.current?.clientHeight ?? 0);
+    const measure = () => {
+      setImgH(imgRef.current?.clientHeight ?? 0);
+      setWindowH(window.innerWidth < 640 ? 380 : 440);
+    };
     measure();
     window.addEventListener("resize", measure);
     return () => window.removeEventListener("resize", measure);
   }, []);
 
   const current = pins[active];
-  const windowH = typeof window !== "undefined" && window.innerWidth < 640 ? 380 : 440;
   const offset =
     imgH > windowH && current
       ? Math.max(
@@ -120,6 +123,7 @@ function HeroEvidence({
           Math.min(0, -((current.y_percentage / 100) * imgH - windowH / 2)),
         )
       : 0;
+
 
 
   return (
