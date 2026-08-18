@@ -10,7 +10,9 @@ import {
   Type as TypeIcon,
 } from "lucide-react";
 
-import { allFrictionPoints, totalConsoleErrors } from "@/lib/audit-schema";
+import { Gauge } from "@/components/audit/Gauge";
+import { allFrictionPoints } from "@/lib/audit-schema";
+
 import type { ForensicAuditReport, FrictionPoint } from "@/lib/audit-schema";
 import { fixtureReports } from "@/lib/audit-runner";
 import { listFeaturedReports, type FeaturedSummary } from "@/lib/featured.functions";
@@ -261,9 +263,7 @@ function Marketing() {
   const heroStage = hero.stages[0]!;
   const heroPins = heroStage.friction_points.slice(0, 3);
 
-  const stages = fixtureReports.reduce((n, r) => n + r.stages.length, 0);
-  const findings = fixtureReports.reduce((n, r) => n + allFrictionPoints(r).length, 0);
-  const errors = fixtureReports.reduce((n, r) => n + totalConsoleErrors(r), 0);
+
 
 
   return (
@@ -361,14 +361,9 @@ function Marketing() {
 
       </section>
 
-      {/* Proof strip */}
-      <section className="border-b border-border" aria-label="What the agent has found so far">
-        <div className="mx-auto grid w-full max-w-6xl gap-px bg-border px-6 py-0 sm:grid-cols-3">
-          <Stat value={stages} label="journey stages walked" />
-          <Stat value={findings} label="conversion findings surfaced" />
-          <Stat value={errors} label="console errors caught mid-purchase" />
-        </div>
-      </section>
+      {/* Value prop + interactive rubric */}
+      <ValueProp />
+
 
       {/* Pillars */}
       <section className="mx-auto w-full max-w-6xl px-6 py-20">
@@ -521,16 +516,159 @@ function Marketing() {
   );
 }
 
-function Stat({ value, label }: { value: number; label: string }) {
+const VALUE_PROPS = [
+  {
+    k: "01",
+    t: "Find the money you're already losing",
+    b: "Every hesitation between landing and paying — surfaced, ranked, and tied to the revenue step it blocks.",
+  },
+  {
+    k: "02",
+    t: "Get proof, not opinions",
+    b: "Each finding is anchored to the exact element in the exact capture, so nobody argues about whether it's real.",
+  },
+  {
+    k: "03",
+    t: "Know what to fix on Monday",
+    b: "A fixed rubric ranks everything high to low, so your team ships the three changes that move orders first.",
+  },
+];
+
+const SEVERITIES = [
+  {
+    key: "high" as const,
+    label: "High",
+    dot: "bg-sev-high",
+    text: "text-sev-high",
+    headline: "Blocks the purchase",
+    body: "A dead add-to-cart, a forced account, a cost that appears after the card form. People leave here.",
+  },
+  {
+    key: "medium" as const,
+    label: "Medium",
+    dot: "bg-sev-medium",
+    text: "text-sev-medium",
+    headline: "Adds doubt or effort",
+    body: "Vague buttons, missing sizing help, delivery promises buried below three scrolls. Fixable in a sprint.",
+  },
+  {
+    key: "low" as const,
+    label: "Low",
+    dot: "bg-sev-low",
+    text: "text-sev-low",
+    headline: "Polish worth doing",
+    body: "Small clarity and layout wins that compound once the bigger blockers are gone.",
+  },
+];
+
+/**
+ * Replaces the old raw-count strip. Counts from our own fixtures meant nothing
+ * to a visitor; this says what they get, then lets them feel the grading
+ * system by dragging a real metric through the same thresholds the report uses.
+ */
+function ValueProp() {
+  const [sev, setSev] = useState<"high" | "medium" | "low">("high");
+  const [lcp, setLcp] = useState(3200);
+  const active = SEVERITIES.find((s) => s.key === sev)!;
+  const example = fixtureReports
+    .flatMap((r) => allFrictionPoints(r))
+    .find((p) => p.severity === sev);
+
   return (
-    <div className="bg-background px-2 py-10 text-center sm:px-6">
-      <p className="font-display text-4xl leading-none tabular-nums">{value}</p>
-      <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-        {label}
-      </p>
-    </div>
+    <section className="border-b border-border bg-card" aria-label="What you get">
+      <div className="mx-auto grid w-full max-w-6xl gap-12 px-6 py-16 lg:grid-cols-[1fr_1fr] lg:gap-16">
+        <div>
+          <p className="label-caps">What you actually get</p>
+          <h2 className="mt-4 max-w-md font-display text-2xl tracking-tight sm:text-[1.75rem]">
+            A shopper's-eye teardown of your funnel, with the receipts.
+          </h2>
+          <ul className="mt-8 space-y-6">
+            {VALUE_PROPS.map((v) => (
+              <li key={v.k} className="flex gap-4">
+                <span className="mt-0.5 font-mono text-xs text-primary">{v.k}</span>
+                <span>
+                  <span className="block font-display text-base tracking-tight">{v.t}</span>
+                  <span className="mt-1 block text-sm leading-relaxed text-muted-foreground">
+                    {v.b}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="tile p-6">
+          <p className="label-caps">How we grade it — try it</p>
+
+          <div className="mt-4 flex gap-2">
+            {SEVERITIES.map((s) => (
+              <button
+                key={s.key}
+                type="button"
+                onClick={() => setSev(s.key)}
+                className={cn(
+                  "flex flex-1 items-center justify-center gap-2 rounded-md border px-3 py-2 font-mono text-[11px] uppercase tracking-[0.1em] transition-colors",
+                  sev === s.key
+                    ? "border-foreground/25 bg-muted text-foreground"
+                    : "border-border text-muted-foreground hover:bg-muted/60",
+                )}
+              >
+                <span className={cn("size-2 rounded-full", s.dot)} aria-hidden />
+                {s.label}
+              </button>
+            ))}
+          </div>
+
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={sev}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.22 }}
+              className="mt-5"
+            >
+              <p className={cn("font-display text-lg tracking-tight", active.text)}>
+                {active.headline}
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{active.body}</p>
+              {example ? (
+                <p className="mt-4 border-l-2 border-border pl-3 font-mono text-[11px] leading-relaxed text-muted-foreground">
+                  from a real run — “{example.title}”
+                </p>
+              ) : null}
+            </motion.div>
+          </AnimatePresence>
+
+          <div className="mt-7 border-t border-border pt-5">
+            <div className="flex items-baseline justify-between">
+              <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
+                largest paint
+              </p>
+              <p className="font-display text-xl tabular-nums">{(lcp / 1000).toFixed(1)}s</p>
+            </div>
+            <Gauge metric="lcp" value={lcp} />
+            <input
+              type="range"
+              min={500}
+              max={6000}
+              step={100}
+              value={lcp}
+              onChange={(e) => setLcp(Number(e.target.value))}
+              aria-label="Try a page load time to see how it is graded"
+              className="mt-4 w-full accent-primary"
+            />
+            <p className="mt-2 font-mono text-[10px] text-muted-foreground">
+              drag it — every number in your report is scored against thresholds like these, never a
+              model's opinion.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
+
 
 /** A published audit of a real, named store — the strongest proof we have. */
 function RealSampleCard({ run }: { run: FeaturedSummary }) {
