@@ -566,9 +566,50 @@ const SEVERITIES = [
  * to a visitor; this says what they get, then lets them feel the grading
  * system by dragging a real metric through the same thresholds the report uses.
  */
+const METRICS = [
+  {
+    key: "lcp" as const,
+    tab: "Load",
+    label: "largest paint",
+    min: 500,
+    max: 6000,
+    step: 100,
+    start: 3200,
+    format: (v: number) => `${(v / 1000).toFixed(1)}s`,
+    blurb: "How long before the main thing a shopper came for is actually on screen.",
+  },
+  {
+    key: "cls" as const,
+    tab: "Stability",
+    label: "layout shift",
+    min: 0,
+    max: 0.5,
+    step: 0.01,
+    start: 0.18,
+    format: (v: number) => v.toFixed(2),
+    blurb: "How much the page jumps around while it settles — the cause of mis-taps on mobile.",
+  },
+  {
+    key: "transferred" as const,
+    tab: "Weight",
+    label: "page weight",
+    min: 200_000,
+    max: 8_000_000,
+    step: 100_000,
+    start: 3_400_000,
+    format: (v: number) => `${(v / 1_000_000).toFixed(1)}MB`,
+    blurb: "How much a phone on a weak connection has to download before it can buy.",
+  },
+];
+
 function ValueProp() {
   const [sev, setSev] = useState<"high" | "medium" | "low">("high");
-  const [lcp, setLcp] = useState(3200);
+  const [metricKey, setMetricKey] = useState<(typeof METRICS)[number]["key"]>("lcp");
+  const [values, setValues] = useState<Record<string, number>>(() =>
+    Object.fromEntries(METRICS.map((m) => [m.key, m.start])),
+  );
+  const metric = METRICS.find((m) => m.key === metricKey)!;
+  const value = values[metric.key]!;
   const active = SEVERITIES.find((s) => s.key === sev)!;
   const example = fixtureReports
     .flatMap((r) => allFrictionPoints(r))
@@ -600,74 +641,99 @@ function ValueProp() {
         <div className="tile p-6">
           <p className="label-caps">How we grade it — try it</p>
 
+          {/* Measured metrics: pick one, drag it, watch the threshold verdict move. */}
           <div className="mt-4 flex gap-2">
-            {SEVERITIES.map((s) => (
+            {METRICS.map((m) => (
               <button
-                key={s.key}
+                key={m.key}
                 type="button"
-                onClick={() => setSev(s.key)}
+                onClick={() => setMetricKey(m.key)}
                 className={cn(
-                  "flex flex-1 items-center justify-center gap-2 rounded-md border px-3 py-2 font-mono text-[11px] uppercase tracking-[0.1em] transition-colors",
-                  sev === s.key
+                  "flex-1 rounded-md border px-3 py-2 font-mono text-[11px] uppercase tracking-[0.1em] transition-colors",
+                  metricKey === m.key
                     ? "border-foreground/25 bg-muted text-foreground"
                     : "border-border text-muted-foreground hover:bg-muted/60",
                 )}
               >
-                <span className={cn("size-2 rounded-full", s.dot)} aria-hidden />
-                {s.label}
+                {m.tab}
               </button>
             ))}
           </div>
 
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={sev}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.22 }}
-              className="mt-5"
-            >
-              <p className={cn("font-display text-lg tracking-tight", active.text)}>
-                {active.headline}
-              </p>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{active.body}</p>
-              {example ? (
-                <p className="mt-4 border-l-2 border-border pl-3 font-mono text-[11px] leading-relaxed text-muted-foreground">
-                  from a real run — “{example.title}”
-                </p>
-              ) : null}
-            </motion.div>
-          </AnimatePresence>
-
-          <div className="mt-7 border-t border-border pt-5">
+          <div className="mt-5">
             <div className="flex items-baseline justify-between">
               <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
-                largest paint
+                {metric.label}
               </p>
-              <p className="font-display text-xl tabular-nums">{(lcp / 1000).toFixed(1)}s</p>
+              <p className="font-display text-xl tabular-nums">{metric.format(value)}</p>
             </div>
-            <Gauge metric="lcp" value={lcp} />
+            <Gauge metric={metric.key} value={value} />
             <input
               type="range"
-              min={500}
-              max={6000}
-              step={100}
-              value={lcp}
-              onChange={(e) => setLcp(Number(e.target.value))}
-              aria-label="Try a page load time to see how it is graded"
+              min={metric.min}
+              max={metric.max}
+              step={metric.step}
+              value={value}
+              onChange={(e) =>
+                setValues((prev) => ({ ...prev, [metric.key]: Number(e.target.value) }))
+              }
+              aria-label={`Try a ${metric.label} value to see how it is graded`}
               className="mt-4 w-full accent-primary"
             />
-            <p className="mt-2 font-mono text-[10px] text-muted-foreground">
-              drag it — every number in your report is scored against thresholds like these, never a
-              model's opinion.
+            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{metric.blurb}</p>
+          </div>
+
+          {/* Severity: how the human findings are ranked, separate from the numbers. */}
+          <div className="mt-7 border-t border-border pt-5">
+            <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
+              and every finding gets a priority
             </p>
+            <div className="mt-3 flex gap-2">
+              {SEVERITIES.map((s) => (
+                <button
+                  key={s.key}
+                  type="button"
+                  onClick={() => setSev(s.key)}
+                  className={cn(
+                    "flex flex-1 items-center justify-center gap-2 rounded-md border px-3 py-2 font-mono text-[11px] uppercase tracking-[0.1em] transition-colors",
+                    sev === s.key
+                      ? "border-foreground/25 bg-muted text-foreground"
+                      : "border-border text-muted-foreground hover:bg-muted/60",
+                  )}
+                >
+                  <span className={cn("size-2 rounded-full", s.dot)} aria-hidden />
+                  {s.label}
+                </button>
+              ))}
+            </div>
+
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={sev}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.22 }}
+                className="mt-4"
+              >
+                <p className={cn("font-display text-lg tracking-tight", active.text)}>
+                  {active.headline}
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{active.body}</p>
+                {example ? (
+                  <p className="mt-4 border-l-2 border-border pl-3 font-mono text-[11px] leading-relaxed text-muted-foreground">
+                    from a real run — “{example.title}”
+                  </p>
+                ) : null}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
       </div>
     </section>
   );
 }
+
 
 
 /** A published audit of a real, named store — the strongest proof we have. */
