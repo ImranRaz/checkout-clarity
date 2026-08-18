@@ -361,14 +361,9 @@ function Marketing() {
 
       </section>
 
-      {/* Proof strip */}
-      <section className="border-b border-border" aria-label="What the agent has found so far">
-        <div className="mx-auto grid w-full max-w-6xl gap-px bg-border px-6 py-0 sm:grid-cols-3">
-          <Stat value={stages} label="journey stages walked" />
-          <Stat value={findings} label="conversion findings surfaced" />
-          <Stat value={errors} label="console errors caught mid-purchase" />
-        </div>
-      </section>
+      {/* Value prop + interactive rubric */}
+      <ValueProp />
+
 
       {/* Pillars */}
       <section className="mx-auto w-full max-w-6xl px-6 py-20">
