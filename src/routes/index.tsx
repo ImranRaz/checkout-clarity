@@ -261,9 +261,7 @@ function Marketing() {
   const heroStage = hero.stages[0]!;
   const heroPins = heroStage.friction_points.slice(0, 3);
 
-  const stages = fixtureReports.reduce((n, r) => n + r.stages.length, 0);
-  const findings = fixtureReports.reduce((n, r) => n + allFrictionPoints(r).length, 0);
-  const errors = fixtureReports.reduce((n, r) => n + totalConsoleErrors(r), 0);
+
 
 
   return (
