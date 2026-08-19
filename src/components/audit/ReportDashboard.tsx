@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
 import { AlertTriangle, ArrowUpRight, Clock, ShieldAlert } from "lucide-react";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ExecutiveSummary } from "./ExecutiveSummary";
 import { Explain } from "./Explain";
