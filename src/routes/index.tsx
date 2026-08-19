@@ -6,12 +6,12 @@ import {
   Banknote,
   Gauge as GaugeIcon,
   MousePointerClick,
-  ScanSearch,
   Type as TypeIcon,
 } from "lucide-react";
 
+import { BrandLockup } from "@/components/BrandMark";
 import { Gauge } from "@/components/audit/Gauge";
-import { allFrictionPoints } from "@/lib/audit-schema";
+import { allFrictionPoints, categoryLabel } from "@/lib/audit-schema";
 
 import type { ForensicAuditReport, FrictionPoint } from "@/lib/audit-schema";
 import { fixtureReports } from "@/lib/audit-runner";
@@ -233,6 +233,9 @@ function HeroEvidence({
                     {active + 1}
                   </span>
                   <span className="label-caps">{current.severity} friction</span>
+                  <span className="ml-auto rounded-full border border-border px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.1em] text-muted-foreground">
+                    {categoryLabel[current.category]}
+                  </span>
                 </div>
                 <p className="mt-2 text-sm font-medium leading-snug">{current.title}</p>
                 <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
@@ -256,6 +259,32 @@ function HeroEvidence({
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border px-4 py-2.5">
+        <span className="label-caps">checked</span>
+        {(["clarity", "trust", "form", "accessibility"] as const).map((key) => {
+          const hits = pins.filter((p) => p.category === key).length;
+          return (
+            <span
+              key={key}
+              className={cn(
+                "font-mono text-[10px]",
+                hits ? "text-foreground" : "text-muted-foreground/60",
+              )}
+            >
+              {categoryLabel[key]}
+              <span className={cn("ml-1", hits ? "text-primary" : "text-muted-foreground/50")}>
+                {hits}
+              </span>
+            </span>
+          );
+        })}
+        <span className="font-mono text-[10px] text-foreground">
+          Speed
+          <span className="ml-1 text-primary">
+            {(stage.technical_metrics.largest_contentful_paint_ms / 1000).toFixed(1)}s
+          </span>
+        </span>
+      </div>
     </div>
   );
 }
@@ -265,7 +294,9 @@ function Marketing() {
   const complete = fixtureReports.filter((r) => r.status === "complete");
   const hero = complete[0] ?? fixtureReports[0]!;
   const heroStage = hero.stages[0]!;
-  const heroPins = heroStage.friction_points.slice(0, 3);
+  const heroPins = [...heroStage.friction_points]
+    .sort((a, b) => a.y_percentage - b.y_percentage)
+    .slice(0, 5);
 
 
 
@@ -274,10 +305,7 @@ function Marketing() {
     <main className="min-h-screen">
       <nav className="border-b border-border">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
-          <span className="label-caps flex items-center gap-2">
-            <ScanSearch className="size-3.5" aria-hidden />
-            Checkout Forensic
-          </span>
+          <BrandLockup />
           <div className="flex items-center gap-4">
             <a
               href="#samples"

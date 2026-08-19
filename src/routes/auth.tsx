@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
-import { Loader2, Lock } from "lucide-react";
+import { Loader2 } from "lucide-react";
+
+import { BrandLockup } from "@/components/BrandMark";
 
 import { supabase } from "@/integrations/supabase/client";
 import { createFirstAccount, needsFirstAccount } from "@/lib/bootstrap.functions";
@@ -89,9 +91,8 @@ function AuthPage() {
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-16">
       <div className="w-full max-w-sm">
-        <Link to="/" className="label-caps inline-flex items-center gap-2">
-          <Lock className="size-3.5" aria-hidden />
-          Checkout Forensic
+        <Link to="/" className="inline-flex">
+          <BrandLockup />
         </Link>
 
         <h1 className="mt-6 font-display text-2xl tracking-tight">

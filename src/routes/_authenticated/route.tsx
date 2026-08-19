@@ -1,5 +1,7 @@
 import { Link, Outlet, createFileRoute, redirect, useRouter } from "@tanstack/react-router";
-import { LogOut, ScanSearch } from "lucide-react";
+import { LogOut } from "lucide-react";
+
+import { BrandLockup } from "@/components/BrandMark";
 
 import { supabase } from "@/integrations/supabase/client";
 
@@ -26,9 +28,9 @@ function ConsoleLayout() {
     <div className="min-h-screen">
       <header className="border-b border-border">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-6 py-3">
-          <Link to="/app" className="label-caps flex items-center gap-2">
-            <ScanSearch className="size-3.5" aria-hidden />
-            Console
+          <Link to="/app" className="flex items-center gap-2.5">
+            <BrandLockup />
+            <span className="label-caps hidden sm:inline">console</span>
           </Link>
           <div className="flex items-center gap-4">
             <span className="hidden truncate font-mono text-[11px] text-muted-foreground sm:inline">
