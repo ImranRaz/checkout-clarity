@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
  * single pinpoint dropped on the last one — the journey narrowing, and the
  * exact place it breaks. Flat, geometric, no gloss.
  */
-export function BrandGlyph({ className }: { className?: string }) {
+export function BrandGlyph({ className }: { className?: string | undefined }) {
   return (
     <svg
       viewBox="0 0 32 32"
