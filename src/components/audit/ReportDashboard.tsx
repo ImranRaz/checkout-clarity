@@ -365,26 +365,14 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
                 {activePoint ? activePoint.selector : stage.screenshot.caption}
               </p>
             </div>
-            <div className="flex shrink-0 gap-1">
-              <ViewToggle active={zoomed} onClick={() => setZoomed(true)} icon={<ZoomIn className="size-3.5" />}>
-                Focus
-              </ViewToggle>
-              <ViewToggle
-                active={!zoomed}
-                onClick={() => setZoomed(false)}
-                icon={<Maximize2 className="size-3.5" />}
-              >
-                Full page
-              </ViewToggle>
-            </div>
           </header>
 
           <EvidenceViewer
             stage={stage}
             activeId={activeId}
-            zoomed={zoomed && activePoint !== null}
             onSelect={(id) => select(stageIndex, id)}
           />
+
 
           <footer className="flex items-center justify-between gap-3 border-t border-border px-4 py-2.5">
             <p className="font-mono text-[11px] text-muted-foreground">
