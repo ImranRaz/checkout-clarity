@@ -6,10 +6,10 @@ import {
   Banknote,
   Gauge as GaugeIcon,
   MousePointerClick,
-  ScanSearch,
   Type as TypeIcon,
 } from "lucide-react";
 
+import { BrandLockup } from "@/components/BrandMark";
 import { Gauge } from "@/components/audit/Gauge";
 import { allFrictionPoints } from "@/lib/audit-schema";
 
