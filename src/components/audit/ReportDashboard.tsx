@@ -830,21 +830,7 @@ function Pin({
 }
 
 
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 font-mono text-[11px] transition-colors",
-        active
-          ? "border-primary/50 bg-accent text-foreground"
-          : "border-border text-muted-foreground hover:bg-secondary",
-      )}
-    >
-      {icon}
-      {children}
-    </button>
-  );
-}
+
 
 function NavButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
   return (
