@@ -707,245 +707,77 @@ const clampNum = (value: number, min: number, max: number) => Math.min(max, Math
 function EvidenceViewer({
   stage,
   activeId,
-  zoomed,
   onSelect,
 }: {
   stage: AuditStage;
   activeId: number | null;
-  zoomed: boolean;
   onSelect: (id: number) => void;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
   const fullRef = useRef<HTMLDivElement>(null);
-  const [box, setBox] = useState({ w: 0, h: 0 });
-
-
-  useLayoutEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const measure = () => setBox({ w: el.clientWidth, h: el.clientHeight });
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
 
   const point = stage.friction_points.find((p) => p.id === activeId) ?? null;
-  const ratio = stage.screenshot.height / stage.screenshot.width;
-  const rect = point ? pointRect(point) : null;
   const pinRects = useMemo(() => spreadPinRects(stage.friction_points), [stage.friction_points]);
 
-  // In full-page mode, bring the selected pin into view instead of leaving the
-  // reader at the top of a very tall composite.
+  // Bring the selected pin into view instead of leaving the reader at the top
+  // of a very tall composite. The capture is often still decoding on the first
+  // selection, so scroll again once the image reports its real height.
+  const rect = point ? (pinRects.get(point.id) ?? pointRect(point)) : null;
   const rectY = rect?.y ?? null;
   useEffect(() => {
-    if (zoomed || rectY === null) return;
+    if (rectY === null) return;
     const el = fullRef.current;
     if (!el) return;
     const img = el.querySelector("img");
-    const height = img?.clientHeight ?? el.scrollHeight;
-    el.scrollTo({ top: Math.max(0, (rectY / 100) * height - el.clientHeight / 3), behavior: "smooth" });
-  }, [rectY, zoomed, activeId]);
 
+    const scrollToPin = (behavior: ScrollBehavior) => {
+      const height = img?.clientHeight || el.scrollHeight;
+      if (!height) return;
+      el.scrollTo({
+        top: Math.max(0, (rectY / 100) * height - el.clientHeight / 3),
+        behavior,
+      });
+    };
 
+    scrollToPin("smooth");
+    let frame = requestAnimationFrame(() => scrollToPin("smooth"));
 
-  // Scale so the offending element fills roughly half the frame in each axis,
-  // rather than applying one blunt zoom to a full-page capture.
-  const zoomFor = () => {
-    if (!rect || box.w === 0) return 2.4;
-    const byWidth = 55 / rect.w;
-    const byHeight = box.h === 0 ? byWidth : (55 / rect.h) * (box.h / box.w) / ratio;
-    // Keep enough surrounding page visible to preserve orientation. Extreme
-    // zoom made a technically correct target feel like the wrong section.
-    return clampNum(Math.min(byWidth, byHeight), 1.4, 3.4);
-  };
-  const zoom = zoomFor();
-
-  const imgW = box.w * zoom;
-  const imgH = imgW * ratio;
-  // Centre on the element's box, not on a bare point.
-  const cx = rect ? ((rect.x + rect.w / 2) / 100) * imgW : 0;
-  const cy = rect ? ((rect.y + rect.h / 2) / 100) * imgH : 0;
-  const tx = rect ? clampNum(box.w / 2 - cx, Math.min(box.w - imgW, 0), 0) : 0;
-  const ty = rect ? clampNum(box.h / 2 - cy, Math.min(box.h - imgH, 0), 0) : 0;
-
-  // A finding below the fold is proved by the screen the shopper was on, not
-  // by a pin on a full-page composite nobody ever sees at once. But that only
-  // holds when the offending element is genuinely inside the frame — a badge
-  // stranded at the top of a screenshot that does not contain the element is
-  // worse than no badge, so those fall through to the zoomed composite below.
-  const frame =
-    point?.evidence_image
-      ? (stage.scroll_profile?.frames?.find((f) => f.src === point.evidence_image) ?? null)
-      : null;
-  const span = frame ? Math.max(0.1, frame.bottom_percentage - frame.top_percentage) : 0;
-  const local =
-    frame && rect
-      ? {
-          x: rect.x,
-          y: ((rect.y - frame.top_percentage) / span) * 100,
-          w: rect.w,
-          h: (rect.h / span) * 100,
-        }
-      : null;
-  const inFrame = local !== null && local.y > -2 && local.y + local.h < 102;
-
-  if (zoomed && point && local && inFrame) {
-    return (
-      <div className="flex max-h-[40rem] flex-col overflow-y-auto bg-secondary p-4">
-        <div className="relative mx-auto w-full max-w-[44rem]">
-          <img
-            src={point.evidence_image ?? stage.screenshot.src}
-            alt={point.evidence_caption ?? `Viewport evidence for: ${point.title}`}
-            className="w-full rounded border border-border bg-card"
-          />
-          <Spotlight point={point} rect={local} />
-        </div>
-        <p className="mx-auto mt-2 max-w-[44rem] text-xs leading-relaxed text-muted-foreground">
-          {point.evidence_caption ?? "The viewport captured during the scroll pass."}
-          {frame ? ` · ${Math.round(frame.depth_percentage)}% down the page` : ""}
-        </p>
-      </div>
-    );
-  }
-
-  if (!zoomed) {
-
-    return (
-      <div ref={fullRef} className="relative max-h-[40rem] overflow-y-auto bg-secondary p-4">
-        <div className="relative mx-auto w-full max-w-[44rem]">
-          <img
-            src={stage.screenshot.src}
-            alt={`Captured ${stage.label.toLowerCase()} for the audited store`}
-            width={stage.screenshot.width}
-            height={stage.screenshot.height}
-            className="w-full rounded border border-border bg-card"
-          />
-          {stage.friction_points.map((p) => (
-            <Pin
-              key={p.id}
-              point={p}
-              displayRect={pinRects.get(p.id)}
-              active={p.id === activeId}
-              dim={activeId !== null && p.id !== activeId}
-              onSelect={() => onSelect(p.id)}
-            />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
+    let cleanup: (() => void) | undefined;
+    if (img && !img.complete) {
+      const onLoad = () => scrollToPin("auto");
+      img.addEventListener("load", onLoad);
+      cleanup = () => img.removeEventListener("load", onLoad);
+    }
+    return () => {
+      cancelAnimationFrame(frame);
+      cleanup?.();
+    };
+  }, [rectY, activeId, stage.id]);
 
   return (
-    <div ref={containerRef} className="relative h-[26rem] overflow-hidden bg-secondary sm:h-[32rem]">
-      <motion.div
-        className="absolute left-0 top-0 origin-top-left"
-        style={{ width: imgW || "100%" }}
-        animate={{ x: tx, y: ty }}
-        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      >
+    <div ref={fullRef} className="relative max-h-[40rem] overflow-y-auto bg-secondary p-4">
+      <div className="relative mx-auto w-full max-w-[44rem]">
         <img
           src={stage.screenshot.src}
           alt={`Captured ${stage.label.toLowerCase()} for the audited store`}
           width={stage.screenshot.width}
           height={stage.screenshot.height}
-          className="w-full bg-card"
+          className="w-full rounded border border-border bg-card"
         />
-        {point && rect && <Spotlight point={point} rect={rect} />}
-        {stage.friction_points
-          .filter((p) => p.id !== activeId)
-          .map((p) => (
-            <Pin
-              key={p.id}
-              point={p}
-              displayRect={pinRects.get(p.id)}
-              active={false}
-              dim
-              onSelect={() => onSelect(p.id)}
-            />
-          ))}
-      </motion.div>
+        {stage.friction_points.map((p) => (
+          <Pin
+            key={p.id}
+            point={p}
+            displayRect={pinRects.get(p.id)}
+            active={p.id === activeId}
+            dim={activeId !== null && p.id !== activeId}
+            onSelect={() => onSelect(p.id)}
+          />
+        ))}
+      </div>
     </div>
   );
 }
 
-const spotBorder = {
-  high: "border-sev-high",
-  medium: "border-sev-medium",
-  low: "border-sev-low",
-} as const;
-
-const spotChip = {
-  high: "bg-sev-high text-card",
-  medium: "bg-sev-medium text-card",
-  low: "bg-sev-low text-card",
-} as const;
-
-/**
- * The highlight for the selected finding: a light scrim over everything else,
- * a ring on the element itself, and a small caption tied to the ring so the
- * number and the words it belongs to are read together rather than the badge
- * floating somewhere near the top of the page.
- */
-function Spotlight({
-  point,
-  rect,
-}: {
-  point: FrictionPoint;
-  rect: { x: number; y: number; w: number; h: number };
-}) {
-  const x = clampNum(rect.x, 0, 99);
-  const y = clampNum(rect.y, 0, 99);
-  const w = Math.max(1.5, Math.min(rect.w, 100 - x));
-  const h = Math.max(1.2, Math.min(rect.h, 100 - y));
-  const below = y < 12; // no room above the box — caption goes underneath
-
-  return (
-    <span aria-hidden className="pointer-events-none absolute inset-0">
-      {/* Scrim in four panels, so the element itself stays at full brightness. */}
-      <span className="absolute inset-x-0 top-0 bg-foreground/25" style={{ height: `${y}%` }} />
-      <span
-        className="absolute inset-x-0 bottom-0 bg-foreground/25"
-        style={{ height: `${Math.max(0, 100 - y - h)}%` }}
-      />
-      <span
-        className="absolute left-0 bg-foreground/25"
-        style={{ top: `${y}%`, height: `${h}%`, width: `${x}%` }}
-      />
-      <span
-        className="absolute right-0 bg-foreground/25"
-        style={{ top: `${y}%`, height: `${h}%`, width: `${Math.max(0, 100 - x - w)}%` }}
-      />
-
-      <span
-        className={cn("absolute rounded-sm border-2", spotBorder[point.severity])}
-        style={{ left: `${x}%`, top: `${y}%`, width: `${w}%`, height: `${h}%` }}
-      />
-
-      <span
-        className="absolute flex max-w-[70%] items-center gap-1.5"
-        style={{
-          left: `${x}%`,
-          top: below ? `calc(${y + h}% + 6px)` : `calc(${y}% - 6px)`,
-          transform: below ? "none" : "translateY(-100%)",
-        }}
-      >
-        <span
-          className={cn(
-            "flex size-5 shrink-0 items-center justify-center rounded-full font-mono text-[10px] font-semibold",
-            spotChip[point.severity],
-          )}
-        >
-          {point.id}
-        </span>
-        <span className="truncate rounded-sm bg-card/95 px-1.5 py-0.5 font-mono text-[10px] leading-tight text-foreground shadow-tile">
-          {point.title}
-        </span>
-      </span>
-    </span>
-  );
-}
 
 /**
  * The badge sits just outside the element it points at — above-left by
