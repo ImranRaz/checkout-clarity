@@ -44,8 +44,8 @@ export function BrandLockup({
   className,
   glyphClassName,
 }: {
-  className?: string;
-  glyphClassName?: string;
+  className?: string | undefined;
+  glyphClassName?: string | undefined;
 }) {
   return (
     <span className={cn("inline-flex items-center gap-2.5", className)}>
