@@ -803,29 +803,33 @@ function Pin({
         point.severity === "high" && "bg-sev-high text-card ring-sev-high/35",
         point.severity === "medium" && "bg-sev-medium text-card ring-sev-medium/35",
         point.severity === "low" && "bg-sev-low text-card ring-sev-low/35",
-        active && "scale-125 ring-8",
+        active && "z-10 scale-125 ring-4",
         dim && "opacity-40",
       )}
       aria-label={`Finding ${point.id}: ${point.title}`}
+      aria-current={active ? "true" : undefined}
     >
+      {/* A soft halo breathing around the selected pin: enough to say "you are
+          here" without dimming the page around it. */}
+      {active && (
+        <motion.span
+          aria-hidden
+          className={cn(
+            "pointer-events-none absolute -inset-1 rounded-full border-2",
+            point.severity === "high" && "border-sev-high/60",
+            point.severity === "medium" && "border-sev-medium/60",
+            point.severity === "low" && "border-sev-low/60",
+          )}
+          animate={{ scale: [1, 1.5, 1], opacity: [0.75, 0.15, 0.75] }}
+          transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+        />
+      )}
       {point.id}
     </button>
   );
 }
 
 
-function ViewToggle({
-  active,
-  onClick,
-  icon,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
     <button
       type="button"
       onClick={onClick}
