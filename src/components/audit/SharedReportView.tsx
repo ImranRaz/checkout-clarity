@@ -1,4 +1,4 @@
-import { ScanSearch } from "lucide-react";
+import { BrandLockup } from "@/components/BrandMark";
 
 import { ReportDashboard } from "@/components/audit/ReportDashboard";
 import { allFrictionPoints, reachedStep } from "@/lib/audit-schema";
@@ -21,9 +21,9 @@ export function SharedReportView({
     <main className="min-h-screen">
       <header className="rule-grid border-b border-border">
         <div className="mx-auto w-full max-w-6xl px-6 py-10">
-          <p className="label-caps flex items-center gap-2">
-            <ScanSearch className="size-3.5" aria-hidden />
-            Checkout Forensic · shared report
+          <p className="flex items-center gap-2.5">
+            <BrandLockup />
+            <span className="label-caps">shared report</span>
           </p>
           <h1 className="mt-4 truncate font-display text-3xl tracking-tight sm:text-4xl">
             {report.domain}
