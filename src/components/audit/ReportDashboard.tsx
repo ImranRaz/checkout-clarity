@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { AlertTriangle, ArrowUpRight, Clock, Maximize2, ShieldAlert, ZoomIn } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, Clock, ShieldAlert } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { ExecutiveSummary } from "./ExecutiveSummary";
@@ -82,7 +82,6 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
   const report = useMemo(() => normalizeReportForDisplay(rawReport), [rawReport]);
   const [stageIndex, setStageIndex] = useState(0);
   const [activeId, setActiveId] = useState<number | null>(null);
-  const [zoomed, setZoomed] = useState(true);
 
   const stage = report.stages[stageIndex]!;
   const score = scoreReport(report);
@@ -97,7 +96,6 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
   const select = useCallback((nextStage: number, pointId: number | null) => {
     setStageIndex(nextStage);
     setActiveId(pointId);
-    if (pointId !== null) setZoomed(true);
   }, []);
 
   const step = useCallback(
