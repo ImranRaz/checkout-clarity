@@ -103,18 +103,21 @@ export const revokeShareLink = createServerFn({ method: "POST" })
   });
 
 /**
- * Public: resolves a token to a report. The database function validates the
- * token (live, unrevoked, unexpired) and bumps the view counter; without a
- * valid token there is no anonymous path to any run.
+ * Public: resolves a token to a report. The database function is no longer
+ * callable by anon/authenticated API roles; it runs here through the trusted
+ * server-only client after the token shape is validated. Without a valid,
+ * live token there is no path to any run.
  */
 export const getSharedReport = createServerFn({ method: "POST" })
   .inputValidator((input: { token: string }) => input)
   .handler(async ({ data }): Promise<ForensicAuditReport | null> => {
     if (!/^[a-f0-9]{16,64}$/.test(data.token)) return null;
-    const { data: report, error } = await publicClient().rpc("get_shared_report", {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: report, error } = await supabaseAdmin.rpc("get_shared_report", {
       _token: data.token,
     });
     if (error || !report) return null;
     const parsed = auditReportSchema.safeParse(report);
     return parsed.success ? parsed.data : null;
   });
+
