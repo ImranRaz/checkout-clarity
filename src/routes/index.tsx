@@ -274,10 +274,7 @@ function Marketing() {
     <main className="min-h-screen">
       <nav className="border-b border-border">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
-          <span className="label-caps flex items-center gap-2">
-            <ScanSearch className="size-3.5" aria-hidden />
-            Checkout Forensic
-          </span>
+          <BrandLockup />
           <div className="flex items-center gap-4">
             <a
               href="#samples"
