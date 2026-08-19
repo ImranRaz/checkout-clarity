@@ -281,7 +281,7 @@ function HeroEvidence({
         <span className="font-mono text-[10px] text-foreground">
           Speed
           <span className="ml-1 text-primary">
-            {(stage.browser_metrics.largest_contentful_paint_ms / 1000).toFixed(1)}s
+            {(stage.technical_metrics.largest_contentful_paint_ms / 1000).toFixed(1)}s
           </span>
         </span>
       </div>
