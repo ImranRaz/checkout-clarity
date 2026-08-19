@@ -261,7 +261,7 @@ function HeroEvidence({
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border px-4 py-2.5">
         <span className="label-caps">checked</span>
-        {(Object.keys(categoryLabel) as (keyof typeof categoryLabel)[]).map((key) => {
+        {(["clarity", "trust", "form", "accessibility"] as const).map((key) => {
           const hits = pins.filter((p) => p.category === key).length;
           return (
             <span
@@ -273,11 +273,17 @@ function HeroEvidence({
             >
               {categoryLabel[key]}
               <span className={cn("ml-1", hits ? "text-primary" : "text-muted-foreground/50")}>
-                {hits ? hits : "0"}
+                {hits}
               </span>
             </span>
           );
         })}
+        <span className="font-mono text-[10px] text-foreground">
+          Speed
+          <span className="ml-1 text-primary">
+            {(stage.browser_metrics.largest_contentful_paint_ms / 1000).toFixed(1)}s
+          </span>
+        </span>
       </div>
     </div>
   );
