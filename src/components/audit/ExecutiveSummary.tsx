@@ -102,72 +102,92 @@ export function ExecutiveSummary({
         </div>
       )}
 
-      <div data-print-wrap className="overflow-x-auto p-4">
-        <table data-print-table className="w-full min-w-[34rem] border-separate border-spacing-1 text-left">
-
-          <caption className="sr-only">
-            Experience pillars scored for each stage of the journey
-          </caption>
-          <thead>
-            <tr>
-              <th scope="col" className="label-caps pb-1 pl-1 font-normal">
-                Pillar
-              </th>
-              {matrix.rows.map((row) => (
-                <th
-                  key={row.stageId}
-                  scope="col"
-                  className="pb-1 text-center font-mono text-[10px] font-normal uppercase tracking-[0.12em] text-muted-foreground"
-                >
-                  <span className="mx-auto block max-w-[7rem] truncate">{row.stageLabel}</span>
-                </th>
-              ))}
-              <th
-                scope="col"
-                className="pb-1 text-center font-mono text-[10px] font-normal uppercase tracking-[0.12em] text-muted-foreground"
+      <div data-print-wrap className="p-4">
+        {/* Journey-wide pillar scores: four fixed columns, always readable. */}
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {PILLARS.map((pillar) => (
+            <div key={pillar} className="rounded-lg border border-border p-3">
+              <span className="flex items-center gap-1 text-sm font-medium text-foreground">
+                {pillarLabel[pillar]}
+                <Explain term={PILLAR_TERM[pillar]} />
+              </span>
+              <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">
+                {pillarQuestion[pillar]}
+              </span>
+              <span
+                className={cn(
+                  "mt-2 flex h-9 items-center justify-center rounded-md font-mono text-sm font-semibold tabular-nums",
+                  cellTone(matrix.overall[pillar]),
+                )}
               >
-                Overall
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+                {matrix.overall[pillar]}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* Per-stage breakdown: one readable row per page, scales to any length. */}
+        <div className="mt-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="label-caps">By page</p>
+            <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+              {matrix.rows.length} step{matrix.rows.length === 1 ? "" : "s"}
+            </p>
+          </div>
+
+          <div className="mt-2 hidden grid-cols-[minmax(0,1fr)_repeat(4,3.25rem)] gap-x-2 px-2 sm:grid">
+            <span />
             {PILLARS.map((pillar) => (
-              <tr key={pillar}>
-                <th scope="row" className="max-w-[12rem] py-1 pl-1 align-middle font-normal">
-                  <span className="flex items-center gap-1 text-sm font-medium text-foreground">
-                    {pillarLabel[pillar]}
-                    <Explain term={PILLAR_TERM[pillar]} />
+              <span
+                key={pillar}
+                className="text-center font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground"
+              >
+                {pillar === "speed" ? "Speed" : pillarLabel[pillar]}
+              </span>
+            ))}
+          </div>
+
+          <ul
+            data-print-table
+            className={cn(
+              "mt-1 divide-y divide-border rounded-lg border border-border",
+              matrix.rows.length > 8 && "max-h-[26rem] overflow-y-auto",
+            )}
+          >
+            {matrix.rows.map((row, i) => (
+              <li
+                key={row.stageId}
+                className="grid grid-cols-[minmax(0,1fr)_repeat(4,3.25rem)] items-center gap-x-2 px-2 py-1.5"
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
+                    {String(i + 1).padStart(2, "0")}
                   </span>
-                  <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">
-                    {pillarQuestion[pillar]}
+                  <span className="truncate text-sm text-foreground" title={row.stageLabel}>
+                    {row.stageLabel}
                   </span>
-                </th>
-                {matrix.rows.map((row) => {
+                </span>
+                {PILLARS.map((pillar) => {
                   const cell = row.cells[pillar];
                   return (
-                    <td key={row.stageId} className="p-0.5 text-center align-middle">
-                      <span
-                        className={cn(
-                          "flex h-9 items-center justify-center rounded-md font-mono text-sm tabular-nums",
-                          cellTone(cell.score),
-                        )}
-                        title={`${cell.findings} finding${cell.findings === 1 ? "" : "s"}`}
-                      >
-                        {cell.score}
-                      </span>
-                    </td>
+                    <span
+                      key={pillar}
+                      className={cn(
+                        "flex h-8 items-center justify-center rounded-md font-mono text-xs tabular-nums",
+                        cellTone(cell.score),
+                      )}
+                      title={`${pillarLabel[pillar]} · ${cell.score}/100 · ${cell.findings} finding${cell.findings === 1 ? "" : "s"}`}
+                    >
+                      {cell.score}
+                    </span>
                   );
                 })}
-                <td className="p-0.5 text-center align-middle">
-                  <span className="flex h-9 items-center justify-center rounded-md border border-border font-mono text-sm font-semibold tabular-nums">
-                    {matrix.overall[pillar]}
-                  </span>
-                </td>
-              </tr>
+              </li>
             ))}
-          </tbody>
-        </table>
+          </ul>
+        </div>
       </div>
+
 
       {fix && (
         <div className="border-t border-border bg-secondary/40 px-4 py-4">
