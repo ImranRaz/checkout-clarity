@@ -103,20 +103,26 @@ export function ExecutiveSummary({
       )}
 
       <div data-print-wrap className="p-4">
-        {/* Journey-wide pillar scores: four fixed columns, always readable. */}
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {/* Journey-wide pillar scores. On phones these read as compact rows so the
+            question text never squeezes into a two-line column of its own. */}
+        <div className="grid gap-2 sm:grid-cols-4">
           {PILLARS.map((pillar) => (
-            <div key={pillar} className="rounded-lg border border-border p-3">
-              <span className="flex items-center gap-1 text-sm font-medium text-foreground">
-                {pillarLabel[pillar]}
-                <Explain term={PILLAR_TERM[pillar]} />
-              </span>
-              <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">
-                {pillarQuestion[pillar]}
+            <div
+              key={pillar}
+              className="flex items-center gap-3 rounded-lg border border-border p-3 sm:h-full sm:flex-col sm:items-stretch"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-1 text-sm font-medium text-foreground">
+                  {pillarLabel[pillar]}
+                  <Explain term={PILLAR_TERM[pillar]} />
+                </span>
+                <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">
+                  {pillarQuestion[pillar]}
+                </span>
               </span>
               <span
                 className={cn(
-                  "mt-2 flex h-9 items-center justify-center rounded-md font-mono text-sm font-semibold tabular-nums",
+                  "flex h-9 w-14 shrink-0 items-center justify-center rounded-md font-mono text-sm font-semibold tabular-nums sm:mt-auto sm:w-full",
                   cellTone(matrix.overall[pillar]),
                 )}
               >
@@ -126,7 +132,8 @@ export function ExecutiveSummary({
           ))}
         </div>
 
-        {/* Per-stage breakdown: one readable row per page, scales to any length. */}
+        {/* Per-stage breakdown. Phones get a stacked card per page with labelled
+            chips; wider screens collapse to one dense row per page. */}
         <div className="mt-4">
           <div className="flex items-center justify-between gap-3">
             <p className="label-caps">By page</p>
@@ -157,7 +164,7 @@ export function ExecutiveSummary({
             {matrix.rows.map((row, i) => (
               <li
                 key={row.stageId}
-                className="grid grid-cols-[minmax(0,1fr)_repeat(4,3.25rem)] items-center gap-x-2 px-2 py-1.5"
+                className="px-2 py-2 sm:grid sm:grid-cols-[minmax(0,1fr)_repeat(4,3.25rem)] sm:items-center sm:gap-x-2 sm:py-1.5"
               >
                 <span className="flex min-w-0 items-center gap-2">
                   <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
@@ -167,26 +174,33 @@ export function ExecutiveSummary({
                     {row.stageLabel}
                   </span>
                 </span>
-                {PILLARS.map((pillar) => {
-                  const cell = row.cells[pillar];
-                  return (
-                    <span
-                      key={pillar}
-                      className={cn(
-                        "flex h-8 items-center justify-center rounded-md font-mono text-xs tabular-nums",
-                        cellTone(cell.score),
-                      )}
-                      title={`${pillarLabel[pillar]} · ${cell.score}/100 · ${cell.findings} finding${cell.findings === 1 ? "" : "s"}`}
-                    >
-                      {cell.score}
-                    </span>
-                  );
-                })}
+                <div className="mt-1.5 grid grid-cols-4 gap-1.5 sm:contents">
+                  {PILLARS.map((pillar) => {
+                    const cell = row.cells[pillar];
+                    return (
+                      <span
+                        key={pillar}
+                        className={cn(
+                          "flex flex-col items-center justify-center rounded-md py-1 font-mono text-xs tabular-nums sm:h-8 sm:py-0",
+                          cellTone(cell.score),
+                        )}
+                        title={`${pillarLabel[pillar]} · ${cell.score}/100 · ${cell.findings} finding${cell.findings === 1 ? "" : "s"}`}
+                      >
+                        <span className="text-[9px] uppercase tracking-[0.1em] opacity-70 sm:hidden">
+                          {pillar === "speed" ? "Speed" : pillarLabel[pillar]}
+                        </span>
+                        {cell.score}
+                      </span>
+                    );
+                  })}
+                </div>
               </li>
             ))}
           </ul>
         </div>
       </div>
+
+
 
 
       {fix && (
