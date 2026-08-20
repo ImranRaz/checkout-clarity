@@ -395,7 +395,7 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
         <motion.section
           variants={tileMotion}
           transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          className="tile p-5 lg:col-span-5"
+          className="tile min-w-0 p-5 lg:col-span-5"
           aria-label="Overall score"
         >
           <div className="flex items-start justify-between gap-4">
@@ -447,8 +447,8 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
                   return (
                     <li key={s.id}>
                       <div className="flex items-baseline justify-between gap-3">
-                        <span className="text-sm text-foreground">{s.label}</span>
-                        <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                        <span className="min-w-0 truncate text-sm text-foreground">{s.label}</span>
+                        <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
                           {stageScore.total}/100
                         </span>
                       </div>
@@ -476,11 +476,11 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
         <motion.section
           variants={tileMotion}
           transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          className="tile p-5 lg:col-span-7"
+          className="tile min-w-0 p-5 lg:col-span-7"
           aria-label="Technical metrics for the selected stage"
         >
           <div className="flex items-baseline justify-between gap-3">
-            <h2 className="label-caps">Browser metrics · {stage.label}</h2>
+            <h2 className="label-caps min-w-0 truncate">Browser metrics · {stage.label}</h2>
             {stage.transition_in && (
               <p className="truncate font-mono text-[11px] text-muted-foreground">
                 {stage.transition_in.action}
