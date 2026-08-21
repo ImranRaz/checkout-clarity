@@ -785,6 +785,11 @@ export async function runJourney(entryUrl, { onLog } = {}) {
           "Fill required fields with sensible defaults: nearest available future date, 2 adults, cheapest available " +
           "option, first available cabin/room. Skip optional upsells, insurance, extras and loyalty prompts by choosing " +
           "the plain continue / no-thanks option. " +
+          "THIRD-PARTY BOOKING ENGINES: on cruise, hotel, tour and ticket sites the marketing pages and the booking " +
+          "engine are often different systems on different domains, and 'Book now' hands over to the engine (sometimes " +
+          "in what was meant to be a new window — it has been forced into this tab, so simply carry on with the page " +
+          "you are now on). Landing on a different domain mid-flow is EXPECTED and is progress, not an error: continue " +
+          "the funnel there. Never navigate back to the marketing site to look for a cart. " +
           "IMPORTANT — where the buy control lives: a category or listing grid almost never has an add-to-cart button. " +
           "If you are on a grid of several items, do NOT look for add-to-cart; open one in-stock item to reach its " +
           "detail page first. On a detail page for clothing, footwear or anything with variants, the add-to-cart " +
