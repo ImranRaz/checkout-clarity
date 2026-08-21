@@ -170,3 +170,100 @@ export function verticalBrief(vertical) {
     `Use this category's own vocabulary. Using the wrong category's language (asking a cruise line about shipping, or a shoe store about cancellation policy) is a disqualifying error.`,
   ].join("\n");
 }
+
+/**
+ * Last line of defence against category-wrong findings.
+ *
+ * The brief tells the reviewers what not to ask for, and the deterministic
+ * checks in friction.js are written in retail vocabulary because most targets
+ * are shops. Both still leak: a cruise line gets told it has no returns
+ * window. That single sentence destroys the credibility of an otherwise sharp
+ * audit, so nothing category-wrong is allowed to reach the report.
+ *
+ * Findings whose whole subject is out of category are dropped. The one
+ * measured check that is genuinely useful everywhere — is there any
+ * reassurance next to the commitment — is rewritten into the right words
+ * instead of being thrown away.
+ */
+const OFF_CATEGORY = {
+  travel: /\b(shipping|free delivery|delivery (cost|charge|fee|date|time|window)|returns? (window|policy|period)|return postage|restocking|in stock|out of stock|stock level|size (guide|chart)|fit guide|add to (cart|bag|basket))\b/i,
+  ticketing: /\b(shipping (cost|fee|charge)|returns? (window|policy)|return postage|size (guide|chart)|fit guide|stock level)\b/i,
+  subscription: /\b(shipping|delivery (cost|date|fee)|returns? (window|policy)|size (guide|chart)|in stock|out of stock)\b/i,
+  services: /\b(shipping|delivery (cost|date|fee)|returns? (window|policy)|add to (cart|bag|basket)|in stock|out of stock|size (guide|chart))\b/i,
+  food: /\b(returns? (window|policy)|return postage|size (guide|chart)|fit guide)\b/i,
+  goods: /\b(deposit (amount|schedule)|cancellation policy|port fees|double occupancy|stateroom)\b/i,
+};
+
+/** Category-correct wording for "nothing reassures the buyer here". */
+const TRUST_REWRITE = {
+  travel: {
+    title: "No reassurance near the booking decision",
+    evidence:
+      "Nothing where the booking is committed states what the fare includes, the deposit and payment schedule, or the cancellation and change policy.",
+    proof:
+      "Searched page text for what's-included, deposit, cancellation, change and refund language near the booking control.",
+  },
+  ticketing: {
+    title: "No reassurance near the ticket decision",
+    evidence:
+      "Nothing near the buy control states whether fees are included, how tickets are delivered, or the transfer and resale rules.",
+    proof: "Searched page text for all-in pricing, delivery method and transfer-policy language.",
+  },
+  subscription: {
+    title: "No reassurance near the sign-up decision",
+    evidence:
+      "Nothing near the sign-up control states what happens after any trial, whether a card is needed up front, or how to cancel.",
+    proof: "Searched page text for trial, billing and cancellation language near the sign-up control.",
+  },
+  services: {
+    title: "No reassurance near the enquiry form",
+    evidence:
+      "Nothing near the form says what happens after it is sent, how quickly someone replies, or how pricing works.",
+    proof: "Searched page text for response-time, pricing and credibility signals near the form.",
+  },
+  food: {
+    title: "No reassurance near the order decision",
+    evidence:
+      "Nothing near the order control states the delivery window, fees, minimum order or substitution policy.",
+    proof: "Searched page text for delivery window, fee, minimum-order and substitution language.",
+  },
+};
+
+const TRUST_CHECK = /trust or returns signal|no trust signal/i;
+
+/**
+ * @param {Array<object>} points
+ * @param {object} vertical
+ */
+export function applyVerticalGuard(points, vertical) {
+  const id = vertical?.id || "generic";
+  const banned = OFF_CATEGORY[id];
+  if (!Array.isArray(points) || !banned) return points || [];
+
+  const rewrite = TRUST_REWRITE[id];
+  const out = [];
+
+  for (const point of points) {
+    const blob = [point?.title, point?.evidence, point?.recommendation, point?.proof]
+      .filter(Boolean)
+      .join(" ");
+    if (!banned.test(blob)) {
+      out.push(point);
+      continue;
+    }
+    if (rewrite && TRUST_CHECK.test(String(point?.title || ""))) {
+      out.push({
+        ...point,
+        title: rewrite.title,
+        evidence: rewrite.evidence,
+        proof: rewrite.proof,
+        recommendation: undefined,
+      });
+      continue;
+    }
+    // Category-wrong and not salvageable: it never reaches the report.
+  }
+
+  return out;
+}
+
