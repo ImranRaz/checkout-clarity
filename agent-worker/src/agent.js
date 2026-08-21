@@ -5,7 +5,8 @@ import { z } from "zod";
 import { FRICTION_SCRIPT, PAGE_DIGEST_SCRIPT } from "./friction.js";
 import { createReviewer } from "./ux-review.js";
 import { reviewJourney } from "./journey-review.js";
-import { classifyVertical, VERTICALS } from "./vertical.js";
+import { applyVerticalGuard, classifyVertical, VERTICALS } from "./vertical.js";
+import { followPopups, SAME_TAB_INIT } from "./popups.js";
 import { VITALS_INIT, VITALS_READ } from "./vitals.js";
 import { dismissOverlays } from "./overlays.js";
 import { scrollBrief, scrollFindings, scrollSweep } from "./scroll.js";
@@ -486,6 +487,14 @@ function orderFindings(points) {
     .map((point, index) => ({ ...point, id: index + 1 }));
 }
 
+/**
+ * Order the findings and drop anything that belongs to another business model
+ * (asking a cruise line about shipping is a credibility-ending mistake).
+ */
+function finalizeFindings(points) {
+  return orderFindings(applyVerticalGuard(points, vertical));
+}
+
 async function captureStage(page, { kind, label: rawLabel, transition, emit }) {
   const label = cleanLabel(rawLabel, kind);
 
@@ -509,7 +518,7 @@ async function captureStage(page, { kind, label: rawLabel, transition, emit }) {
   const interstitials = capturedInterstitials.splice(0, capturedInterstitials.length);
 
   const measured = [...friction, ...scrollFindings(scroll_profile, kind)];
-  const friction_points = orderFindings(measured);
+  const friction_points = finalizeFindings(measured);
 
   const stage = {
     id: `${kind}-${Date.now()}`,
@@ -570,7 +579,7 @@ async function captureStage(page, { kind, label: rawLabel, transition, emit }) {
           }
 
           if (judged.length > 0 || dropped.size > 0) {
-            stage.friction_points = orderFindings([...kept, ...judged]);
+            stage.friction_points = finalizeFindings([...kept, ...judged]);
 
             emit?.(
               "vision",
@@ -651,6 +660,11 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     }
 
     const page = stagehand.page;
+    // Booking engines are usually a third party that opens in a new tab. Keep
+    // that navigation in the tab the agent is driving, and follow anything
+    // that still escapes.
+    await page.addInitScript(SAME_TAB_INIT);
+    followPopups(page.context(), () => stagehand.page, emit);
     page.on("console", (m) => {
       if (m.type() === "error") consoleErrors.push(m.text().slice(0, 240));
     });
@@ -1025,7 +1039,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
           });
           const extra = await checkoutFindings(page);
           if (extra.length > 0) {
-            stage.friction_points = orderFindings([...stage.friction_points, ...extra]);
+            stage.friction_points = finalizeFindings([...stage.friction_points, ...extra]);
           }
           stages.push(stage);
           emit(
@@ -1109,7 +1123,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
       seenFindings.add(key);
       kept.push(point);
     }
-    stage.friction_points = orderFindings(kept);
+    stage.friction_points = finalizeFindings(kept);
   }
 
   const host = new URL(entryUrl).hostname.replace(/^www\./, "");

@@ -257,7 +257,9 @@ export function applyVerticalGuard(points, vertical) {
         title: rewrite.title,
         evidence: rewrite.evidence,
         proof: rewrite.proof,
-        recommendation: undefined,
+        recommendation: banned.test(String(point?.recommendation || ""))
+          ? "State this category's own reassurance — what is included, the deposit and the cancellation terms — beside the commitment control."
+          : point?.recommendation,
       });
       continue;
     }
