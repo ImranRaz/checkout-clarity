@@ -70,10 +70,16 @@ export function SharedReportView({
           </a>
         </div>
         <div className="mx-auto w-full max-w-6xl px-6 pb-8">
-          <p className="font-mono text-[11px] text-muted-foreground">
-            Scores are computed by a fixed rubric, not generated. Pins are derived from element
-            bounding boxes.
-          </p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="font-mono text-[11px] text-muted-foreground">
+              Scores are computed by a fixed rubric, not generated. Pins are derived from element
+              bounding boxes.
+            </p>
+            <p className="font-mono text-[11px] text-muted-foreground">
+              Built by{" "}
+              <span className="font-medium text-foreground">Imran Razzak</span>
+            </p>
+          </div>
         </div>
       </footer>
     </main>
