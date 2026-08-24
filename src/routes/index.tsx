@@ -5,6 +5,7 @@ import {
   ArrowRight,
   Banknote,
   Gauge as GaugeIcon,
+  Linkedin,
   MousePointerClick,
   Type as TypeIcon,
 } from "lucide-react";
