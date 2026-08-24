@@ -545,14 +545,14 @@ function Marketing() {
                 rel="noopener noreferrer"
                 className="font-medium text-foreground underline-offset-4 hover:underline"
               >
-                Imran Razzak
+                Imran Razaq
               </a>
             </p>
             <a
               href="https://www.linkedin.com/in/imranrazaq/"
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="Imran Razzak on LinkedIn"
+              aria-label="Imran Razaq on LinkedIn"
               className="text-muted-foreground transition-colors hover:text-foreground"
             >
               <Linkedin className="size-4" aria-hidden />
