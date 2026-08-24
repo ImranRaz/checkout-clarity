@@ -95,7 +95,7 @@ export function SharedReportView({
                   rel="noopener noreferrer"
                   className="font-medium text-foreground underline-offset-4 hover:underline"
                 >
-                  Imran Razzak
+                  Imran Razaq
                 </a>
               </p>
               <a
