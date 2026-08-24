@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Linkedin } from "lucide-react";
 
 import { BrandLockup } from "@/components/BrandMark";
 import { ReportDashboard } from "@/components/audit/ReportDashboard";
