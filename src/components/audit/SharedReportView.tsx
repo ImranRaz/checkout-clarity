@@ -75,10 +75,28 @@ export function SharedReportView({
               Scores are computed by a fixed rubric, not generated. Pins are derived from element
               bounding boxes.
             </p>
-            <p className="font-mono text-[11px] text-muted-foreground">
-              Built by{" "}
-              <span className="font-medium text-foreground">Imran Razzak</span>
-            </p>
+            <div className="flex items-center gap-3">
+              <p className="font-mono text-[11px] text-muted-foreground">
+                Built by{" "}
+                <a
+                  href="https://www.linkedin.com/in/imranrazaq/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-foreground underline-offset-4 hover:underline"
+                >
+                  Imran Razzak
+                </a>
+              </p>
+              <a
+                href="https://www.linkedin.com/in/imranrazaq/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Imran Razzak on LinkedIn"
+                className="text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <Linkedin className="size-4" aria-hidden />
+              </a>
+            </div>
           </div>
         </div>
       </footer>
