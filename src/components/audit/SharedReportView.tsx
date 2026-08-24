@@ -1,5 +1,7 @@
-import { BrandLockup } from "@/components/BrandMark";
+import { Link } from "@tanstack/react-router";
+import { ArrowLeft } from "lucide-react";
 
+import { BrandLockup } from "@/components/BrandMark";
 import { ReportDashboard } from "@/components/audit/ReportDashboard";
 import { allFrictionPoints, reachedStep } from "@/lib/audit-schema";
 import type { ForensicAuditReport } from "@/lib/audit-schema";
@@ -21,10 +23,19 @@ export function SharedReportView({
     <main className="min-h-screen">
       <header className="rule-grid border-b border-border">
         <div className="mx-auto w-full max-w-6xl px-6 py-10">
-          <p className="flex items-center gap-2.5">
-            <BrandLockup />
-            <span className="label-caps">shared report</span>
-          </p>
+          <div className="flex items-center justify-between gap-4">
+            <p className="flex items-center gap-2.5">
+              <BrandLockup />
+              <span className="label-caps">shared report</span>
+            </p>
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            >
+              <ArrowLeft className="size-3.5" aria-hidden />
+              Back to home
+            </Link>
+          </div>
           <h1 className="mt-4 truncate font-display text-3xl tracking-tight sm:text-4xl">
             {report.domain}
           </h1>
@@ -59,10 +70,16 @@ export function SharedReportView({
           </a>
         </div>
         <div className="mx-auto w-full max-w-6xl px-6 pb-8">
-          <p className="font-mono text-[11px] text-muted-foreground">
-            Scores are computed by a fixed rubric, not generated. Pins are derived from element
-            bounding boxes.
-          </p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="font-mono text-[11px] text-muted-foreground">
+              Scores are computed by a fixed rubric, not generated. Pins are derived from element
+              bounding boxes.
+            </p>
+            <p className="font-mono text-[11px] text-muted-foreground">
+              Built by{" "}
+              <span className="font-medium text-foreground">Imran Razzak</span>
+            </p>
+          </div>
         </div>
       </footer>
     </main>
