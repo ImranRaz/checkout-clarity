@@ -28,13 +28,24 @@ export function SharedReportView({
               <BrandLockup />
               <span className="label-caps">shared report</span>
             </p>
-            <Link
-              to="/"
-              className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-            >
-              <ArrowLeft className="size-3.5" aria-hidden />
-              Back to home
-            </Link>
+            <div className="flex items-center gap-3">
+              <a
+                href="https://www.linkedin.com/in/imranrazaq/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Imran Razzak on LinkedIn"
+                className="text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <Linkedin className="size-4" aria-hidden />
+              </a>
+              <Link
+                to="/"
+                className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              >
+                <ArrowLeft className="size-3.5" aria-hidden />
+                Back to home
+              </Link>
+            </div>
           </div>
           <h1 className="mt-4 truncate font-display text-3xl tracking-tight sm:text-4xl">
             {report.domain}
