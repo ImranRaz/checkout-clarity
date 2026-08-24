@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Linkedin } from "lucide-react";
 
 import { BrandLockup } from "@/components/BrandMark";
 import { ReportDashboard } from "@/components/audit/ReportDashboard";
@@ -28,13 +28,24 @@ export function SharedReportView({
               <BrandLockup />
               <span className="label-caps">shared report</span>
             </p>
-            <Link
-              to="/"
-              className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-            >
-              <ArrowLeft className="size-3.5" aria-hidden />
-              Back to home
-            </Link>
+            <div className="flex items-center gap-3">
+              <a
+                href="https://www.linkedin.com/in/imranrazaq/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Imran Razzak on LinkedIn"
+                className="text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <Linkedin className="size-4" aria-hidden />
+              </a>
+              <Link
+                to="/"
+                className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              >
+                <ArrowLeft className="size-3.5" aria-hidden />
+                Back to home
+              </Link>
+            </div>
           </div>
           <h1 className="mt-4 truncate font-display text-3xl tracking-tight sm:text-4xl">
             {report.domain}
@@ -75,10 +86,28 @@ export function SharedReportView({
               Scores are computed by a fixed rubric, not generated. Pins are derived from element
               bounding boxes.
             </p>
-            <p className="font-mono text-[11px] text-muted-foreground">
-              Built by{" "}
-              <span className="font-medium text-foreground">Imran Razzak</span>
-            </p>
+            <div className="flex items-center gap-3">
+              <p className="font-mono text-[11px] text-muted-foreground">
+                Built by{" "}
+                <a
+                  href="https://www.linkedin.com/in/imranrazaq/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-foreground underline-offset-4 hover:underline"
+                >
+                  Imran Razzak
+                </a>
+              </p>
+              <a
+                href="https://www.linkedin.com/in/imranrazaq/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Imran Razzak on LinkedIn"
+                className="text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <Linkedin className="size-4" aria-hidden />
+              </a>
+            </div>
           </div>
         </div>
       </footer>
