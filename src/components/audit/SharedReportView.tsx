@@ -1,5 +1,7 @@
-import { BrandLockup } from "@/components/BrandMark";
+import { Link } from "@tanstack/react-router";
+import { ArrowLeft } from "lucide-react";
 
+import { BrandLockup } from "@/components/BrandMark";
 import { ReportDashboard } from "@/components/audit/ReportDashboard";
 import { allFrictionPoints, reachedStep } from "@/lib/audit-schema";
 import type { ForensicAuditReport } from "@/lib/audit-schema";
