@@ -5,7 +5,7 @@ import { auditReportSchema, type ForensicAuditReport } from "./audit-schema";
  * browser session. Fixture reports keep using their own ids.
  */
 
-const PREFIX = "checkout-forensic:live:";
+const PREFIX = "coherentx:live:";
 
 export function isLiveId(id: string): boolean {
   return id.startsWith("live-");
