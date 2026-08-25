@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Checkout Forensic — Find the revenue your checkout leaks" },
+      { title: "CoherentX — Find the revenue your checkout leaks" },
       {
         name: "description",
         content:
@@ -31,7 +31,7 @@ export const Route = createFileRoute("/")({
       },
       {
         property: "og:title",
-        content: "Checkout Forensic — Find the revenue your checkout leaks",
+        content: "CoherentX — Find the revenue your checkout leaks",
       },
       {
         property: "og:description",
@@ -39,10 +39,10 @@ export const Route = createFileRoute("/")({
           "An agent shops your store like a customer and shows you exactly where buyers give up — pinned to the pixels.",
       },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "https://checkout-specter.lovable.app/" },
+      { property: "og:url", content: "https://www.coherentx.com/" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
-    links: [{ rel: "canonical", href: "https://checkout-specter.lovable.app/" }],
+    links: [{ rel: "canonical", href: "https://www.coherentx.com/" }],
   }),
   loader: async () => ({ featured: await listFeaturedReports() }),
   component: Marketing,
@@ -371,7 +371,7 @@ function Marketing() {
                 <ArrowRight className="size-3.5" aria-hidden />
               </Link>
               <a
-                href="mailto:hello@checkoutforensic.com?subject=Audit%20my%20store"
+                href="mailto:hello@coherentx.com?subject=Audit%20my%20store"
                 className="inline-flex items-center gap-2 rounded-md border border-border px-5 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
               >
                 Request an audit
@@ -526,7 +526,7 @@ function Marketing() {
           your team.
         </p>
         <a
-          href="mailto:hello@checkoutforensic.com?subject=Audit%20my%20store"
+          href="mailto:hello@coherentx.com?subject=Audit%20my%20store"
           className="mt-8 inline-flex items-center gap-2 rounded-md bg-primary px-6 py-3.5 text-sm font-medium text-primary-foreground shadow-tile transition-all duration-200 hover:-translate-y-0.5 hover:shadow-tile-hover"
         >
           Request an audit

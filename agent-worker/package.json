@@ -1,5 +1,5 @@
 {
-  "name": "checkout-forensic-agent",
+  "name": "coherentx-agent",
   "private": true,
   "type": "module",
   "engines": {

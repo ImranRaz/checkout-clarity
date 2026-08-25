@@ -1,6 +1,6 @@
-# Checkout Clarity
+# CoherentX
 
-**Checkout Clarity** is an autonomous conversion-friction audit agent for e-commerce and booking funnels. Drop in any product URL — Shopify, WooCommerce, cruise lines, travel bookings — and the agent navigates the real site, captures screenshots, measures performance, and surfaces prioritized UX friction points with exact visual evidence.
+**CoherentX** is an autonomous conversion-friction audit agent for e-commerce and booking funnels. Drop in any product URL — Shopify, WooCommerce, cruise lines, travel bookings — and the agent navigates the real site, captures screenshots, measures performance, and surfaces prioritized UX friction points with exact visual evidence.
 
 Built to demonstrate **agentic orchestration** end-to-end: a production-grade frontend, a remote browser worker, deterministic scoring, multi-modal reasoning, and persistent audit history.
 

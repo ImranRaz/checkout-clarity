@@ -1,4 +1,4 @@
-# Checkout Forensic — Agent Worker
+# CoherentX — Agent Worker
 
 The Lovable app runs on an edge runtime, which cannot host a real browser or a long-lived session. This is the Node half: it drives a real Chrome in Browserbase from a starting URL through to a cart or booking summary, and returns a report in the exact shape the dashboard renders.
 

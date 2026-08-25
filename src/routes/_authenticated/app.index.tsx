@@ -31,13 +31,13 @@ export const Route = createFileRoute("/_authenticated/app/")({
   ),
   head: () => ({
     meta: [
-      { title: "Checkout Forensic — Why shoppers leave, page by page" },
+      { title: "CoherentX — Why shoppers leave, page by page" },
       {
         name: "description",
         content:
           "Point an agent at any store page. It finds its own way to cart and guest checkout, then reports the copy, cost, effort and speed problems costing you orders — pinned to the pixels.",
       },
-      { property: "og:title", content: "Checkout Forensic — Why shoppers leave, page by page" },
+      { property: "og:title", content: "CoherentX — Why shoppers leave, page by page" },
       {
         property: "og:description",
         content:
@@ -131,7 +131,7 @@ function Home() {
             className="label-caps flex items-center gap-2"
           >
             <ScanSearch className="size-3.5" aria-hidden />
-            Checkout Forensic
+            CoherentX
           </motion.p>
 
           <motion.h1
