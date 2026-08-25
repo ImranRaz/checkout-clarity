@@ -11,15 +11,15 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — Checkout Forensic" },
+      { title: "Sign in — CoherentX" },
       {
         name: "description",
-        content: "Sign in to the Checkout Forensic console to run and review store audits.",
+        content: "Sign in to the CoherentX console to run and review store audits.",
       },
-      { property: "og:title", content: "Sign in — Checkout Forensic" },
+      { property: "og:title", content: "Sign in — CoherentX" },
       {
         property: "og:description",
-        content: "Sign in to the Checkout Forensic console to run and review store audits.",
+        content: "Sign in to the CoherentX console to run and review store audits.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

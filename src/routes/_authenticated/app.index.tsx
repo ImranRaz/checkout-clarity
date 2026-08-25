@@ -31,7 +31,7 @@ export const Route = createFileRoute("/_authenticated/app/")({
   ),
   head: () => ({
     meta: [
-      { title: "Checkout Forensic — Why shoppers leave, page by page" },
+      { title: "CoherentX — Why shoppers leave, page by page" },
       {
         name: "description",
         content:

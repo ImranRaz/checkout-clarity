@@ -77,18 +77,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Checkout Forensic" },
+      { title: "CoherentX" },
       {
         name: "description",
         content:
-          "An agent that audits the conversion friction of any e-commerce checkout flow — technical and UX, in one run.",
+          "CoherentX is an autonomous agent that audits the conversion friction of any e-commerce checkout flow — technical and UX, in one run.",
       },
-      { name: "author", content: "Checkout Forensic" },
-      { property: "og:title", content: "Checkout Forensic" },
+      { name: "author", content: "CoherentX" },
+      { property: "og:title", content: "CoherentX" },
       {
         property: "og:description",
         content:
-          "An agent that audits the conversion friction of any e-commerce checkout flow — technical and UX, in one run.",
+          "CoherentX is an autonomous agent that audits the conversion friction of any e-commerce checkout flow — technical and UX, in one run.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
