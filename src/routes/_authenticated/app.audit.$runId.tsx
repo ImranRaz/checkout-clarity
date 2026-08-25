@@ -21,10 +21,10 @@ export const Route = createFileRoute("/_authenticated/app/audit/$runId")({
   head: ({ loaderData }) => {
     if (!loaderData?.report) {
       return {
-        meta: [{ title: "Live run — Checkout Forensic — Checkout Forensic" }, { name: "robots", content: "noindex" }],
+        meta: [{ title: "Live run — CoherentX — CoherentX" }, { name: "robots", content: "noindex" }],
       };
     }
-    const title = `Auditing ${loaderData.report.domain} — Checkout Forensic`;
+    const title = `Auditing ${loaderData.report.domain} — CoherentX`;
     const description = `Live forensic run against ${loaderData.report.domain}: cart traversal, browser metrics, and mapped conversion friction.`;
     return {
       meta: [

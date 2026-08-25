@@ -74,7 +74,7 @@ export function SharedReportView({
             </p>
           </div>
           <a
-            href="mailto:hello@checkoutforensic.com?subject=Checkout%20audit"
+            href="mailto:hello@coherentx.com?subject=Checkout%20audit"
             className="inline-flex shrink-0 items-center justify-center rounded-md bg-primary px-5 py-3 text-sm font-medium text-primary-foreground shadow-tile transition-all duration-200 hover:-translate-y-0.5 hover:shadow-tile-hover"
           >
             Talk to us

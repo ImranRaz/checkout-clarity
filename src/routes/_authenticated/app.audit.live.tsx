@@ -18,7 +18,7 @@ export const Route = createFileRoute("/_authenticated/app/audit/live")({
   }),
   head: () => ({
     meta: [
-      { title: "Live agent run — Checkout Forensic" },
+      { title: "Live agent run — CoherentX" },
       { name: "robots", content: "noindex" },
     ],
   }),

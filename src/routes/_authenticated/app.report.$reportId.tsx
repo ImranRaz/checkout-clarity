@@ -26,14 +26,14 @@ export const Route = createFileRoute("/_authenticated/app/report/$reportId")({
     if (!loaderData?.report) {
       return {
         meta: [
-          { title: "Report unavailable — Checkout Forensic" },
+          { title: "Report unavailable — CoherentX" },
           { name: "robots", content: "noindex" },
         ],
       };
     }
     const { report } = loaderData;
     const score = scoreReport(report);
-    const title = `${report.domain} scored ${score.total}/100 — Checkout Forensic`;
+    const title = `${report.domain} scored ${score.total}/100 — CoherentX`;
     const description = `${allFrictionPoints(report).length} conversion friction points and ${totalConsoleErrors(report)} console errors found across ${report.stages.length} stages of the ${report.domain} purchase journey.`;
     return {
       meta: [

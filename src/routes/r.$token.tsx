@@ -11,13 +11,13 @@ export const Route = createFileRoute("/r/$token")({
     if (!loaderData?.report) {
       return {
         meta: [
-          { title: "Report unavailable — Checkout Forensic" },
+          { title: "Report unavailable — CoherentX" },
           { name: "robots", content: "noindex" },
         ],
       };
     }
     const { report } = loaderData;
-    const title = `${report.domain} checkout audit — Checkout Forensic`;
+    const title = `${report.domain} checkout audit — CoherentX`;
     const description = `A walkthrough of the ${report.domain} purchase path: where shoppers hesitate, what it costs, and what to fix first.`;
     return {
       meta: [
