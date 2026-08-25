@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
  * single pinpoint dropped on the last one — the journey narrowing, and the
  * exact place it breaks. Flat, geometric, no gloss.
  */
+
 export function BrandGlyph({ className }: { className?: string | undefined }) {
   return (
     <svg
@@ -43,15 +44,22 @@ export function BrandGlyph({ className }: { className?: string | undefined }) {
 export function BrandLockup({
   className,
   glyphClassName,
+  subtitle = true,
 }: {
   className?: string | undefined;
   glyphClassName?: string | undefined;
+  subtitle?: boolean | undefined;
 }) {
   return (
     <span className={cn("inline-flex items-center gap-2.5", className)}>
       <BrandGlyph className={glyphClassName} />
-      <span className="font-display text-[15px] font-semibold leading-none tracking-tight">
-        Checkout<span className="text-primary">Forensic</span>
+      <span className="flex flex-col leading-none">
+        <span className="font-display text-[15px] font-semibold tracking-tight">
+          Coherent<span className="text-primary">X</span>
+        </span>
+        {subtitle ? (
+          <span className="mt-1 label-caps">Conversion forensics</span>
+        ) : null}
       </span>
     </span>
   );
