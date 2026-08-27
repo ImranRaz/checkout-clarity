@@ -595,14 +595,19 @@ function Marketing() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6, delay: 0.15 }}
           >
-            <HeroEvidence report={hero} stage={heroStage} pins={heroPins} />
+            <AgentScan report={hero} stage={heroStage} pins={heroPins} />
           </motion.div>
         </div>
 
       </section>
 
+      {/* The report itself: findings left, pinned capture right */}
+      <EvidenceShowcase report={hero} stage={heroStage} pins={heroPins} />
+
       {/* Value prop + interactive rubric */}
       <ValueProp />
+
+
 
 
       {/* Pillars */}
