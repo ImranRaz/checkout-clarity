@@ -85,7 +85,212 @@ function exampleFinding(pillar: string): FrictionPoint | null {
   return null;
 }
 
-function HeroEvidence({
+/**
+ * The hero visual: a browser window being driven by the agent. A scan sweep
+ * runs down a real captured page while the agent narrates what it is checking,
+ * then the findings it collected stack up. Loops.
+ */
+const SCAN_PHASES = [
+  { label: "opening the store in a real browser", tag: "navigate" },
+  { label: "reading headlines, buttons and promises", tag: "copy" },
+  { label: "measuring paint, shift and page weight", tag: "speed" },
+  { label: "walking category → product → cart", tag: "journey" },
+  { label: "checking contrast, labels and tap targets", tag: "a11y" },
+  { label: "reaching guest checkout", tag: "checkout" },
+];
+
+function AgentScan({
+  report,
+  stage,
+  pins,
+}: {
+  report: ForensicAuditReport;
+  stage: ForensicAuditReport["stages"][number];
+  pins: FrictionPoint[];
+}) {
+  const [phase, setPhase] = useState(0);
+  const done = phase >= SCAN_PHASES.length;
+  const foundCount = done ? pins.length : Math.min(pins.length, Math.max(0, phase - 1));
+
+  useEffect(() => {
+    const t = setTimeout(
+      () => setPhase((p) => (p > SCAN_PHASES.length ? 0 : p + 1)),
+      phase === 0 ? 900 : done ? 3400 : 1500,
+    );
+    return () => clearTimeout(t);
+  }, [phase, done]);
+
+  return (
+    <div className="tile relative overflow-hidden p-0">
+      <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
+        <span className="size-2 rounded-full bg-sev-high/70" />
+        <span className="size-2 rounded-full bg-sev-medium/70" />
+        <span className="size-2 rounded-full bg-primary/60" />
+        <span className="ml-2 truncate font-mono text-[11px] text-muted-foreground">
+          {report.domain}
+        </span>
+        <span className="ml-auto flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+          <motion.span
+            animate={{ opacity: done ? 1 : [1, 0.25, 1] }}
+            transition={{ duration: 1.2, repeat: done ? 0 : Infinity }}
+            className={cn("size-1.5 rounded-full", done ? "bg-primary" : "bg-sev-medium")}
+          />
+          {done ? "run complete" : "agent running"}
+        </span>
+      </div>
+
+      <div className="relative h-[380px] overflow-hidden bg-secondary sm:h-[440px]">
+        <motion.img
+          src={stage.screenshot.src}
+          alt={`The agent scanning the ${report.domain} storefront`}
+          className="block w-full opacity-90"
+          loading="eager"
+          decoding="async"
+          animate={{ y: done ? -160 : [0, -80, -160] }}
+          transition={{ duration: done ? 0.8 : SCAN_PHASES.length * 1.5, ease: "linear" }}
+        />
+
+        {!done ? (
+          <>
+            <motion.div
+              className="pointer-events-none absolute inset-x-0 h-28"
+              style={{
+                background:
+                  "linear-gradient(to bottom, transparent, color-mix(in oklab, var(--primary) 18%, transparent))",
+              }}
+              animate={{ top: ["-10%", "88%"] }}
+              transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+            />
+            <motion.div
+              className="pointer-events-none absolute inset-x-0 h-px bg-primary"
+              animate={{ top: ["4%", "96%"] }}
+              transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+            />
+          </>
+        ) : null}
+
+        {pins.slice(0, foundCount).map((point, i) => (
+          <motion.span
+            key={point.id}
+            initial={{ opacity: 0, scale: 0.4 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.35 }}
+            style={{
+              left: `${Math.min(90, Math.max(6, point.x_percentage))}%`,
+              top: `${18 + i * 13}%`,
+            }}
+            className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
+          >
+            <span
+              className={cn(
+                "absolute -inset-2 animate-ping rounded-full opacity-30",
+                point.severity === "high" ? "bg-sev-high" : "bg-sev-medium",
+              )}
+            />
+            <span
+              className={cn(
+                "relative block size-4 rounded-full border-2 border-background",
+                point.severity === "high" ? "bg-sev-high" : "bg-sev-medium",
+              )}
+            />
+          </motion.span>
+        ))}
+
+        <div className="absolute inset-x-3 bottom-3">
+          <AnimatePresence mode="wait">
+            {done ? (
+              <motion.div
+                key="result"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                className="rounded-lg border border-border bg-background/95 p-3.5 shadow-tile-hover backdrop-blur"
+              >
+                <p className="label-caps">{pins.length} friction points found</p>
+                <ul className="mt-2.5 space-y-1.5">
+                  {pins.map((p, i) => (
+                    <motion.li
+                      key={p.id}
+                      initial={{ opacity: 0, x: -6 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.12 * i }}
+                      className="flex items-center gap-2 text-xs"
+                    >
+                      <span
+                        className={cn(
+                          "size-1.5 shrink-0 rounded-full",
+                          p.severity === "high"
+                            ? "bg-sev-high"
+                            : p.severity === "medium"
+                              ? "bg-sev-medium"
+                              : "bg-sev-low",
+                        )}
+                      />
+                      <span className="truncate">{p.title}</span>
+                      <span className="ml-auto shrink-0 font-mono text-[9px] uppercase tracking-[0.1em] text-muted-foreground">
+                        {categoryLabel[p.category]}
+                      </span>
+                    </motion.li>
+                  ))}
+                </ul>
+              </motion.div>
+            ) : (
+              <motion.div
+                key={phase}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.25 }}
+                className="rounded-lg border border-border bg-background/95 p-3 shadow-tile-hover backdrop-blur"
+              >
+                <p className="flex items-center gap-2 font-mono text-[11px] text-foreground">
+                  <span className="rounded-full border border-border px-2 py-0.5 text-[9px] uppercase tracking-[0.1em] text-muted-foreground">
+                    {SCAN_PHASES[Math.min(phase, SCAN_PHASES.length - 1)]!.tag}
+                  </span>
+                  {SCAN_PHASES[Math.min(phase, SCAN_PHASES.length - 1)]!.label}
+                  <span className="ml-auto text-muted-foreground">{foundCount} found</span>
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="mt-2 flex gap-1.5">
+            {SCAN_PHASES.map((p, i) => (
+              <span
+                key={p.tag}
+                className={cn(
+                  "h-0.5 flex-1 rounded-full transition-colors",
+                  done || i <= phase ? "bg-primary/80" : "bg-foreground/20",
+                )}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border px-4 py-2.5">
+        <span className="label-caps">checked</span>
+        {(["clarity", "trust", "form", "accessibility"] as const).map((key) => (
+          <span key={key} className="font-mono text-[10px] text-muted-foreground">
+            {categoryLabel[key]}
+          </span>
+        ))}
+        <span className="font-mono text-[10px] text-foreground">
+          Speed
+          <span className="ml-1 text-primary">
+            {(stage.technical_metrics.largest_contentful_paint_ms / 1000).toFixed(1)}s
+          </span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The pinned-evidence showcase: findings listed on the left, the capture with
+ * pins panning on the right.
+ */
+function EvidenceShowcase({
   report,
   stage,
   pins,
@@ -102,7 +307,7 @@ function HeroEvidence({
 
   useEffect(() => {
     if (paused || pins.length < 2) return;
-    const t = setInterval(() => setActive((i) => (i + 1) % pins.length), 3800);
+    const t = setInterval(() => setActive((i) => (i + 1) % pins.length), 4200);
     return () => clearInterval(t);
   }, [paused, pins.length]);
 
@@ -125,168 +330,169 @@ function HeroEvidence({
         )
       : 0;
 
-
-
   return (
-    <div
-      className="tile relative overflow-hidden p-0"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-    >
-      <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
-        <span className="size-2 rounded-full bg-sev-high/70" />
-        <span className="size-2 rounded-full bg-sev-medium/70" />
-        <span className="size-2 rounded-full bg-primary/60" />
-        <span className="ml-2 truncate font-mono text-[11px] text-muted-foreground">
-          {report.domain}
-        </span>
-        <span className="ml-auto font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-          live capture
-        </span>
-      </div>
+    <section className="border-b border-border bg-card" aria-label="What the report looks like">
+      <div className="mx-auto w-full max-w-6xl px-6 py-16">
+        <p className="label-caps">What you actually see</p>
+        <h2 className="mt-4 max-w-xl font-display text-2xl tracking-tight sm:text-[1.75rem]">
+          Every finding pinned to the pixel that caused it.
+        </h2>
 
-      <div className="relative h-[380px] overflow-hidden sm:h-[440px]">
-        <motion.div
-          className="absolute inset-x-0 top-0"
-          animate={{ y: offset }}
-          transition={{ type: "spring", stiffness: 60, damping: 18 }}
-        >
-          <img
-            ref={imgRef}
-            src={stage.screenshot.src}
-            alt={`Audited capture of the ${report.domain} storefront with numbered findings`}
-            className="block w-full"
-            loading="eager"
-            decoding="async"
-            onLoad={(e) => setImgH(e.currentTarget.clientHeight)}
-          />
-
-          {pins.map((point, i) => {
-            const isActive = i === active;
-            return (
-              <button
-                key={point.id}
-                type="button"
-                onClick={() => setActive(i)}
-                aria-label={point.title}
-                style={{
-                  left: `${Math.min(94, Math.max(4, point.x_percentage))}%`,
-                  top: `${point.y_percentage}%`,
-                }}
-                className="absolute -translate-x-1/2 -translate-y-1/2"
-              >
-                {isActive ? (
-                  <motion.span
-                    layoutId="hero-pin-halo"
-                    className={cn(
-                      "absolute -inset-2 rounded-full opacity-35",
-                      point.severity === "high"
-                        ? "bg-sev-high"
-                        : point.severity === "medium"
-                          ? "bg-sev-medium"
-                          : "bg-sev-low",
-                    )}
-                  />
-                ) : null}
-                <motion.span
-                  initial={{ opacity: 0, scale: 0.6 }}
-                  animate={{ opacity: isActive ? 1 : 0.5, scale: isActive ? 1.1 : 1 }}
-                  transition={{ duration: 0.3, delay: 0.4 + i * 0.15 }}
+        <div className="mt-10 grid gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:gap-12">
+          <ul className="flex min-w-0 flex-col gap-2.5">
+            {pins.map((point, i) => (
+              <li key={point.id}>
+                <button
+                  type="button"
+                  onClick={() => setActive(i)}
                   className={cn(
-                    "relative flex size-5 items-center justify-center rounded-full font-mono text-[10px] font-semibold text-background shadow-tile",
-                    point.severity === "high"
-                      ? "bg-sev-high"
-                      : point.severity === "medium"
-                        ? "bg-sev-medium"
-                        : "bg-sev-low",
+                    "w-full rounded-lg border p-4 text-left transition-colors",
+                    i === active
+                      ? "border-foreground/25 bg-background shadow-tile"
+                      : "border-border hover:bg-background/60",
                   )}
                 >
-                  {i + 1}
-                </motion.span>
-              </button>
-            );
-          })}
-        </motion.div>
+                  <span className="flex items-center gap-2">
+                    <span
+                      className={cn(
+                        "flex size-4 shrink-0 items-center justify-center rounded-full font-mono text-[9px] font-semibold text-background",
+                        point.severity === "high"
+                          ? "bg-sev-high"
+                          : point.severity === "medium"
+                            ? "bg-sev-medium"
+                            : "bg-sev-low",
+                      )}
+                    >
+                      {i + 1}
+                    </span>
+                    <span className="label-caps">{point.severity} friction</span>
+                    <span className="ml-auto shrink-0 rounded-full border border-border px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.1em] text-muted-foreground">
+                      {categoryLabel[point.category]}
+                    </span>
+                  </span>
+                  <span className="mt-2 block text-sm font-medium leading-snug">{point.title}</span>
+                  {i === active ? (
+                    <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">
+                      {point.evidence}
+                    </span>
+                  ) : null}
+                </button>
+              </li>
+            ))}
+          </ul>
 
-        {/* Cycling finding card */}
-        <div className="pointer-events-none absolute inset-x-3 bottom-3">
-          <AnimatePresence mode="wait">
-            {current ? (
+          <div
+            className="tile relative min-w-0 overflow-hidden p-0"
+            onMouseEnter={() => setPaused(true)}
+            onMouseLeave={() => setPaused(false)}
+          >
+            <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
+              <span className="size-2 rounded-full bg-sev-high/70" />
+              <span className="size-2 rounded-full bg-sev-medium/70" />
+              <span className="size-2 rounded-full bg-primary/60" />
+              <span className="ml-2 truncate font-mono text-[11px] text-muted-foreground">
+                {report.domain}
+              </span>
+              <span className="ml-auto font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                pinned evidence
+              </span>
+            </div>
+
+            <div className="relative h-[380px] overflow-hidden sm:h-[440px]">
               <motion.div
-                key={current.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.28 }}
-                className="rounded-lg border border-border bg-background/95 p-3.5 shadow-tile-hover backdrop-blur"
+                className="absolute inset-x-0 top-0"
+                animate={{ y: offset }}
+                transition={{ type: "spring", stiffness: 60, damping: 18 }}
               >
-                <div className="flex items-center gap-2">
+                <img
+                  ref={imgRef}
+                  src={stage.screenshot.src}
+                  alt={`Audited capture of the ${report.domain} storefront with numbered findings`}
+                  className="block w-full"
+                  loading="lazy"
+                  decoding="async"
+                  onLoad={(e) => setImgH(e.currentTarget.clientHeight)}
+                />
+
+                {pins.map((point, i) => {
+                  const isActive = i === active;
+                  return (
+                    <button
+                      key={point.id}
+                      type="button"
+                      onClick={() => setActive(i)}
+                      aria-label={point.title}
+                      style={{
+                        left: `${Math.min(94, Math.max(4, point.x_percentage))}%`,
+                        top: `${point.y_percentage}%`,
+                      }}
+                      className="absolute -translate-x-1/2 -translate-y-1/2"
+                    >
+                      {isActive ? (
+                        <motion.span
+                          layoutId="showcase-pin-halo"
+                          className={cn(
+                            "absolute -inset-2 rounded-full opacity-35",
+                            point.severity === "high"
+                              ? "bg-sev-high"
+                              : point.severity === "medium"
+                                ? "bg-sev-medium"
+                                : "bg-sev-low",
+                          )}
+                        />
+                      ) : null}
+                      <motion.span
+                        animate={{ opacity: isActive ? 1 : 0.5, scale: isActive ? 1.1 : 1 }}
+                        transition={{ duration: 0.3 }}
+                        className={cn(
+                          "relative flex size-5 items-center justify-center rounded-full font-mono text-[10px] font-semibold text-background shadow-tile",
+                          point.severity === "high"
+                            ? "bg-sev-high"
+                            : point.severity === "medium"
+                              ? "bg-sev-medium"
+                              : "bg-sev-low",
+                        )}
+                      >
+                        {i + 1}
+                      </motion.span>
+                    </button>
+                  );
+                })}
+              </motion.div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border px-4 py-2.5">
+              <span className="label-caps">checked</span>
+              {(["clarity", "trust", "form", "accessibility"] as const).map((key) => {
+                const hits = pins.filter((p) => p.category === key).length;
+                return (
                   <span
+                    key={key}
                     className={cn(
-                      "flex size-4 items-center justify-center rounded-full font-mono text-[9px] font-semibold text-background",
-                      current.severity === "high"
-                        ? "bg-sev-high"
-                        : current.severity === "medium"
-                          ? "bg-sev-medium"
-                          : "bg-sev-low",
+                      "font-mono text-[10px]",
+                      hits ? "text-foreground" : "text-muted-foreground/60",
                     )}
                   >
-                    {active + 1}
+                    {categoryLabel[key]}
+                    <span
+                      className={cn("ml-1", hits ? "text-primary" : "text-muted-foreground/50")}
+                    >
+                      {hits}
+                    </span>
                   </span>
-                  <span className="label-caps">{current.severity} friction</span>
-                  <span className="ml-auto rounded-full border border-border px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.1em] text-muted-foreground">
-                    {categoryLabel[current.category]}
-                  </span>
-                </div>
-                <p className="mt-2 text-sm font-medium leading-snug">{current.title}</p>
-                <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                  {current.evidence}
-                </p>
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
-
-          <div className="mt-2 flex gap-1.5">
-            {pins.map((p, i) => (
-              <span
-                key={p.id}
-                className={cn(
-                  "h-0.5 flex-1 rounded-full transition-colors",
-                  i === active ? "bg-foreground/70" : "bg-foreground/20",
-                )}
-              />
-            ))}
+                );
+              })}
+              <span className="font-mono text-[10px] text-foreground">
+                Speed
+                <span className="ml-1 text-primary">
+                  {(stage.technical_metrics.largest_contentful_paint_ms / 1000).toFixed(1)}s
+                </span>
+              </span>
+            </div>
           </div>
         </div>
       </div>
-
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border px-4 py-2.5">
-        <span className="label-caps">checked</span>
-        {(["clarity", "trust", "form", "accessibility"] as const).map((key) => {
-          const hits = pins.filter((p) => p.category === key).length;
-          return (
-            <span
-              key={key}
-              className={cn(
-                "font-mono text-[10px]",
-                hits ? "text-foreground" : "text-muted-foreground/60",
-              )}
-            >
-              {categoryLabel[key]}
-              <span className={cn("ml-1", hits ? "text-primary" : "text-muted-foreground/50")}>
-                {hits}
-              </span>
-            </span>
-          );
-        })}
-        <span className="font-mono text-[10px] text-foreground">
-          Speed
-          <span className="ml-1 text-primary">
-            {(stage.technical_metrics.largest_contentful_paint_ms / 1000).toFixed(1)}s
-          </span>
-        </span>
-      </div>
-    </div>
+    </section>
   );
 }
 
@@ -334,7 +540,7 @@ function Marketing() {
               transition={{ duration: 0.4 }}
               className="label-caps"
             >
-              Conversion forensics for online stores
+              Full-funnel conversion forensics for online stores
             </motion.p>
 
             <motion.h1
@@ -343,7 +549,7 @@ function Marketing() {
               transition={{ duration: 0.5, delay: 0.05 }}
               className="mt-4 max-w-lg font-display text-[2.1rem] leading-[1.04] tracking-tight sm:text-[2.75rem]"
             >
-              Your checkout is leaking revenue. We show you where.
+              Your funnel is leaking revenue. We show you where.
             </motion.h1>
 
             <motion.p
@@ -352,8 +558,9 @@ function Marketing() {
               transition={{ duration: 0.5, delay: 0.12 }}
               className="mt-4 max-w-md text-[15px] leading-relaxed text-muted-foreground"
             >
-              An agent shops your store like a customer — category to guest checkout — and hands
-              back every hesitation it hit, pinned to the exact pixels that caused it.
+              An agent shops your store like a customer — homepage, category, product, cart, all the
+              way to guest checkout — and hands back every hesitation it hit, top of funnel to
+              checkout, pinned to the exact pixels that caused it.
             </motion.p>
 
             <motion.div
@@ -388,14 +595,19 @@ function Marketing() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6, delay: 0.15 }}
           >
-            <HeroEvidence report={hero} stage={heroStage} pins={heroPins} />
+            <AgentScan report={hero} stage={heroStage} pins={heroPins} />
           </motion.div>
         </div>
 
       </section>
 
+      {/* The report itself: findings left, pinned capture right */}
+      <EvidenceShowcase report={hero} stage={heroStage} pins={heroPins} />
+
       {/* Value prop + interactive rubric */}
       <ValueProp />
+
+
 
 
       {/* Pillars */}
