@@ -540,7 +540,7 @@ function Marketing() {
               transition={{ duration: 0.4 }}
               className="label-caps"
             >
-              Conversion forensics for online stores
+              Full-funnel conversion forensics for online stores
             </motion.p>
 
             <motion.h1
@@ -549,7 +549,7 @@ function Marketing() {
               transition={{ duration: 0.5, delay: 0.05 }}
               className="mt-4 max-w-lg font-display text-[2.1rem] leading-[1.04] tracking-tight sm:text-[2.75rem]"
             >
-              Your checkout is leaking revenue. We show you where.
+              Your funnel is leaking revenue. We show you where.
             </motion.h1>
 
             <motion.p
@@ -558,8 +558,9 @@ function Marketing() {
               transition={{ duration: 0.5, delay: 0.12 }}
               className="mt-4 max-w-md text-[15px] leading-relaxed text-muted-foreground"
             >
-              An agent shops your store like a customer — category to guest checkout — and hands
-              back every hesitation it hit, pinned to the exact pixels that caused it.
+              An agent shops your store like a customer — homepage, category, product, cart, all the
+              way to guest checkout — and hands back every hesitation it hit, top of funnel to
+              checkout, pinned to the exact pixels that caused it.
             </motion.p>
 
             <motion.div
