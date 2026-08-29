@@ -65,6 +65,11 @@ export const frictionPointSchema = z.object({
   evidence_caption: z.string().nullish().optional(),
 
   selector: z.string(),
+  /**
+   * Set by the synthesis pass when the reputation agent found customers saying
+   * the same thing. Holds the matching theme id.
+   */
+  corroborated_by: z.string().nullish().optional(),
 });
 export type FrictionPoint = z.infer<typeof frictionPointSchema>;
 
