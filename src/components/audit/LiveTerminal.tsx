@@ -148,7 +148,7 @@ export function LiveTerminal({
               <span className={cn("w-[4.5rem] shrink-0 select-none", actorColor.system)}>
                 [system]
               </span>
-              <span className="text-foreground/85">Waking a real browser in the cloud…</span>
+              <span className="text-foreground/85">{idleMessage}</span>
             </li>
           ) : null}
 
