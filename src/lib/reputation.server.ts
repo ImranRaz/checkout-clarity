@@ -180,6 +180,77 @@ async function scrapePage(hit: SourceHit): Promise<SourceHit> {
   }
 }
 
+const PROFILE_SYSTEM = `You identify a business from its own website so a reputation agent knows where to look for reviews.
+
+Return STRICT JSON only:
+{
+  "name": "the exact trading name customers would search for",
+  "category": "hotel | restaurant | cruise line | clinic | law firm | home services | DTC ecommerce | SaaS | marketplace | other",
+  "location": "city, state/country if it is a physical place, else null",
+  "queries": ["5 web search queries"]
+}
+
+Rules for "queries" — this is the important part:
+- Always include the location (when there is one) so a same-named business elsewhere is not picked up.
+- Query 1 MUST target Google reviews/Maps for the business, e.g. "Sea View Hotel Bal Harbour Florida google reviews".
+- The rest must target the review platforms that matter FOR THIS CATEGORY, not a generic list:
+  hotel/resort -> tripadvisor, booking.com, expedia, hotels.com, yelp
+  restaurant -> yelp, opentable, tripadvisor
+  cruise -> cruisecritic, tripadvisor
+  clinic/doctor -> healthgrades, zocdoc
+  home services -> angi, houzz, yelp, bbb
+  SaaS/B2B -> g2, capterra, trustpilot, reddit
+  DTC ecommerce -> trustpilot, sitejabber, reddit, bbb
+- Include one query aimed at complaints/negative experiences.
+- Plain search strings. At most one site: operator per query.`;
+
+/** Reads the site itself so the searches know what kind of business this is. */
+async function profileBrand(
+  url: string,
+  brand: string,
+  domain: string,
+): Promise<{ name: string; category: string | null; location: string | null; queries: string[] }> {
+  const fallback = {
+    name: brand,
+    category: null,
+    location: null,
+    queries: [
+      `"${brand}" ${domain} reviews google`,
+      `"${brand}" reviews trustpilot OR tripadvisor OR yelp`,
+      `${brand} customer complaints bad experience reviews`,
+    ],
+  };
+
+  try {
+    const home = await scrapePage({ url, title: brand, site: domain, text: "" });
+    if (home.text.length < 120) return fallback;
+
+    const raw = await askModel(
+      PROFILE_SYSTEM,
+      `Website: ${url}\nDomain: ${domain}\n\nHomepage content:\n\n${home.text.slice(0, 6000)}`,
+    );
+    const parsed = parseJson(raw) as {
+      name?: string;
+      category?: string;
+      location?: string | null;
+      queries?: unknown;
+    };
+    const queries = Array.isArray(parsed.queries)
+      ? parsed.queries.filter((q): q is string => typeof q === "string" && q.length > 3).slice(0, 5)
+      : [];
+    if (queries.length === 0) return fallback;
+
+    return {
+      name: parsed.name?.trim() || brand,
+      category: parsed.category?.trim() || null,
+      location: parsed.location?.trim() || null,
+      queries,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
 /** Finds the pages where this brand is actually being talked about. */
 export async function findReviewSources(url: string): Promise<{
   brand: string;
@@ -188,12 +259,12 @@ export async function findReviewSources(url: string): Promise<{
 }> {
   const { brand, domain } = brandFromUrl(url);
 
-  const queries = [
-    `"${brand}" reviews ${REVIEW_SITES.slice(0, 4)
-      .map((s) => `site:${s}`)
-      .join(" OR ")}`,
-    `${brand} ${domain} customer complaints refund shipping experience reviews`,
-  ];
+  // Who is this, really? A hotel and a sock brand are reviewed in entirely
+  // different places, and "Seaview Hotel" exists in six countries.
+  const profile = await profileBrand(url, brand, domain);
+  const queries = profile.queries;
+  const label = [profile.name, profile.location].filter(Boolean).join(" — ");
+
 
   const settled = await Promise.allSettled(queries.map((q) => firecrawlSearch(q, 6)));
   const seen = new Set<string>();
