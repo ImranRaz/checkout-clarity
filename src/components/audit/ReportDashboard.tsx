@@ -84,7 +84,7 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
   const [stageIndex, setStageIndex] = useState(0);
   const [activeId, setActiveId] = useState<number | null>(null);
 
-  const stage = report.stages[stageIndex]!;
+  const stage = report.stages[stageIndex] as AuditStage | undefined;
   const score = scoreReport(report);
   const partial = report.status === "partial";
   const coverage = reportCoverage(report);
@@ -133,7 +133,22 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
     return () => window.removeEventListener("keydown", onKey);
   }, [step]);
 
-  const activePoint = stage.friction_points.find((p) => p.id === activeId) ?? null;
+  const activePoint = stage?.friction_points.find((p) => p.id === activeId) ?? null;
+
+  // A run that captured nothing still owes the customer an explanation.
+  if (!stage) {
+    return (
+      <div className="tile flex flex-col gap-2 border-sev-medium/40 bg-sev-medium-soft p-4 sm:flex-row sm:gap-3">
+        <ShieldAlert className="size-4 shrink-0 text-sev-medium sm:mt-0.5" aria-hidden />
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-foreground">
+            No pages were captured on {report.domain}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{report.blocked_reason}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <motion.div
