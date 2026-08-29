@@ -97,6 +97,9 @@ already takes 1–3 minutes.
   read-only links and the PDF export pick it up with no extra plumbing.
 - **UI:** a tab strip on `ReportDashboard`, a new `ReputationPanel` component, and small
   corroboration chips added to the existing findings rail.
+- **Live view:** `LiveTerminal` is generalised into lanes. The reputation track emits
+  the same step shape the browser worker already streams (`actor`, `text`, `tone`), so
+  the run page polls both jobs on one loop and renders each lane's log independently.
 - **Failure mode:** if no credible review presence is found, the tab says so plainly
   rather than inventing themes — and the funnel report is unaffected.
 
