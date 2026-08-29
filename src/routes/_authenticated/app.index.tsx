@@ -61,6 +61,9 @@ function Home() {
   const [checking, setChecking] = useState(false);
   const [preflight, setPreflight] = useState<PreflightResult | null>(null);
   const [removing, setRemoving] = useState<string[]>([]);
+  // Two independent agents. Both on by default; at least one must stay on.
+  const [funnel, setFunnel] = useState(true);
+  const [rep, setRep] = useState(true);
   const busy = checking;
 
   const valid = isPlausibleUrl(url);
