@@ -404,6 +404,8 @@ Rules:
 - 3 to 7 complaint themes and 1 to 3 praise themes, ordered by weight.
 - "category" maps the theme to the on-site lens it would show up as: pricing/returns/refund distrust -> trust; confusing product info or promises -> clarity; checkout or form pain -> form; slow site -> performance; otherwise null.
 - review_count is your honest estimate of how many distinct reviews the text represents.
+- The brand label may include a location (e.g. "Sea View Hotel — Bal Harbour, Florida"). Ignore any page about a same-named business in a different city or country, and never mix them into the themes.
+- Use whatever the sources are: Google/Maps, Tripadvisor, Booking, Yelp, Trustpilot, Reddit, forums — all count as customer reviews.
 - If the text is not really about this brand, return an empty themes array and say so in summary.`;
 
 /** Turns scraped review text into ranked complaint and praise themes. */
