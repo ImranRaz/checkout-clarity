@@ -318,6 +318,14 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
                                     {impactLabel[point.impact]}
                                   </span>
                                 )}
+                                {point.corroborated_by && (
+                                  <span
+                                    title="Customers are complaining about this in public reviews"
+                                    className="rounded-full border border-primary/50 bg-primary/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-primary"
+                                  >
+                                    Confirmed by reviews
+                                  </span>
+                                )}
                               </span>
                               {isActive && (
                                 <>
