@@ -8,6 +8,7 @@ import { Gauge } from "./Gauge";
 import type { BenchmarkKey } from "@/lib/benchmarks";
 import type { GlossaryKey } from "@/lib/glossary";
 import { Interstitials, ScrollPass } from "./ScrollEvidence";
+import { ReputationPanel } from "./ReputationPanel";
 import { SeverityChip } from "./SeverityChip";
 
 import {
