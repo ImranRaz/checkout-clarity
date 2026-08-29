@@ -175,6 +175,40 @@ function LiveRun() {
     })();
   }, [rawReport, repEnabled, reputation, router, url]);
 
+  /**
+   * Reputation-only runs have no funnel report to attach to, so they publish a
+   * report of their own — saved, permalinked, shareable and exportable exactly
+   * like a full run, just with a single track.
+   */
+  const repOnlyFinalizedRef = useRef(false);
+  useEffect(() => {
+    if (funnelEnabled || !repEnabled) return;
+    if (repOnlyFinalizedRef.current) return;
+    if (reputation.status !== "done" || !reputation.report) return;
+    repOnlyFinalizedRef.current = true;
+
+    const built = reputationOnlyReport(
+      normalizeUrl(url),
+      reputation.report,
+      reputation.elapsed,
+    );
+    saveLiveReport(built);
+    void fns.current
+      .persistRun({ data: { url: normalizeUrl(url), report: built } })
+      .then((res) => {
+        if (!res?.ok) {
+          setSaveError(res?.error ?? "Could not save this run.");
+          return;
+        }
+        void router.invalidate();
+      })
+      .catch((err: unknown) => {
+        setSaveError(err instanceof Error ? err.message : "Could not save this run.");
+      });
+    setReport(built);
+  }, [funnelEnabled, repEnabled, reputation.status, reputation.report, reputation.elapsed, router, url]);
+
+
   // Keep the clock moving between two-second polls.
   useEffect(() => {
     if (status !== "running") return;
