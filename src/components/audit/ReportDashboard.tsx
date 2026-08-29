@@ -146,9 +146,17 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
           <ShieldAlert className="size-4 shrink-0 text-sev-medium sm:mt-0.5" aria-hidden />
           <div className="min-w-0">
             <p className="text-sm font-medium text-foreground">
-              Partial audit — the agent was stopped at {reachedStep(report)}
+              {scorable
+                ? `Provisional score — the journey stopped at ${reachedStep(report)}`
+                : `Partial audit — the agent was stopped at ${reachedStep(report)}`}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">{report.blocked_reason}</p>
+            {scorable && coverage.missing.length > 0 ? (
+              <p className="mt-1 font-mono text-[11px] text-muted-foreground">
+                scored on {coverage.covered.join(" · ").toLowerCase()} · not measured:{" "}
+                {coverage.missing.join(", ").toLowerCase()}
+              </p>
+            ) : null}
           </div>
         </motion.div>
       )}
@@ -162,9 +170,9 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
       >
         <div className="flex min-w-0 items-baseline gap-3">
           <span className="font-display text-4xl leading-none tracking-tight tabular-nums">
-            {partial ? "n/a" : score.total}
+            {scorable ? score.total : "n/a"}
           </span>
-          {!partial && (
+          {scorable && (
             <span className="flex items-center gap-1 font-mono text-xs text-muted-foreground">
               /100
               <Explain term="score" />
@@ -174,10 +182,10 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
             <span
               className={cn(
                 "block text-sm font-medium",
-                partial ? "text-sev-medium" : grade[score.grade],
+                !scorable || provisional ? "text-sev-medium" : grade[score.grade],
               )}
             >
-              {partial ? "Not scored" : score.grade}
+              {!scorable ? "Not scored" : provisional ? `${score.grade} · provisional` : score.grade}
             </span>
             <span className="block truncate font-mono text-[11px] text-muted-foreground">
               {report.domain} · {report.stages.length} stages ·{" "}
@@ -187,14 +195,6 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {report.reputation ? (
-            <a
-              href="#reputation"
-              className="no-print inline-flex items-center gap-1.5 rounded-md border border-primary/40 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-primary transition-colors hover:bg-primary/10"
-            >
-              Reputation {report.reputation.score}/100
-            </a>
-          ) : null}
           <button
             type="button"
             onClick={() => window.print()}
@@ -205,6 +205,33 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
           </button>
         </div>
       </motion.section>
+
+      {/* Two equal tracks: what the agent saw, and what customers say. */}
+      {report.reputation ? (
+        <motion.div
+          variants={tileMotion}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="no-print grid gap-3 sm:grid-cols-2"
+          role="tablist"
+          aria-label="Report sections"
+        >
+          <TrackTab
+            active={view === "funnel"}
+            onClick={() => setView("funnel")}
+            title="Funnel experience"
+            caption={`${report.stages.reduce((n, s) => n + s.friction_points.length, 0)} findings across ${report.stages.length} stages`}
+            value={scorable ? `${score.total}/100` : "n/a"}
+          />
+          <TrackTab
+            active={view === "reputation"}
+            onClick={() => setView("reputation")}
+            title="What customers say"
+            caption={`${report.reputation.sources.length} public source${report.reputation.sources.length === 1 ? "" : "s"} read`}
+            value={`${report.reputation.score}/100`}
+          />
+        </motion.div>
+      ) : null}
+
 
       <div className={cn("space-y-4", view === "funnel" ? "" : "hidden print:block")}>
       {/* Journey strip */}
