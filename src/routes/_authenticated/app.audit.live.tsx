@@ -6,12 +6,12 @@ import { useEffect, useRef, useState } from "react";
 
 import { LiveTerminal } from "@/components/audit/LiveTerminal";
 import { ReportDashboard } from "@/components/audit/ReportDashboard";
-import { ReputationPanel } from "@/components/audit/ReputationPanel";
 import { useReputationRun } from "@/components/audit/useReputationRun";
 import { pollLiveAudit, startLiveAudit, type LiveStep } from "@/lib/audit.functions";
 import { normalizeUrl } from "@/lib/audit-runner";
 import type { ForensicAuditReport } from "@/lib/audit-schema";
 import { saveLiveReport } from "@/lib/live-store";
+import { reputationOnlyReport } from "@/lib/reputation-merge";
 import { saveAuditRun } from "@/lib/reports.functions";
 
 export const Route = createFileRoute("/_authenticated/app/audit/live")({
@@ -227,9 +227,6 @@ function LiveRun() {
 
   const domain = hostOf(url);
   const bothTracks = funnelEnabled && repEnabled;
-  // Reputation-only runs have no funnel report to attach to, so they render
-  // their own panel once the second agent finishes.
-  const repOnlyDone = !funnelEnabled && repEnabled && reputation.status === "done";
 
   return (
     <main className="min-h-screen">
@@ -326,13 +323,7 @@ function LiveRun() {
                   />
                 ) : null}
 
-                {repOnlyDone && reputation.report ? (
-                  <div className="pt-4">
-                    <ReputationPanel reputation={reputation.report} />
-                  </div>
-                ) : null}
-
-                {status === "error" && !repOnlyDone ? (
+                {status === "error" || (!funnelEnabled && reputation.status === "error") ? (
                   <Link
                     to="/app"
                     className="mt-4 inline-flex items-center gap-2 rounded-md border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
