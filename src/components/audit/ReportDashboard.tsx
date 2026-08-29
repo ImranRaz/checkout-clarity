@@ -135,6 +135,45 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
 
   const activePoint = stage?.friction_points.find((p) => p.id === activeId) ?? null;
 
+  // A reputation-only run has no pages to show, but it is still a full report:
+  // its own verdict bar, PDF export and (on the permalink) share link.
+  if (!stage && report.reputation) {
+    const rep = report.reputation;
+    return (
+      <div className="space-y-4">
+        <section
+          className="tile flex flex-wrap items-center justify-between gap-4 p-4"
+          aria-label="Verdict"
+        >
+          <div className="flex min-w-0 items-baseline gap-3">
+            <span className="font-display text-4xl leading-none tracking-tight tabular-nums">
+              {rep.score}
+            </span>
+            <span className="font-mono text-xs text-muted-foreground">/100</span>
+            <span className="min-w-0">
+              <span className="block text-sm font-medium text-foreground">
+                Reputation audit · what customers say
+              </span>
+              <span className="block truncate font-mono text-[11px] text-muted-foreground">
+                {report.domain} · {rep.sources.length} public source
+                {rep.sources.length === 1 ? "" : "s"} · {rep.review_count} reviews read
+              </span>
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="no-print inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          >
+            <ArrowUpRight className="size-3.5" aria-hidden />
+            Export PDF
+          </button>
+        </section>
+        <ReputationPanel reputation={rep} />
+      </div>
+    );
+  }
+
   // A run that captured nothing still owes the customer an explanation.
   if (!stage) {
     return (
@@ -149,6 +188,7 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
       </div>
     );
   }
+
 
   return (
     <motion.div
