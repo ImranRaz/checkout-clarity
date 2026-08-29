@@ -217,6 +217,27 @@ function Home() {
                 : "We check the page loads and what it sells before sending the agent in."}
             </p>
 
+            <fieldset className="mt-6">
+              <legend className="label-caps">Agents to run</legend>
+              <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                <TrackToggle
+                  title="Funnel agent"
+                  description="Drives a real browser from category to guest checkout, pinning friction to pixels."
+                  checked={funnel}
+                  onChange={(next) => setFunnel(next || !rep ? true : next)}
+                  disabled={funnel && !rep}
+                />
+                <TrackToggle
+                  title="Reputation agent"
+                  description="Reads public reviews for this brand and matches complaints to what we see on site."
+                  checked={rep}
+                  onChange={(next) => setRep(next || !funnel ? true : next)}
+                  disabled={rep && !funnel}
+                />
+              </div>
+            </fieldset>
+
+
             {preflight ? (
               <TargetSummary
                 result={preflight}
