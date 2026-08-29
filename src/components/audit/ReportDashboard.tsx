@@ -607,13 +607,17 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
           </a>
         </motion.section>
       </div>
+      </div>
 
       {report.reputation ? (
         <motion.section
           id="reputation"
           variants={tileMotion}
           transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          className="scroll-mt-6 space-y-4 border-t border-border pt-8"
+          className={cn(
+            "scroll-mt-6 space-y-4",
+            view === "reputation" ? "" : "hidden print:block print:border-t print:pt-8",
+          )}
           aria-label="Reputation"
         >
           <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -629,12 +633,16 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
                 s.friction_points.some((p) => p.id === findingId),
               );
               if (stageIdx === -1) return;
+              setView("funnel");
               select(stageIdx, findingId);
-              document.getElementById("evidence-top")?.scrollIntoView({ behavior: "smooth" });
+              requestAnimationFrame(() =>
+                document.getElementById("evidence-top")?.scrollIntoView({ behavior: "smooth" }),
+              );
             }}
           />
         </motion.section>
       ) : null}
+
     </motion.div>
   );
 }
