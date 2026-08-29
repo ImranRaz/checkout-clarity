@@ -38,7 +38,7 @@ export function ReputationPanel({
   onSelectFinding,
 }: {
   reputation: ReputationReport;
-  onSelectFinding?: (findingId: number) => void;
+  onSelectFinding?: ((findingId: number) => void) | undefined;
 }) {
   const complaints = reputation.themes.filter((t) => t.kind === "complaint");
   const praise = reputation.themes.filter((t) => t.kind === "praise");
@@ -124,7 +124,7 @@ function ThemeCard({
 }: {
   theme: ReputationTheme;
   index: number;
-  onSelectFinding?: (findingId: number) => void;
+  onSelectFinding?: ((findingId: number) => void) | undefined;
 }) {
   return (
     <motion.article

@@ -65,11 +65,11 @@ export function LiveTerminal({
   status: "starting" | "running" | "done" | "error";
   error: string | null;
   /** Shown in the window chrome — lets two agents share this component. */
-  label?: string;
+  label?: string | undefined;
   /** Optional human title above the window, used in the two-lane view. */
-  title?: string;
-  idleMessage?: string;
-  compact?: boolean;
+  title?: string | undefined;
+  idleMessage?: string | undefined;
+  compact?: boolean | undefined;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const active = status === "starting" || status === "running";
