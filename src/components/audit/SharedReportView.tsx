@@ -51,8 +51,10 @@ export function SharedReportView({
             {report.domain}
           </h1>
           <p className="mt-2 font-mono text-xs text-muted-foreground">
-            captured {captured.toISOString().replace("T", " ").slice(0, 16)} UTC · reached{" "}
-            {reachedStep(report)} · {allFrictionPoints(report).length} findings
+            captured {captured.toISOString().replace("T", " ").slice(0, 16)} UTC ·{" "}
+            {report.stages.length === 0 && report.reputation
+              ? `${report.reputation.sources.length} public review sources · ${report.reputation.themes.length} themes`
+              : `reached ${reachedStep(report)} · ${allFrictionPoints(report).length} findings`}
           </p>
           {note ? <p className="mt-4 max-w-2xl text-sm text-muted-foreground">{note}</p> : null}
         </div>
