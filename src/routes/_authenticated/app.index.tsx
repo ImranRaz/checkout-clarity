@@ -504,3 +504,42 @@ function gradeFor(score: number): string {
   if (score >= 40) return "Leaking";
   return "Critical";
 }
+
+/** One selectable agent track. The last enabled track can't be switched off. */
+function TrackToggle({
+  title,
+  description,
+  checked,
+  onChange,
+  disabled,
+}: {
+  title: string;
+  description: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  disabled: boolean;
+}) {
+  return (
+    <label
+      className={cn(
+        "flex cursor-pointer gap-3 rounded-md border bg-card p-3.5 transition-colors",
+        checked ? "border-primary/50 shadow-tile" : "border-border hover:border-input",
+        disabled && "cursor-default",
+      )}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5 size-4 shrink-0 accent-primary"
+      />
+      <span className="min-w-0">
+        <span className="block text-sm font-medium text-foreground">{title}</span>
+        <span className="mt-1 block text-[13px] leading-relaxed text-muted-foreground">
+          {description}
+        </span>
+      </span>
+    </label>
+  );
+}
