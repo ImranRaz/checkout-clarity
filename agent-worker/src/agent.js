@@ -109,7 +109,12 @@ async function createBrowserSession(key, projectId) {
     },
     body: JSON.stringify({
       projectId,
+      // The project's default session timeout is shorter than a long booking
+      // journey, and when it fires mid-run Playwright only reports "target
+      // closed". Ask for a window that always outlives our own budget.
+      timeout: Math.ceil(RUN_BUDGET_MS / 1000) + 180,
       // Residential proxies and Verified (advanced stealth) mode are paid /
+
       // enterprise features: requesting them on a free plan makes session
       // creation fail outright, so both are opt-in via env.
       ...(process.env.BROWSERBASE_PROXIES === "true" ? { proxies: true } : {}),
