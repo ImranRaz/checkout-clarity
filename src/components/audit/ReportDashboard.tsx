@@ -185,14 +185,24 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
             </span>
           </span>
         </div>
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="no-print inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border px-3 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-        >
-          <ArrowUpRight className="size-3.5" aria-hidden />
-          Export PDF
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          {report.reputation ? (
+            <a
+              href="#reputation"
+              className="no-print inline-flex items-center gap-1.5 rounded-md border border-primary/40 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-primary transition-colors hover:bg-primary/10"
+            >
+              Reputation {report.reputation.score}/100
+            </a>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="no-print inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          >
+            <ArrowUpRight className="size-3.5" aria-hidden />
+            Export PDF
+          </button>
+        </div>
       </motion.section>
 
 
