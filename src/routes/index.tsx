@@ -1042,7 +1042,7 @@ function RealSampleCard({ run }: { run: FeaturedSummary }) {
 }
 
 function SampleCard({ report }: { report: ForensicAuditReport }) {
-  const score = report.status === "partial" ? null : scoreReport(report).total;
+  const score = report.stages.length > 0 ? scoreReport(report).total : null;
   const thumb = report.stages[0]?.screenshot.src;
 
   return (

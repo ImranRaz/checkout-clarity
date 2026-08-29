@@ -39,7 +39,7 @@ export const saveAuditRun = createServerFn({ method: "POST" })
     }
     const report = parsed.data;
 
-    const score = report.status === "partial" ? null : scoreReport(report).total;
+    const score = report.stages.length > 0 ? scoreReport(report).total : null;
     // Insert only — the table intentionally allows no updates, so an upsert
     // would be rejected outright. A repeat id just means the run is already on
     // file, which is a success from the caller's point of view.
