@@ -22,7 +22,7 @@ import {
   type ForensicAuditReport,
   type FrictionPoint,
 } from "@/lib/audit-schema";
-import { scoreReport, scoreStage } from "@/lib/scoring";
+import { reportCoverage, scoreReport, scoreStage } from "@/lib/scoring";
 import { cn } from "@/lib/utils";
 
 const tileMotion = {
@@ -681,6 +681,50 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
       ) : null}
 
     </motion.div>
+  );
+}
+
+function TrackTab({
+  active,
+  onClick,
+  title,
+  caption,
+  value,
+}: {
+  active: boolean;
+  onClick: () => void;
+  title: string;
+  caption: string;
+  value: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={cn(
+        "tile flex items-center justify-between gap-3 p-4 text-left transition-all duration-200",
+        active
+          ? "border-primary/60 bg-accent shadow-tile"
+          : "border-border hover:border-primary/30 hover:bg-secondary",
+      )}
+    >
+      <span className="min-w-0">
+        <span className="block text-sm font-medium text-foreground">{title}</span>
+        <span className="mt-0.5 block truncate font-mono text-[11px] text-muted-foreground">
+          {caption}
+        </span>
+      </span>
+      <span
+        className={cn(
+          "shrink-0 font-mono text-sm tabular-nums",
+          active ? "text-primary" : "text-muted-foreground",
+        )}
+      >
+        {value}
+      </span>
+    </button>
   );
 }
 
