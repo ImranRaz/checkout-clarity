@@ -290,22 +290,37 @@ export async function findReviewSources(url: string): Promise<{
     }
   }
 
-  // Prefer known review destinations, then everything else.
-  hits.sort((a, b) => {
-    const ra = REVIEW_SITES.indexOf(a.site);
-    const rb = REVIEW_SITES.indexOf(b.site);
-    return (ra === -1 ? 99 : ra) - (rb === -1 ? 99 : rb);
-  });
+  // Prefer known review destinations (matched loosely, so google.com.mx and
+  // www.tripadvisor.co.uk still count), and inside that prefer pages that
+  // mention the business's own city — the defence against same-name confusion.
+  const locale = (profile.location ?? "")
+    .toLowerCase()
+    .split(/[,/]/)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 2);
+
+  const rank = (hit: SourceHit) => {
+    const i = REVIEW_SITES.findIndex(
+      (site) => hit.site === site || hit.site.endsWith(`.${site}`) || hit.site.startsWith(`${site.split(".")[0]}.`),
+    );
+    const base = i === -1 ? 99 : i;
+    const haystack = `${hit.title} ${hit.text}`.toLowerCase();
+    const local = locale.length > 0 && locale.some((part) => haystack.includes(part));
+    return base - (local ? 40 : 0);
+  };
+
+  hits.sort((a, b) => rank(a) - rank(b));
 
   // Fetch the top pages in full — snippets alone are too thin to cluster.
-  const top = hits.slice(0, 6);
+  const top = hits.slice(0, 7);
   const scraped = await Promise.all(top.map((hit) => scrapePage(hit)));
 
   return {
-    brand,
+    brand: label || brand,
     domain,
     hits: scraped.filter((hit) => hit.text.length > 120),
   };
+
 }
 
 async function askModel(system: string, user: string): Promise<string> {
