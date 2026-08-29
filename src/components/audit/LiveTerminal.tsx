@@ -136,7 +136,10 @@ export function LiveTerminal({
 
       <div
         ref={scrollRef}
-        className="max-h-[26rem] min-h-[20rem] overflow-y-auto bg-card px-4 py-4"
+        className={cn(
+          "flex-1 overflow-y-auto bg-card px-4 py-4",
+          compact ? "max-h-[22rem] min-h-[16rem]" : "max-h-[26rem] min-h-[20rem]",
+        )}
         aria-live="polite"
       >
         <ul className="space-y-1.5 font-mono text-[13px] leading-relaxed">
