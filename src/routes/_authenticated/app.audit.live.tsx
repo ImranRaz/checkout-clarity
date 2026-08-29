@@ -6,6 +6,8 @@ import { useEffect, useRef, useState } from "react";
 
 import { LiveTerminal } from "@/components/audit/LiveTerminal";
 import { ReportDashboard } from "@/components/audit/ReportDashboard";
+import { ReputationPanel } from "@/components/audit/ReputationPanel";
+import { useReputationRun } from "@/components/audit/useReputationRun";
 import { pollLiveAudit, startLiveAudit, type LiveStep } from "@/lib/audit.functions";
 import { normalizeUrl } from "@/lib/audit-runner";
 import type { ForensicAuditReport } from "@/lib/audit-schema";
@@ -15,6 +17,9 @@ import { saveAuditRun } from "@/lib/reports.functions";
 export const Route = createFileRoute("/_authenticated/app/audit/live")({
   validateSearch: (search: Record<string, unknown>) => ({
     url: typeof search["url"] === "string" ? search["url"] : "",
+    // Both tracks default on: a bare link to this page runs the full thing.
+    funnel: search["funnel"] === false || search["funnel"] === "false" ? false : true,
+    rep: search["rep"] === false || search["rep"] === "false" ? false : true,
   }),
   head: () => ({
     meta: [
@@ -34,19 +39,24 @@ function hostOf(url: string): string {
 }
 
 function LiveRun() {
-  const { url } = Route.useSearch();
+  const { url, funnel: funnelEnabled, rep: repEnabled } = Route.useSearch();
   const router = useRouter();
   const startLive = useServerFn(startLiveAudit);
   const pollLive = useServerFn(pollLiveAudit);
   const persistRun = useServerFn(saveAuditRun);
 
-  const [status, setStatus] = useState<"starting" | "running" | "done" | "error">("starting");
+  const [status, setStatus] = useState<"starting" | "running" | "done" | "error">(
+    funnelEnabled ? "starting" : "done",
+  );
   const [steps, setSteps] = useState<LiveStep[]>([]);
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // The browser agent's raw output, before the reputation agent's synthesis.
+  const [rawReport, setRawReport] = useState<ForensicAuditReport | null>(null);
   const [report, setReport] = useState<ForensicAuditReport | null>(null);
 
+  const reputation = useReputationRun(normalizeUrl(url || "example.com"), repEnabled && !!url);
 
   const startedRef = useRef(false);
   const jobIdRef = useRef<string | null>(null);
@@ -59,7 +69,7 @@ function LiveRun() {
   fns.current = { startLive, pollLive, persistRun };
 
   useEffect(() => {
-    if (!url) return;
+    if (!url || !funnelEnabled) return;
     // Always clear the cancel flag on (re)mount. React's dev double-invoke
     // tears the first effect down immediately; without this the loop below
     // would see a stale `true` and abandon a job that is happily running.
@@ -111,24 +121,7 @@ function LiveRun() {
           return;
         }
         if (poll.status === "done" && poll.report) {
-          saveLiveReport(poll.report);
-          // Persist it so the run shows up under "Recent audits" and its
-          // permalink keeps working in another browser or after a reload.
-          void fns.current
-            .persistRun({ data: { url: normalizeUrl(url), report: poll.report } })
-            .then((res) => {
-              if (!res?.ok) {
-                setSaveError(res?.error ?? "Could not save this run.");
-                return;
-              }
-              // Make the landing page's Recent audits rail pick it up.
-              void router.invalidate();
-            })
-            .catch((err: unknown) => {
-              setSaveError(err instanceof Error ? err.message : "Could not save this run.");
-            });
-
-          setReport(poll.report);
+          setRawReport(poll.report);
           setStatus("done");
           return;
         }
@@ -143,8 +136,44 @@ function LiveRun() {
     return () => {
       cancelled.current = true;
     };
-  }, [url]);
+  }, [url, funnelEnabled]);
 
+  /**
+   * Finalisation waits for both agents: the funnel report is only published
+   * once the reputation agent has had its chance to cross-reference it, so the
+   * saved report and the shared link carry the same corroboration links.
+   */
+  const finalizedRef = useRef(false);
+  useEffect(() => {
+    if (!rawReport || finalizedRef.current) return;
+    const repSettled =
+      !repEnabled || reputation.status === "done" || reputation.status === "error";
+    if (!repSettled) return;
+    finalizedRef.current = true;
+
+    void (async () => {
+      const merged =
+        repEnabled && reputation.report ? await reputation.synthesize(rawReport) : rawReport;
+
+      saveLiveReport(merged);
+      // Persist it so the run shows up under "Recent audits" and its permalink
+      // keeps working in another browser or after a reload.
+      void fns.current
+        .persistRun({ data: { url: normalizeUrl(url), report: merged } })
+        .then((res) => {
+          if (!res?.ok) {
+            setSaveError(res?.error ?? "Could not save this run.");
+            return;
+          }
+          void router.invalidate();
+        })
+        .catch((err: unknown) => {
+          setSaveError(err instanceof Error ? err.message : "Could not save this run.");
+        });
+
+      setReport(merged);
+    })();
+  }, [rawReport, repEnabled, reputation, router, url]);
 
   // Keep the clock moving between two-second polls.
   useEffect(() => {
@@ -157,12 +186,16 @@ function LiveRun() {
   // the dashboard — the same reveal the recorded runs use.
   const [revealed, setRevealed] = useState(false);
   useEffect(() => {
-    if (status !== "done") return;
+    if (!report) return;
     const id = setTimeout(() => setRevealed(true), 900);
     return () => clearTimeout(id);
-  }, [status]);
+  }, [report]);
 
   const domain = hostOf(url);
+  const bothTracks = funnelEnabled && repEnabled;
+  // Reputation-only runs have no funnel report to attach to, so they render
+  // their own panel once the second agent finishes.
+  const repOnlyDone = !funnelEnabled && repEnabled && reputation.status === "done";
 
   return (
     <main className="min-h-screen">
@@ -201,7 +234,6 @@ function LiveRun() {
         ) : null}
 
         <div className="mt-8">
-
           <AnimatePresence mode="wait">
             {report && revealed ? (
               <motion.div
@@ -213,15 +245,60 @@ function LiveRun() {
                 <ReportDashboard report={report} />
               </motion.div>
             ) : (
-              <div key="terminal">
-                <LiveTerminal
-                  domain={domain}
-                  steps={steps}
-                  elapsedMs={elapsed}
-                  status={status}
-                  error={error}
-                />
-                {status === "error" ? (
+              <div key="terminal" className="space-y-4">
+                {bothTracks ? (
+                  <p className="label-caps">Two agents working in parallel</p>
+                ) : null}
+
+                <div className={bothTracks ? "grid gap-4 lg:grid-cols-2" : ""}>
+                  {funnelEnabled ? (
+                    <LiveTerminal
+                      title={bothTracks ? "Funnel agent · real browser" : undefined}
+                      label="funnel-agent"
+                      domain={domain}
+                      steps={steps}
+                      elapsedMs={elapsed}
+                      status={status}
+                      error={error}
+                      compact={bothTracks}
+                    />
+                  ) : null}
+
+                  {repEnabled ? (
+                    <LiveTerminal
+                      title={bothTracks ? "Reputation agent · public reviews" : undefined}
+                      label="reputation-agent"
+                      domain={domain}
+                      steps={reputation.steps}
+                      elapsedMs={reputation.elapsed}
+                      status={reputation.status === "idle" ? "starting" : reputation.status}
+                      error={reputation.error}
+                      idleMessage="Looking for where this brand is reviewed…"
+                      compact={bothTracks}
+                    />
+                  ) : null}
+                </div>
+
+                {bothTracks && reputation.synthStatus !== "idle" ? (
+                  <LiveTerminal
+                    title="Synthesis · matching reviews to findings"
+                    label="synthesis"
+                    domain={domain}
+                    steps={reputation.synthSteps}
+                    elapsedMs={0}
+                    status={reputation.synthStatus === "running" ? "running" : "done"}
+                    error={null}
+                    compact
+                  />
+                ) : null}
+
+                {repOnlyDone && reputation.report ? (
+                  <div className="pt-4">
+                    <ReputationPanel reputation={reputation.report} />
+                  </div>
+                ) : null}
+
+                {status === "error" && !repOnlyDone ? (
                   <Link
                     to="/app"
                     className="mt-4 inline-flex items-center gap-2 rounded-md border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
