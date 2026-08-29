@@ -242,7 +242,7 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
         </ol>
       </motion.section>
 
-      <div className="grid gap-4 lg:grid-cols-12">
+      <div id="evidence-top" className="grid scroll-mt-6 gap-4 lg:grid-cols-12">
         {/* Findings rail */}
         <motion.section
           variants={tileMotion}
