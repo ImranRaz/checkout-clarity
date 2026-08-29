@@ -47,6 +47,31 @@ function withTimeout(promise, timeoutMs, label) {
 }
 
 /**
+ * A dead browser tab is an infrastructure event, not a finding about the
+ * store. Detect it anywhere in the loop so the run seals what it already
+ * measured instead of throwing a Playwright string at the customer.
+ */
+export function isSessionGone(error) {
+  const message = String(error?.message || error || "");
+  return /has been closed|Target closed|Session closed|browser has disconnected|WebSocket|Connection closed|context or browser/i.test(
+    message,
+  );
+}
+
+/** Turns raw automation errors into something a paying customer can read. */
+export function humanizeFailure(message) {
+  const raw = String(message || "");
+  if (isSessionGone(raw)) {
+    return "The cloud browser session ended before the journey finished, so the run was sealed with everything captured up to that point.";
+  }
+  if (/timed out/i.test(raw)) {
+    return `${raw.replace(/\.$/, "")} — the run was sealed with everything captured up to that point.`;
+  }
+  return raw.slice(0, 240);
+}
+
+
+/**
  * The API key alone identifies the account, so the project id is looked up
  * rather than asked for. Cached per key for the life of the process.
  */
@@ -84,7 +109,12 @@ async function createBrowserSession(key, projectId) {
     },
     body: JSON.stringify({
       projectId,
+      // The project's default session timeout is shorter than a long booking
+      // journey, and when it fires mid-run Playwright only reports "target
+      // closed". Ask for a window that always outlives our own budget.
+      timeout: Math.ceil(RUN_BUDGET_MS / 1000) + 180,
       // Residential proxies and Verified (advanced stealth) mode are paid /
+
       // enterprise features: requesting them on a free plan makes session
       // creation fail outright, so both are opt-in via env.
       ...(process.env.BROWSERBASE_PROXIES === "true" ? { proxies: true } : {}),
@@ -727,7 +757,16 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     const openedProducts = new Set();
 
     for (let step = 0; !wall && step < MAX_STEPS && Date.now() < deadline; step += 1) {
+      // If the cloud tab died (session timeout, remote disconnect), stop here
+      // and keep the stages already captured rather than failing the run.
+      if (page.isClosed()) {
+        status = "partial";
+        blockedReason = humanizeFailure("Target page, context or browser has been closed");
+        emit("system", blockedReason, "warn");
+        break;
+      }
       await withTimeout(clearOverlays(page, { emit }), 12000, "Clearing pop-ups").catch(() => {});
+
 
       // Reading controls is now a DOM scan, so it cannot stall the run; if it
       // ever does, the planner simply works from the screen alone.
@@ -1082,9 +1121,10 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     }
   } catch (error) {
     status = "partial";
-    blockedReason = error.message.slice(0, 240);
-    emit("system", blockedReason, "error");
+    blockedReason = humanizeFailure(error?.message || error);
+    emit("system", blockedReason, isSessionGone(error) ? "warn" : "error");
   } finally {
+
     // The reviews ran alongside navigation. Geometry is frozen into each
     // stage's digest at capture time, so they no longer depend on the live
     // page — but they are still collected before teardown so their findings

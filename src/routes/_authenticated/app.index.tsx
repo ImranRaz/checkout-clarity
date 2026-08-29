@@ -300,7 +300,7 @@ function Home() {
                     id: report.id,
                     domain: report.domain,
                     status: report.status,
-                    score: report.status === "partial" ? null : score.total,
+                    score: report.stages.length > 0 ? score.total : null,
                     stages: report.stages.length,
                     friction: allFrictionPoints(report).length,
                     consoleErrors: totalConsoleErrors(report),
@@ -496,7 +496,12 @@ function RecentCard({
             <span className="font-display text-4xl leading-none tabular-nums">{run.score}</span>
             <span className="font-mono text-xs text-muted-foreground">/100</span>
           </p>
-          <p className="mt-1 text-sm text-foreground">{gradeFor(run.score)}</p>
+          <p className="mt-1 text-sm text-foreground">
+            {gradeFor(run.score)}
+            {run.status === "partial" ? (
+              <span className="text-muted-foreground"> · provisional</span>
+            ) : null}
+          </p>
         </>
       )}
 

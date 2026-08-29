@@ -22,7 +22,7 @@ import {
   type ForensicAuditReport,
   type FrictionPoint,
 } from "@/lib/audit-schema";
-import { scoreReport, scoreStage } from "@/lib/scoring";
+import { reportCoverage, scoreReport, scoreStage } from "@/lib/scoring";
 import { cn } from "@/lib/utils";
 
 const tileMotion = {
@@ -84,9 +84,14 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
   const [stageIndex, setStageIndex] = useState(0);
   const [activeId, setActiveId] = useState<number | null>(null);
 
-  const stage = report.stages[stageIndex]!;
+  const stage = report.stages[stageIndex] as AuditStage | undefined;
   const score = scoreReport(report);
   const partial = report.status === "partial";
+  const coverage = reportCoverage(report);
+  const scorable = coverage.scorable;
+  const provisional = coverage.provisional;
+  const [view, setView] = useState<"funnel" | "reputation">("funnel");
+
 
   const flat: Cursor[] = useMemo(
     () =>
@@ -128,7 +133,22 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
     return () => window.removeEventListener("keydown", onKey);
   }, [step]);
 
-  const activePoint = stage.friction_points.find((p) => p.id === activeId) ?? null;
+  const activePoint = stage?.friction_points.find((p) => p.id === activeId) ?? null;
+
+  // A run that captured nothing still owes the customer an explanation.
+  if (!stage) {
+    return (
+      <div className="tile flex flex-col gap-2 border-sev-medium/40 bg-sev-medium-soft p-4 sm:flex-row sm:gap-3">
+        <ShieldAlert className="size-4 shrink-0 text-sev-medium sm:mt-0.5" aria-hidden />
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-foreground">
+            No pages were captured on {report.domain}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{report.blocked_reason}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -146,9 +166,17 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
           <ShieldAlert className="size-4 shrink-0 text-sev-medium sm:mt-0.5" aria-hidden />
           <div className="min-w-0">
             <p className="text-sm font-medium text-foreground">
-              Partial audit — the agent was stopped at {reachedStep(report)}
+              {scorable
+                ? `Provisional score — the journey stopped at ${reachedStep(report)}`
+                : `Partial audit — the agent was stopped at ${reachedStep(report)}`}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">{report.blocked_reason}</p>
+            {scorable && coverage.missing.length > 0 ? (
+              <p className="mt-1 font-mono text-[11px] text-muted-foreground">
+                scored on {coverage.covered.join(" · ").toLowerCase()} · not measured:{" "}
+                {coverage.missing.join(", ").toLowerCase()}
+              </p>
+            ) : null}
           </div>
         </motion.div>
       )}
@@ -162,9 +190,9 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
       >
         <div className="flex min-w-0 items-baseline gap-3">
           <span className="font-display text-4xl leading-none tracking-tight tabular-nums">
-            {partial ? "n/a" : score.total}
+            {scorable ? score.total : "n/a"}
           </span>
-          {!partial && (
+          {scorable && (
             <span className="flex items-center gap-1 font-mono text-xs text-muted-foreground">
               /100
               <Explain term="score" />
@@ -174,10 +202,10 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
             <span
               className={cn(
                 "block text-sm font-medium",
-                partial ? "text-sev-medium" : grade[score.grade],
+                !scorable || provisional ? "text-sev-medium" : grade[score.grade],
               )}
             >
-              {partial ? "Not scored" : score.grade}
+              {!scorable ? "Not scored" : provisional ? `${score.grade} · provisional` : score.grade}
             </span>
             <span className="block truncate font-mono text-[11px] text-muted-foreground">
               {report.domain} · {report.stages.length} stages ·{" "}
@@ -187,14 +215,6 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {report.reputation ? (
-            <a
-              href="#reputation"
-              className="no-print inline-flex items-center gap-1.5 rounded-md border border-primary/40 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-primary transition-colors hover:bg-primary/10"
-            >
-              Reputation {report.reputation.score}/100
-            </a>
-          ) : null}
           <button
             type="button"
             onClick={() => window.print()}
@@ -206,8 +226,36 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
         </div>
       </motion.section>
 
+      {/* Two equal tracks: what the agent saw, and what customers say. */}
+      {report.reputation ? (
+        <motion.div
+          variants={tileMotion}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="no-print grid gap-3 sm:grid-cols-2"
+          role="tablist"
+          aria-label="Report sections"
+        >
+          <TrackTab
+            active={view === "funnel"}
+            onClick={() => setView("funnel")}
+            title="Funnel experience"
+            caption={`${report.stages.reduce((n, s) => n + s.friction_points.length, 0)} findings across ${report.stages.length} stages`}
+            value={scorable ? `${score.total}/100` : "n/a"}
+          />
+          <TrackTab
+            active={view === "reputation"}
+            onClick={() => setView("reputation")}
+            title="What customers say"
+            caption={`${report.reputation.sources.length} public source${report.reputation.sources.length === 1 ? "" : "s"} read`}
+            value={`${report.reputation.score}/100`}
+          />
+        </motion.div>
+      ) : null}
 
+
+      <div className={cn("space-y-4", view === "funnel" ? "" : "hidden print:block")}>
       {/* Journey strip */}
+
 
       <motion.section
         variants={tileMotion}
@@ -234,7 +282,7 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
                 stage={s}
                 index={i}
                 selected={i === stageIndex}
-                partial={partial}
+                partial={!scorable}
                 onSelect={() => select(i, null)}
               />
             </li>
@@ -272,7 +320,7 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
                     {i + 1}. {s.label}
                   </span>
                   <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
-                    {partial ? "n/a" : `${scoreStage(s).total}/100`} · {s.friction_points.length}
+                    {scorable ? `${scoreStage(s).total}/100` : "n/a"} · {s.friction_points.length}
                   </span>
                 </button>
                 <ul className="mt-1.5 space-y-1.5">
@@ -425,17 +473,21 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
               </h2>
               <p className="mt-2 flex items-baseline gap-2">
                 <span className="font-display text-4xl leading-none tracking-tight tabular-nums">
-                  {partial ? "n/a" : score.total}
+                  {scorable ? score.total : "n/a"}
                 </span>
-                {!partial && <span className="font-mono text-sm text-muted-foreground">/100</span>}
+                {scorable && <span className="font-mono text-sm text-muted-foreground">/100</span>}
               </p>
               <p
                 className={cn(
                   "mt-1 text-sm font-medium",
-                  partial ? "text-sev-medium" : grade[score.grade],
+                  !scorable || provisional ? "text-sev-medium" : grade[score.grade],
                 )}
               >
-                {partial ? "Not scored" : score.grade}
+                {!scorable
+                  ? "Not scored"
+                  : provisional
+                    ? `${score.grade} · provisional`
+                    : score.grade}
               </p>
             </div>
 
@@ -452,13 +504,13 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
           </div>
 
 
-          {partial ? (
+          {!scorable ? (
             <p className="mt-5 border-t border-border pt-4 text-sm leading-relaxed text-muted-foreground">
-              The agent never reached a product page or a cart, so the signals a score depends on
-              were never measured. Scoring the interlock page instead would produce a flattering,
-              meaningless number.
+              The agent never captured a page, so there were no signals to score. The blocked reason
+              above explains where the run stopped.
             </p>
           ) : (
+
             <>
               <ul className="mt-5 space-y-3 border-t border-border pt-4">
                 {report.stages.map((s) => {
@@ -607,13 +659,17 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
           </a>
         </motion.section>
       </div>
+      </div>
 
       {report.reputation ? (
         <motion.section
           id="reputation"
           variants={tileMotion}
           transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          className="scroll-mt-6 space-y-4 border-t border-border pt-8"
+          className={cn(
+            "scroll-mt-6 space-y-4",
+            view === "reputation" ? "" : "hidden print:block print:border-t print:pt-8",
+          )}
           aria-label="Reputation"
         >
           <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -629,13 +685,61 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
                 s.friction_points.some((p) => p.id === findingId),
               );
               if (stageIdx === -1) return;
+              setView("funnel");
               select(stageIdx, findingId);
-              document.getElementById("evidence-top")?.scrollIntoView({ behavior: "smooth" });
+              requestAnimationFrame(() =>
+                document.getElementById("evidence-top")?.scrollIntoView({ behavior: "smooth" }),
+              );
             }}
           />
         </motion.section>
       ) : null}
+
     </motion.div>
+  );
+}
+
+function TrackTab({
+  active,
+  onClick,
+  title,
+  caption,
+  value,
+}: {
+  active: boolean;
+  onClick: () => void;
+  title: string;
+  caption: string;
+  value: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={cn(
+        "tile flex items-center justify-between gap-3 p-4 text-left transition-all duration-200",
+        active
+          ? "border-primary/60 bg-accent shadow-tile"
+          : "border-border hover:border-primary/30 hover:bg-secondary",
+      )}
+    >
+      <span className="min-w-0">
+        <span className="block text-sm font-medium text-foreground">{title}</span>
+        <span className="mt-0.5 block truncate font-mono text-[11px] text-muted-foreground">
+          {caption}
+        </span>
+      </span>
+      <span
+        className={cn(
+          "shrink-0 font-mono text-sm tabular-nums",
+          active ? "text-primary" : "text-muted-foreground",
+        )}
+      >
+        {value}
+      </span>
+    </button>
   );
 }
 
