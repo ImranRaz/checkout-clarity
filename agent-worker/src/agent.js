@@ -1121,9 +1121,10 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     }
   } catch (error) {
     status = "partial";
-    blockedReason = error.message.slice(0, 240);
-    emit("system", blockedReason, "error");
+    blockedReason = humanizeFailure(error?.message || error);
+    emit("system", blockedReason, isSessionGone(error) ? "warn" : "error");
   } finally {
+
     // The reviews ran alongside navigation. Geometry is frozen into each
     // stage's digest at capture time, so they no longer depend on the live
     // page — but they are still collected before teardown so their findings
