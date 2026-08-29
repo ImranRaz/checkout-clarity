@@ -254,35 +254,78 @@ function Home() {
       </div>
 
       <section className="mx-auto w-full max-w-5xl px-6 pt-14" aria-label="Recent audits">
-        <div className="flex items-baseline justify-between gap-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-4">
           <h2 className="label-caps">Recent audits</h2>
           <p className="font-mono text-[11px] text-muted-foreground">
-            {recent.length} live {recent.length === 1 ? "run" : "runs"} on file
+            {filtered.length} of {recent.length} {recent.length === 1 ? "run" : "runs"} on file
           </p>
         </div>
+
+        {recent.length > 0 ? (
+          <div className="mt-3 flex flex-wrap gap-2" role="tablist" aria-label="Filter runs">
+            {(
+              [
+                ["all", "All"],
+                ["full", "Full audit"],
+                ["funnel", "Funnel only"],
+                ["reputation", "Reputation only"],
+              ] as const
+            ).map(([key, label]) => {
+              const count =
+                key === "all" ? recent.length : recent.filter((r) => r.kind === key).length;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={kindFilter === key}
+                  onClick={() => setKindFilter(key)}
+                  className={cn(
+                    "rounded-full border px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.12em] transition-colors",
+                    kindFilter === key
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-border text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
+                >
+                  {label} · {count}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
 
         {recent.length === 0 ? (
           <p className="mt-4 rounded-lg border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
             No live runs saved yet. Send in the agent and the finished report lands here.
           </p>
+        ) : filtered.length === 0 ? (
+          <p className="mt-4 rounded-lg border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
+            No runs of that kind yet.
+          </p>
         ) : (
-          <ul className="mt-4 flex snap-x gap-4 overflow-x-auto pb-3">
-            {recent.map((run) => (
-              <li key={run.id} className="w-72 shrink-0 snap-start">
-                <RecentCard
+          <ul className="mt-4 divide-y divide-border overflow-hidden rounded-lg border border-border">
+            {filtered.map((run) => (
+              <li key={run.id}>
+                <RecentRow
                   run={run}
-                  live
-                  thumb={`/api/public/thumb/${run.id}?t=${run.thumbToken}`}
+                  thumb={
+                    run.kind === "reputation"
+                      ? undefined
+                      : `/api/public/thumb/${run.id}?t=${run.thumbToken}`
+                  }
                   {...(run.score === null || run.status !== "complete"
-                    ? { onDelete: () => void handleDelete(run.id), deleting: removing.includes(run.id) }
+                    ? {
+                        onDelete: () => void handleDelete(run.id),
+                        deleting: removing.includes(run.id),
+                      }
                     : {})}
                 />
-
               </li>
             ))}
           </ul>
         )}
       </section>
+
 
       <section className="mx-auto w-full max-w-5xl px-6 pb-14 pt-10" aria-label="Sample reports">
         <div className="flex items-baseline justify-between gap-4">
