@@ -299,7 +299,8 @@ export const auditReportSchema = z.object({
   captured_at: z.string(),
   run_duration_ms: z.number(),
   steps: z.array(logLineSchema),
-  stages: z.array(stageSchema).min(1),
+  /** Empty on a reputation-only run, which captures no pages. */
+  stages: z.array(stageSchema),
   /**
    * The run-level judgement: the shape of the funnel and the three changes
    * worth doing first. Optional so reports captured before it existed parse.
@@ -343,7 +344,7 @@ export const stageKindLabel: Record<StageKind, string> = {
 
 /** The last stage the run actually reached. */
 export function reachedStep(report: ForensicAuditReport): string {
-  return report.stages[report.stages.length - 1]!.label;
+  return report.stages[report.stages.length - 1]?.label ?? "no pages captured";
 }
 
 export function allFrictionPoints(report: ForensicAuditReport): FrictionPoint[] {

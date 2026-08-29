@@ -20,9 +20,18 @@ export type RecentAudit = {
   friction: number;
   consoleErrors: number;
   createdAt: string;
+  /** Which agents produced it: both tracks, funnel only, or reputation only. */
+  kind: "full" | "funnel" | "reputation";
+  /** Reputation score, when that track ran. */
+  reputationScore: number | null;
   /** Signature that lets the browser fetch this run's thumbnail. */
   thumbToken: string;
 };
+
+function kindOf(stages: number, reputationScore: string | null): RecentAudit["kind"] {
+  if (reputationScore == null) return "funnel";
+  return stages === 0 ? "reputation" : "full";
+}
 
 /** Persists a finished report so it shows up under "Recent audits". */
 export const saveAuditRun = createServerFn({ method: "POST" })
@@ -68,7 +77,9 @@ export const listRecentAudits = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<RecentAudit[]> => {
     const { data, error } = await context.supabase
       .from("audit_runs")
-      .select("id, domain, status, score, stages_count, friction_count, console_errors, created_at")
+      .select(
+        "id, domain, status, score, stages_count, friction_count, console_errors, created_at, reputation_score:report->reputation->>score",
+      )
       .order("created_at", { ascending: false })
       .limit(12);
 
@@ -84,6 +95,14 @@ export const listRecentAudits = createServerFn({ method: "GET" })
         friction: (row.friction_count as number) ?? 0,
         consoleErrors: (row.console_errors as number) ?? 0,
         createdAt: row.created_at as string,
+        kind: kindOf(
+          (row.stages_count as number) ?? 0,
+          (row as { reputation_score?: string | null }).reputation_score ?? null,
+        ),
+        reputationScore:
+          (row as { reputation_score?: string | null }).reputation_score != null
+            ? Number((row as { reputation_score?: string | null }).reputation_score)
+            : null,
         thumbToken: await signThumbToken(row.id as string),
       })),
     );

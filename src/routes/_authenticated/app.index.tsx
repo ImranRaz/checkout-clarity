@@ -61,6 +61,11 @@ function Home() {
   const [checking, setChecking] = useState(false);
   const [preflight, setPreflight] = useState<PreflightResult | null>(null);
   const [removing, setRemoving] = useState<string[]>([]);
+  // Recent runs mix full audits, funnel-only and reputation-only runs, so the
+  // rail is filterable rather than one undifferentiated pile.
+  const [kindFilter, setKindFilter] = useState<"all" | RecentAudit["kind"]>("all");
+  const filtered =
+    kindFilter === "all" ? recent : recent.filter((run) => run.kind === kindFilter);
   // Two independent agents. Both on by default; at least one must stay on.
   const [funnel, setFunnel] = useState(true);
   const [rep, setRep] = useState(true);
@@ -254,35 +259,78 @@ function Home() {
       </div>
 
       <section className="mx-auto w-full max-w-5xl px-6 pt-14" aria-label="Recent audits">
-        <div className="flex items-baseline justify-between gap-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-4">
           <h2 className="label-caps">Recent audits</h2>
           <p className="font-mono text-[11px] text-muted-foreground">
-            {recent.length} live {recent.length === 1 ? "run" : "runs"} on file
+            {filtered.length} of {recent.length} {recent.length === 1 ? "run" : "runs"} on file
           </p>
         </div>
+
+        {recent.length > 0 ? (
+          <div className="mt-3 flex flex-wrap gap-2" role="tablist" aria-label="Filter runs">
+            {(
+              [
+                ["all", "All"],
+                ["full", "Full audit"],
+                ["funnel", "Funnel only"],
+                ["reputation", "Reputation only"],
+              ] as const
+            ).map(([key, label]) => {
+              const count =
+                key === "all" ? recent.length : recent.filter((r) => r.kind === key).length;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={kindFilter === key}
+                  onClick={() => setKindFilter(key)}
+                  className={cn(
+                    "rounded-full border px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.12em] transition-colors",
+                    kindFilter === key
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-border text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
+                >
+                  {label} · {count}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
 
         {recent.length === 0 ? (
           <p className="mt-4 rounded-lg border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
             No live runs saved yet. Send in the agent and the finished report lands here.
           </p>
+        ) : filtered.length === 0 ? (
+          <p className="mt-4 rounded-lg border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
+            No runs of that kind yet.
+          </p>
         ) : (
-          <ul className="mt-4 flex snap-x gap-4 overflow-x-auto pb-3">
-            {recent.map((run) => (
-              <li key={run.id} className="w-72 shrink-0 snap-start">
-                <RecentCard
+          <ul className="mt-4 divide-y divide-border overflow-hidden rounded-lg border border-border">
+            {filtered.map((run) => (
+              <li key={run.id}>
+                <RecentRow
                   run={run}
-                  live
-                  thumb={`/api/public/thumb/${run.id}?t=${run.thumbToken}`}
+                  thumb={
+                    run.kind === "reputation"
+                      ? undefined
+                      : `/api/public/thumb/${run.id}?t=${run.thumbToken}`
+                  }
                   {...(run.score === null || run.status !== "complete"
-                    ? { onDelete: () => void handleDelete(run.id), deleting: removing.includes(run.id) }
+                    ? {
+                        onDelete: () => void handleDelete(run.id),
+                        deleting: removing.includes(run.id),
+                      }
                     : {})}
                 />
-
               </li>
             ))}
           </ul>
         )}
       </section>
+
 
       <section className="mx-auto w-full max-w-5xl px-6 pb-14 pt-10" aria-label="Sample reports">
         <div className="flex items-baseline justify-between gap-4">
@@ -305,6 +353,8 @@ function Home() {
                     friction: allFrictionPoints(report).length,
                     consoleErrors: totalConsoleErrors(report),
                     createdAt: report.captured_at,
+                    kind: report.reputation ? "full" : "funnel",
+                    reputationScore: report.reputation?.score ?? null,
                     thumbToken: "",
                   }}
                   thumb={report.stages[0]?.screenshot.src}
@@ -422,6 +472,110 @@ function TargetSummary({
 }
 
 
+
+const kindLabel: Record<RecentAudit["kind"], string> = {
+  full: "Full audit",
+  funnel: "Funnel",
+  reputation: "Reputation",
+};
+
+/**
+ * One full-width row in the Recent audits list. The list grows fast, so it
+ * reads top-to-bottom like a log rather than a horizontal shelf of cards.
+ */
+function RecentRow({
+  run,
+  thumb,
+  onDelete,
+  deleting = false,
+}: {
+  run: RecentAudit;
+  thumb?: string | undefined;
+  onDelete?: (() => void) | undefined;
+  deleting?: boolean | undefined;
+}) {
+  const reputationOnly = run.kind === "reputation";
+  const headline = reputationOnly ? run.reputationScore : run.score;
+
+  return (
+    <div className="group relative flex items-center gap-4 bg-card px-4 py-3 transition-colors hover:bg-muted/40">
+      <Link
+        to="/app/report/$reportId"
+        params={{ reportId: run.id }}
+        className="flex min-w-0 flex-1 items-center gap-4"
+      >
+        <span className="hidden h-12 w-20 shrink-0 overflow-hidden rounded border border-border bg-secondary sm:block">
+          {thumb ? (
+            <img
+              src={thumb}
+              alt={`First capture of the ${run.domain} audit`}
+              loading="lazy"
+              decoding="async"
+              className="size-full object-cover object-top"
+            />
+          ) : (
+            <span className="flex size-full items-center justify-center font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground">
+              reviews
+            </span>
+          )}
+        </span>
+
+        <span className="min-w-0 flex-1">
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="truncate text-sm font-medium text-foreground">{run.domain}</span>
+            <span className="rounded-full border border-border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+              {kindLabel[run.kind]}
+            </span>
+          </span>
+          <span className="mt-1 block truncate font-mono text-[11px] text-muted-foreground">
+            {reputationOnly
+              ? `${new Date(run.createdAt).toISOString().slice(0, 10)} · what customers say`
+              : `${run.stages} stages · ${run.friction} friction · ${run.consoleErrors} console`}
+            {!reputationOnly && run.reputationScore !== null
+              ? ` · reputation ${run.reputationScore}/100`
+              : ""}
+          </span>
+        </span>
+
+        <span className="shrink-0 text-right">
+          {headline === null ? (
+            <span className="font-mono text-sm text-muted-foreground">n/a</span>
+          ) : (
+            <>
+              <span className="font-display text-2xl leading-none tabular-nums">{headline}</span>
+              <span className="ml-1 font-mono text-[11px] text-muted-foreground">/100</span>
+              <span className="mt-0.5 block font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                {gradeFor(headline)}
+                {!reputationOnly && run.status === "partial" ? " · provisional" : ""}
+              </span>
+            </>
+          )}
+        </span>
+
+        <ArrowRight
+          className="size-3.5 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5"
+          aria-hidden
+        />
+      </Link>
+
+      {onDelete ? (
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={deleting}
+          aria-label={`Delete audit for ${run.domain}`}
+          className="inline-flex size-6 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+        >
+          {deleting ? (
+            <Loader2 className="size-3 animate-spin" aria-hidden />
+          ) : (
+            <X className="size-3" aria-hidden />
+          )}
+        </button>
+      ) : null}
+    </div>
+  );
+}
 
 /** One card in the Recent audits rail — saved live runs and fixtures alike. */
 function RecentCard({

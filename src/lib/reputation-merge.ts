@@ -41,3 +41,39 @@ export function corroboratedCount(report: ForensicAuditReport): number {
     0,
   );
 }
+
+/**
+ * A reputation-only run still deserves a saved, shareable, exportable report.
+ * It carries no stages — the funnel agent never ran — so everything downstream
+ * (recent audits, permalink, share link, PDF) treats it as a report whose only
+ * track is what customers say.
+ */
+export function reputationOnlyReport(
+  url: string,
+  reputation: ReputationReport,
+  runDurationMs: number,
+): ForensicAuditReport {
+  let domain = url;
+  try {
+    domain = new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    /* keep the raw string */
+  }
+  return {
+    id: `live-${Date.now().toString(36)}`,
+    url,
+    domain,
+    status: "partial",
+    blocked_reason: null,
+    captured_at: new Date().toISOString(),
+    run_duration_ms: runDurationMs,
+    steps: [],
+    stages: [],
+    reputation,
+  };
+}
+
+/** True when a report only carries the reputation track. */
+export function isReputationOnly(report: ForensicAuditReport): boolean {
+  return report.stages.length === 0 && !!report.reputation;
+}

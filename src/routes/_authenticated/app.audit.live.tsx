@@ -6,12 +6,12 @@ import { useEffect, useRef, useState } from "react";
 
 import { LiveTerminal } from "@/components/audit/LiveTerminal";
 import { ReportDashboard } from "@/components/audit/ReportDashboard";
-import { ReputationPanel } from "@/components/audit/ReputationPanel";
 import { useReputationRun } from "@/components/audit/useReputationRun";
 import { pollLiveAudit, startLiveAudit, type LiveStep } from "@/lib/audit.functions";
 import { normalizeUrl } from "@/lib/audit-runner";
 import type { ForensicAuditReport } from "@/lib/audit-schema";
 import { saveLiveReport } from "@/lib/live-store";
+import { reputationOnlyReport } from "@/lib/reputation-merge";
 import { saveAuditRun } from "@/lib/reports.functions";
 
 export const Route = createFileRoute("/_authenticated/app/audit/live")({
@@ -175,6 +175,40 @@ function LiveRun() {
     })();
   }, [rawReport, repEnabled, reputation, router, url]);
 
+  /**
+   * Reputation-only runs have no funnel report to attach to, so they publish a
+   * report of their own — saved, permalinked, shareable and exportable exactly
+   * like a full run, just with a single track.
+   */
+  const repOnlyFinalizedRef = useRef(false);
+  useEffect(() => {
+    if (funnelEnabled || !repEnabled) return;
+    if (repOnlyFinalizedRef.current) return;
+    if (reputation.status !== "done" || !reputation.report) return;
+    repOnlyFinalizedRef.current = true;
+
+    const built = reputationOnlyReport(
+      normalizeUrl(url),
+      reputation.report,
+      reputation.elapsed,
+    );
+    saveLiveReport(built);
+    void fns.current
+      .persistRun({ data: { url: normalizeUrl(url), report: built } })
+      .then((res) => {
+        if (!res?.ok) {
+          setSaveError(res?.error ?? "Could not save this run.");
+          return;
+        }
+        void router.invalidate();
+      })
+      .catch((err: unknown) => {
+        setSaveError(err instanceof Error ? err.message : "Could not save this run.");
+      });
+    setReport(built);
+  }, [funnelEnabled, repEnabled, reputation.status, reputation.report, reputation.elapsed, router, url]);
+
+
   // Keep the clock moving between two-second polls.
   useEffect(() => {
     if (status !== "running") return;
@@ -193,9 +227,6 @@ function LiveRun() {
 
   const domain = hostOf(url);
   const bothTracks = funnelEnabled && repEnabled;
-  // Reputation-only runs have no funnel report to attach to, so they render
-  // their own panel once the second agent finishes.
-  const repOnlyDone = !funnelEnabled && repEnabled && reputation.status === "done";
 
   return (
     <main className="min-h-screen">
@@ -292,13 +323,7 @@ function LiveRun() {
                   />
                 ) : null}
 
-                {repOnlyDone && reputation.report ? (
-                  <div className="pt-4">
-                    <ReputationPanel reputation={reputation.report} />
-                  </div>
-                ) : null}
-
-                {status === "error" && !repOnlyDone ? (
+                {status === "error" || (!funnelEnabled && reputation.status === "error") ? (
                   <Link
                     to="/app"
                     className="mt-4 inline-flex items-center gap-2 rounded-md border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
