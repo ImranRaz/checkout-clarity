@@ -18,6 +18,38 @@ The report gains a **Reputation** tab alongside the existing funnel view:
 - Praise themes, so the report also says what to protect.
 - Source breakdown: which sites the evidence came from and how many reviews each.
 
+### The live run: two agents, side by side
+
+The run screen becomes the portfolio piece — visible proof of a multi-agent system,
+not a page that appears to be reloading. When both tracks are selected, the terminal
+splits into two live lanes:
+
+```text
+┌ BROWSER AGENT ────────────┐  ┌ REPUTATION AGENT ─────────┐
+│ ● opening store in Chrome │  │ ● resolving the brand     │
+│ ✓ measuring paint & shift │  │ ✓ found 4 review sources  │
+│ ✓ category → product      │  │ ● reading 128 reviews     │
+│ ● adding to cart          │  │ ○ clustering complaints   │
+│ ○ guest checkout          │  │ ○ matching to findings    │
+└───────────────────────────┘  └───────────────────────────┘
+        ↓ both complete ↓
+   ┌ SYNTHESIS ─────────────────────────────────────┐
+   │ ● cross-referencing 6 themes against 14 findings│
+   └─────────────────────────────────────────────────┘
+```
+
+Each lane shows its own step list with live status dots, elapsed time and a running
+count of what it has found. Steps stream in as they happen, exactly as the browser
+agent's log does today. When one lane finishes it stays on screen with its result
+summary while the other keeps going, so the parallelism is legible.
+
+A third, short **Synthesis** lane appears once both finish, showing the cross-reference
+pass running before the report reveals. One track selected means one lane and no
+synthesis step, laid out full width.
+
+On mobile the lanes stack rather than sit side by side.
+
+
 ### The cross-reference (the differentiator)
 
 Every complaint theme is matched against the funnel friction points by category and
