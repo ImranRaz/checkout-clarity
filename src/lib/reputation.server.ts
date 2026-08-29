@@ -167,7 +167,7 @@ async function scrapePage(hit: SourceHit): Promise<SourceHit> {
         // Review sites hang their reviews outside the "main" content and
         // render them late, so take the whole page and give it a beat.
         onlyMainContent: false,
-        waitFor: 4000,
+        waitFor: 8000,
       }),
     });
     if (!response.ok) return hit;
