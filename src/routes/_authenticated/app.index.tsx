@@ -61,6 +61,9 @@ function Home() {
   const [checking, setChecking] = useState(false);
   const [preflight, setPreflight] = useState<PreflightResult | null>(null);
   const [removing, setRemoving] = useState<string[]>([]);
+  // Two independent agents. Both on by default; at least one must stay on.
+  const [funnel, setFunnel] = useState(true);
+  const [rep, setRep] = useState(true);
   const busy = checking;
 
   const valid = isPlausibleUrl(url);
@@ -106,10 +109,14 @@ function Home() {
 
   /**
    * The live run gets its own page, so the agent's activity streams in the same
-   * terminal the recorded runs replay in.
+   * terminal the recorded runs replay in. The selected tracks ride along so the
+   * run page knows how many agents to spin up.
    */
   function runRealAgent() {
-    void navigate({ to: "/app/audit/live", search: { url: normalizeUrl(url) } });
+    void navigate({
+      to: "/app/audit/live",
+      search: { url: normalizeUrl(url), funnel, rep },
+    });
   }
 
 
@@ -209,6 +216,27 @@ function Home() {
                 ? "That doesn't parse as a URL — include the domain, e.g. store.com/p/item"
                 : "We check the page loads and what it sells before sending the agent in."}
             </p>
+
+            <fieldset className="mt-6">
+              <legend className="label-caps">Agents to run</legend>
+              <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                <TrackToggle
+                  title="Funnel agent"
+                  description="Drives a real browser from category to guest checkout, pinning friction to pixels."
+                  checked={funnel}
+                  onChange={(next) => setFunnel(next || !rep ? true : next)}
+                  disabled={funnel && !rep}
+                />
+                <TrackToggle
+                  title="Reputation agent"
+                  description="Reads public reviews for this brand and matches complaints to what we see on site."
+                  checked={rep}
+                  onChange={(next) => setRep(next || !funnel ? true : next)}
+                  disabled={rep && !funnel}
+                />
+              </div>
+            </fieldset>
+
 
             {preflight ? (
               <TargetSummary
@@ -475,4 +503,43 @@ function gradeFor(score: number): string {
   if (score >= 60) return "Workable";
   if (score >= 40) return "Leaking";
   return "Critical";
+}
+
+/** One selectable agent track. The last enabled track can't be switched off. */
+function TrackToggle({
+  title,
+  description,
+  checked,
+  onChange,
+  disabled,
+}: {
+  title: string;
+  description: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  disabled: boolean;
+}) {
+  return (
+    <label
+      className={cn(
+        "flex cursor-pointer gap-3 rounded-md border bg-card p-3.5 transition-colors",
+        checked ? "border-primary/50 shadow-tile" : "border-border hover:border-input",
+        disabled && "cursor-default",
+      )}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5 size-4 shrink-0 accent-primary"
+      />
+      <span className="min-w-0">
+        <span className="block text-sm font-medium text-foreground">{title}</span>
+        <span className="mt-1 block text-[13px] leading-relaxed text-muted-foreground">
+          {description}
+        </span>
+      </span>
+    </label>
+  );
 }

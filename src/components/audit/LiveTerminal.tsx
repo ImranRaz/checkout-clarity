@@ -54,12 +54,22 @@ export function LiveTerminal({
   elapsedMs,
   status,
   error,
+  label = "forensic-agent",
+  title,
+  idleMessage = "Waking a real browser in the cloud…",
+  compact = false,
 }: {
   domain: string;
   steps: LiveStep[];
   elapsedMs: number;
   status: "starting" | "running" | "done" | "error";
   error: string | null;
+  /** Shown in the window chrome — lets two agents share this component. */
+  label?: string | undefined;
+  /** Optional human title above the window, used in the two-lane view. */
+  title?: string | undefined;
+  idleMessage?: string | undefined;
+  compact?: boolean | undefined;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const active = status === "starting" || status === "running";
@@ -76,8 +86,28 @@ export function LiveTerminal({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-      className="tile overflow-hidden"
+      className="tile flex min-w-0 flex-col overflow-hidden"
     >
+      {title ? (
+        <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
+          <span
+            className={cn(
+              "size-2 shrink-0 rounded-full",
+              status === "error"
+                ? "bg-sev-high"
+                : active
+                  ? "animate-pulse bg-primary"
+                  : "bg-primary/50",
+            )}
+            aria-hidden
+          />
+          <p className="min-w-0 truncate text-sm font-medium text-foreground">{title}</p>
+          <p className="ml-auto shrink-0 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+            {status === "done" ? "complete" : status === "error" ? "failed" : "working"}
+          </p>
+        </div>
+      ) : null}
+
       <div className="flex items-center gap-3 border-b border-border bg-secondary px-4 py-2.5">
         <div className="flex gap-1.5" aria-hidden>
           <span className="size-2.5 rounded-full bg-sev-high/60" />
@@ -85,7 +115,7 @@ export function LiveTerminal({
           <span className="size-2.5 rounded-full bg-primary/50" />
         </div>
         <p className="truncate font-mono text-xs text-muted-foreground">
-          forensic-agent — {domain}
+          {label} — {domain}
         </p>
         <p className="ml-auto shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
           {formatClock(elapsedMs)} · {steps.length} steps
@@ -106,7 +136,10 @@ export function LiveTerminal({
 
       <div
         ref={scrollRef}
-        className="max-h-[26rem] min-h-[20rem] overflow-y-auto bg-card px-4 py-4"
+        className={cn(
+          "flex-1 overflow-y-auto bg-card px-4 py-4",
+          compact ? "max-h-[22rem] min-h-[16rem]" : "max-h-[26rem] min-h-[20rem]",
+        )}
         aria-live="polite"
       >
         <ul className="space-y-1.5 font-mono text-[13px] leading-relaxed">
@@ -115,7 +148,7 @@ export function LiveTerminal({
               <span className={cn("w-[4.5rem] shrink-0 select-none", actorColor.system)}>
                 [system]
               </span>
-              <span className="text-foreground/85">Waking a real browser in the cloud…</span>
+              <span className="text-foreground/85">{idleMessage}</span>
             </li>
           ) : null}
 
