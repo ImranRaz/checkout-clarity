@@ -61,6 +61,11 @@ function Home() {
   const [checking, setChecking] = useState(false);
   const [preflight, setPreflight] = useState<PreflightResult | null>(null);
   const [removing, setRemoving] = useState<string[]>([]);
+  // Recent runs mix full audits, funnel-only and reputation-only runs, so the
+  // rail is filterable rather than one undifferentiated pile.
+  const [kindFilter, setKindFilter] = useState<"all" | RecentAudit["kind"]>("all");
+  const filtered =
+    kindFilter === "all" ? recent : recent.filter((run) => run.kind === kindFilter);
   // Two independent agents. Both on by default; at least one must stay on.
   const [funnel, setFunnel] = useState(true);
   const [rep, setRep] = useState(true);
@@ -465,6 +470,110 @@ function TargetSummary({
 }
 
 
+
+const kindLabel: Record<RecentAudit["kind"], string> = {
+  full: "Full audit",
+  funnel: "Funnel",
+  reputation: "Reputation",
+};
+
+/**
+ * One full-width row in the Recent audits list. The list grows fast, so it
+ * reads top-to-bottom like a log rather than a horizontal shelf of cards.
+ */
+function RecentRow({
+  run,
+  thumb,
+  onDelete,
+  deleting = false,
+}: {
+  run: RecentAudit;
+  thumb?: string | undefined;
+  onDelete?: (() => void) | undefined;
+  deleting?: boolean | undefined;
+}) {
+  const reputationOnly = run.kind === "reputation";
+  const headline = reputationOnly ? run.reputationScore : run.score;
+
+  return (
+    <div className="group relative flex items-center gap-4 bg-card px-4 py-3 transition-colors hover:bg-muted/40">
+      <Link
+        to="/app/report/$reportId"
+        params={{ reportId: run.id }}
+        className="flex min-w-0 flex-1 items-center gap-4"
+      >
+        <span className="hidden h-12 w-20 shrink-0 overflow-hidden rounded border border-border bg-secondary sm:block">
+          {thumb ? (
+            <img
+              src={thumb}
+              alt={`First capture of the ${run.domain} audit`}
+              loading="lazy"
+              decoding="async"
+              className="size-full object-cover object-top"
+            />
+          ) : (
+            <span className="flex size-full items-center justify-center font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground">
+              reviews
+            </span>
+          )}
+        </span>
+
+        <span className="min-w-0 flex-1">
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="truncate text-sm font-medium text-foreground">{run.domain}</span>
+            <span className="rounded-full border border-border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+              {kindLabel[run.kind]}
+            </span>
+          </span>
+          <span className="mt-1 block truncate font-mono text-[11px] text-muted-foreground">
+            {reputationOnly
+              ? `${new Date(run.createdAt).toISOString().slice(0, 10)} · what customers say`
+              : `${run.stages} stages · ${run.friction} friction · ${run.consoleErrors} console`}
+            {!reputationOnly && run.reputationScore !== null
+              ? ` · reputation ${run.reputationScore}/100`
+              : ""}
+          </span>
+        </span>
+
+        <span className="shrink-0 text-right">
+          {headline === null ? (
+            <span className="font-mono text-sm text-muted-foreground">n/a</span>
+          ) : (
+            <>
+              <span className="font-display text-2xl leading-none tabular-nums">{headline}</span>
+              <span className="ml-1 font-mono text-[11px] text-muted-foreground">/100</span>
+              <span className="mt-0.5 block font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                {gradeFor(headline)}
+                {!reputationOnly && run.status === "partial" ? " · provisional" : ""}
+              </span>
+            </>
+          )}
+        </span>
+
+        <ArrowRight
+          className="size-3.5 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5"
+          aria-hidden
+        />
+      </Link>
+
+      {onDelete ? (
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={deleting}
+          aria-label={`Delete audit for ${run.domain}`}
+          className="inline-flex size-6 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+        >
+          {deleting ? (
+            <Loader2 className="size-3 animate-spin" aria-hidden />
+          ) : (
+            <X className="size-3" aria-hidden />
+          )}
+        </button>
+      ) : null}
+    </div>
+  );
+}
 
 /** One card in the Recent audits rail — saved live runs and fixtures alike. */
 function RecentCard({
