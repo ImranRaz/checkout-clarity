@@ -231,6 +231,7 @@ async function askModel(system: string, user: string): Promise<string> {
         { role: "user", content: user },
       ],
       response_format: { type: "json_object" },
+      max_tokens: 8000,
     }),
   });
 
@@ -242,9 +243,13 @@ async function askModel(system: string, user: string): Promise<string> {
   }
 
   const payload = (await response.json()) as {
-    choices?: Array<{ message?: { content?: string } }>;
+    choices?: Array<{ message?: { content?: string }; finish_reason?: string }>;
   };
-  return payload.choices?.[0]?.message?.content ?? "";
+  const choice = payload.choices?.[0];
+  if (choice?.finish_reason === "length") {
+    throw new Error("The review analysis ran long and was cut off — try again.");
+  }
+  return choice?.message?.content ?? "";
 }
 
 function parseJson(raw: string): unknown {
