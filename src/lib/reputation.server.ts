@@ -95,17 +95,17 @@ async function firecrawlSearch(query: string, limit: number): Promise<SourceHit[
     throw new Error(`Review search failed [${response.status}]: ${body.slice(0, 300)}`);
   }
 
-  const payload = (await response.json()) as {
-    success?: boolean;
-    data?: unknown;
-    web?: Array<Record<string, unknown>>;
-  };
+  const payload = (await response.json()) as Record<string, unknown>;
 
-  const rows: Array<Record<string, unknown>> = Array.isArray(payload.data)
-    ? (payload.data as Array<Record<string, unknown>>)
-    : Array.isArray(payload.web)
-      ? payload.web
-      : [];
+  // v2 search answers either `{data: [...]}` or `{data: {web: [...]}}`.
+  const data = payload["data"];
+  const rows: Array<Record<string, unknown>> = Array.isArray(data)
+    ? (data as Array<Record<string, unknown>>)
+    : data && typeof data === "object" && Array.isArray((data as Record<string, unknown>)["web"])
+      ? ((data as Record<string, unknown>)["web"] as Array<Record<string, unknown>>)
+      : Array.isArray(payload["web"])
+        ? (payload["web"] as Array<Record<string, unknown>>)
+        : [];
 
   return rows
     .map((row) => {
@@ -120,7 +120,41 @@ async function firecrawlSearch(query: string, limit: number): Promise<SourceHit[
         text: text.slice(0, 12_000),
       };
     })
-    .filter((hit) => hit.url && hit.text.length > 200);
+    .filter((hit) => hit.url.length > 0);
+}
+
+/**
+ * Search only returns snippets, so the pages that matter get fetched properly.
+ * A scrape that fails or times out falls back to the search snippet rather
+ * than dropping the source.
+ */
+async function scrapePage(hit: SourceHit): Promise<SourceHit> {
+  const lovableKey = process.env["LOVABLE_API_KEY"];
+  const connectionKey = process.env["FIRECRAWL_API_KEY"];
+  if (!lovableKey || !connectionKey) return hit;
+
+  try {
+    const response = await fetch(`${FIRECRAWL_GATEWAY}/scrape`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${lovableKey}`,
+        "X-Connection-Api-Key": connectionKey,
+      },
+      body: JSON.stringify({
+        url: hit.url,
+        formats: ["markdown"],
+        onlyMainContent: true,
+      }),
+    });
+    if (!response.ok) return hit;
+    const payload = (await response.json()) as Record<string, unknown>;
+    const doc = (payload["data"] ?? payload) as Record<string, unknown>;
+    const markdown = typeof doc["markdown"] === "string" ? doc["markdown"] : "";
+    return markdown.length > hit.text.length ? { ...hit, text: markdown.slice(0, 12_000) } : hit;
+  } catch {
+    return hit;
+  }
 }
 
 /** Finds the pages where this brand is actually being talked about. */
