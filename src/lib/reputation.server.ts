@@ -26,20 +26,40 @@ export type SourceHit = {
   text: string;
 };
 
-/** Review destinations worth reading, in rough order of signal quality. */
+/**
+ * Review destinations worth reading, in rough order of signal quality. Kept
+ * broad on purpose: a hotel's reviews live on Google/Tripadvisor/Booking, a
+ * DTC brand's on Trustpilot, a SaaS tool's on G2. The profiling pass below
+ * decides which of these actually get searched.
+ */
 const REVIEW_SITES = [
+  "google.com",
+  "tripadvisor.com",
   "trustpilot.com",
+  "yelp.com",
+  "booking.com",
+  "expedia.com",
+  "hotels.com",
   "reddit.com",
+  "opentable.com",
+  "trip.com",
+  "agoda.com",
+  "cruisecritic.com",
   "sitejabber.com",
   "bbb.org",
   "consumeraffairs.com",
+  "g2.com",
+  "capterra.com",
+  "healthgrades.com",
+  "zocdoc.com",
+  "avvo.com",
+  "angi.com",
+  "houzz.com",
+  "facebook.com",
   "resellerratings.com",
   "producthunt.com",
-  "tripadvisor.com",
-  "cruisecritic.com",
-  "yelp.com",
-  "g2.com",
 ];
+
 
 export function brandFromUrl(url: string): { brand: string; domain: string } {
   let domain = url;
@@ -117,7 +137,7 @@ async function firecrawlSearch(query: string, limit: number): Promise<SourceHit[
         url,
         title: typeof row["title"] === "string" ? row["title"] : url,
         site: siteOf(url),
-        text: text.slice(0, 12_000),
+        text: text.slice(0, 40_000),
       };
     })
     .filter((hit) => hit.url.length > 0);
@@ -147,16 +167,87 @@ async function scrapePage(hit: SourceHit): Promise<SourceHit> {
         // Review sites hang their reviews outside the "main" content and
         // render them late, so take the whole page and give it a beat.
         onlyMainContent: false,
-        waitFor: 4000,
+        waitFor: 8000,
       }),
     });
     if (!response.ok) return hit;
     const payload = (await response.json()) as Record<string, unknown>;
     const doc = (payload["data"] ?? payload) as Record<string, unknown>;
     const markdown = typeof doc["markdown"] === "string" ? doc["markdown"] : "";
-    return markdown.length > hit.text.length ? { ...hit, text: markdown.slice(0, 12_000) } : hit;
+    return markdown.length > hit.text.length ? { ...hit, text: markdown.slice(0, 40_000) } : hit;
   } catch {
     return hit;
+  }
+}
+
+const PROFILE_SYSTEM = `You identify a business from its own website so a reputation agent knows where to look for reviews.
+
+Return STRICT JSON only:
+{
+  "name": "the exact trading name customers would search for",
+  "category": "hotel | restaurant | cruise line | clinic | law firm | home services | DTC ecommerce | SaaS | marketplace | other",
+  "location": "city, state/country if it is a physical place, else null",
+  "queries": ["5 web search queries"]
+}
+
+Rules for "queries" — this is the important part:
+- Always include the location (when there is one) so a same-named business elsewhere is not picked up.
+- Query 1 MUST target Google reviews/Maps for the business, e.g. "Sea View Hotel Bal Harbour Florida google reviews".
+- The rest must target the review platforms that matter FOR THIS CATEGORY, not a generic list:
+  hotel/resort -> tripadvisor, booking.com, expedia, hotels.com, yelp
+  restaurant -> yelp, opentable, tripadvisor
+  cruise -> cruisecritic, tripadvisor
+  clinic/doctor -> healthgrades, zocdoc
+  home services -> angi, houzz, yelp, bbb
+  SaaS/B2B -> g2, capterra, trustpilot, reddit
+  DTC ecommerce -> trustpilot, sitejabber, reddit, bbb
+- Include one query aimed at complaints/negative experiences.
+- Plain search strings. At most one site: operator per query.`;
+
+/** Reads the site itself so the searches know what kind of business this is. */
+async function profileBrand(
+  url: string,
+  brand: string,
+  domain: string,
+): Promise<{ name: string; category: string | null; location: string | null; queries: string[] }> {
+  const fallback = {
+    name: brand,
+    category: null,
+    location: null,
+    queries: [
+      `"${brand}" ${domain} reviews google`,
+      `"${brand}" reviews trustpilot OR tripadvisor OR yelp`,
+      `${brand} customer complaints bad experience reviews`,
+    ],
+  };
+
+  try {
+    const home = await scrapePage({ url, title: brand, site: domain, text: "" });
+    if (home.text.length < 120) return fallback;
+
+    const raw = await askModel(
+      PROFILE_SYSTEM,
+      `Website: ${url}\nDomain: ${domain}\n\nHomepage content:\n\n${home.text.slice(0, 6000)}`,
+    );
+    const parsed = parseJson(raw) as {
+      name?: string;
+      category?: string;
+      location?: string | null;
+      queries?: unknown;
+    };
+    const queries = Array.isArray(parsed.queries)
+      ? parsed.queries.filter((q): q is string => typeof q === "string" && q.length > 3).slice(0, 5)
+      : [];
+    if (queries.length === 0) return fallback;
+
+    return {
+      name: parsed.name?.trim() || brand,
+      category: parsed.category?.trim() || null,
+      location: parsed.location?.trim() || null,
+      queries,
+    };
+  } catch {
+    return fallback;
   }
 }
 
@@ -168,12 +259,12 @@ export async function findReviewSources(url: string): Promise<{
 }> {
   const { brand, domain } = brandFromUrl(url);
 
-  const queries = [
-    `"${brand}" reviews ${REVIEW_SITES.slice(0, 4)
-      .map((s) => `site:${s}`)
-      .join(" OR ")}`,
-    `${brand} ${domain} customer complaints refund shipping experience reviews`,
-  ];
+  // Who is this, really? A hotel and a sock brand are reviewed in entirely
+  // different places, and "Seaview Hotel" exists in six countries.
+  const profile = await profileBrand(url, brand, domain);
+  const queries = profile.queries;
+  const label = [profile.name, profile.location].filter(Boolean).join(" — ");
+
 
   const settled = await Promise.allSettled(queries.map((q) => firecrawlSearch(q, 6)));
   const seen = new Set<string>();
@@ -199,22 +290,37 @@ export async function findReviewSources(url: string): Promise<{
     }
   }
 
-  // Prefer known review destinations, then everything else.
-  hits.sort((a, b) => {
-    const ra = REVIEW_SITES.indexOf(a.site);
-    const rb = REVIEW_SITES.indexOf(b.site);
-    return (ra === -1 ? 99 : ra) - (rb === -1 ? 99 : rb);
-  });
+  // Prefer known review destinations (matched loosely, so google.com.mx and
+  // www.tripadvisor.co.uk still count), and inside that prefer pages that
+  // mention the business's own city — the defence against same-name confusion.
+  const locale = (profile.location ?? "")
+    .toLowerCase()
+    .split(/[,/]/)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 2);
+
+  const rank = (hit: SourceHit) => {
+    const i = REVIEW_SITES.findIndex(
+      (site) => hit.site === site || hit.site.endsWith(`.${site}`) || hit.site.startsWith(`${site.split(".")[0]}.`),
+    );
+    const base = i === -1 ? 99 : i;
+    const haystack = `${hit.title} ${hit.text}`.toLowerCase();
+    const local = locale.length > 0 && locale.some((part) => haystack.includes(part));
+    return base - (local ? 40 : 0);
+  };
+
+  hits.sort((a, b) => rank(a) - rank(b));
 
   // Fetch the top pages in full — snippets alone are too thin to cluster.
-  const top = hits.slice(0, 6);
+  const top = hits.slice(0, 7);
   const scraped = await Promise.all(top.map((hit) => scrapePage(hit)));
 
   return {
-    brand,
+    brand: label || brand,
     domain,
     hits: scraped.filter((hit) => hit.text.length > 120),
   };
+
 }
 
 async function askModel(system: string, user: string): Promise<string> {
@@ -298,6 +404,8 @@ Rules:
 - 3 to 7 complaint themes and 1 to 3 praise themes, ordered by weight.
 - "category" maps the theme to the on-site lens it would show up as: pricing/returns/refund distrust -> trust; confusing product info or promises -> clarity; checkout or form pain -> form; slow site -> performance; otherwise null.
 - review_count is your honest estimate of how many distinct reviews the text represents.
+- The brand label may include a location (e.g. "Sea View Hotel — Bal Harbour, Florida"). Ignore any page about a same-named business in a different city or country, and never mix them into the themes.
+- Use whatever the sources are: Google/Maps, Tripadvisor, Booking, Yelp, Trustpilot, Reddit, forums — all count as customer reviews.
 - If the text is not really about this brand, return an empty themes array and say so in summary.`;
 
 /** Turns scraped review text into ranked complaint and praise themes. */
@@ -328,12 +436,12 @@ export async function analyzeReviews(
   }
 
   const corpus = hits
-    .map((hit) => `### ${hit.title}\nSOURCE: ${hit.site}\nURL: ${hit.url}\n\n${hit.text.slice(0, 6000)}`)
+    .map((hit) => `### ${hit.title}\nSOURCE: ${hit.site}\nURL: ${hit.url}\n\n${hit.text.slice(0, 14_000)}`)
     .join("\n\n---\n\n");
 
   const raw = await askModel(
     THEME_SYSTEM,
-    `Brand: ${brand}\n\nScraped review pages:\n\n${corpus.slice(0, 90_000)}`,
+    `Brand: ${brand}\n\nScraped review pages:\n\n${corpus.slice(0, 140_000)}`,
   );
   const parsed = parseJson(raw) as {
     average_rating?: number | null;
