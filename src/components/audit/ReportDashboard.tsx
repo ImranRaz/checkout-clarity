@@ -87,6 +87,11 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
   const stage = report.stages[stageIndex]!;
   const score = scoreReport(report);
   const partial = report.status === "partial";
+  const coverage = reportCoverage(report);
+  const scorable = coverage.scorable;
+  const provisional = coverage.provisional;
+  const [view, setView] = useState<"funnel" | "reputation">("funnel");
+
 
   const flat: Cursor[] = useMemo(
     () =>
