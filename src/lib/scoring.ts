@@ -125,7 +125,13 @@ export function scoreReport(report: ForensicAuditReport): ScoreBreakdown {
     weight: STAGE_WEIGHT[stage.kind] ?? 0.5,
     score: scoreStage(stage),
   }));
+  // A run that captured nothing has nothing to score; callers show the
+  // blocked reason instead of a fabricated number.
+  if (scored.length === 0) {
+    return { total: 0, grade: "Critical", components: [] };
+  }
   const totalWeight = scored.reduce((sum, s) => sum + s.weight, 0) || 1;
+
 
   const total = Math.round(
     scored.reduce((sum, s) => sum + s.score.total * s.weight, 0) / totalWeight,
