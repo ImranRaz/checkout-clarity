@@ -237,6 +237,58 @@ export const stageSchema = z.object({
 
 export type AuditStage = z.infer<typeof stageSchema>;
 
+/* ---------------------------------------------------------------------------
+ * Reputation track — what customers say, produced by a second, browser-free
+ * agent that reads public reviews rather than driving the site.
+ * ------------------------------------------------------------------------ */
+
+export const reviewSourceSchema = z.object({
+  name: z.string(),
+  url: z.string(),
+  review_count: z.number().nullish(),
+  average_rating: z.number().nullish(),
+});
+export type ReviewSource = z.infer<typeof reviewSourceSchema>;
+
+export const reviewQuoteSchema = z.object({
+  text: z.string(),
+  source: z.string(),
+  rating: z.number().nullish(),
+  url: z.string().nullish(),
+});
+export type ReviewQuote = z.infer<typeof reviewQuoteSchema>;
+
+export const reputationThemeSchema = z.object({
+  id: z.string(),
+  kind: z.enum(["complaint", "praise"]),
+  title: z.string(),
+  summary: z.string(),
+  /** Roughly how many reviews touched this theme in the sample we read. */
+  mention_count: z.number(),
+  severity: severitySchema,
+  trend: z.enum(["rising", "steady", "fading"]),
+  /** The funnel lens this maps onto, when there is one. */
+  category: frictionCategorySchema.nullish(),
+  quotes: z.array(reviewQuoteSchema),
+  /** Friction-point ids the synthesis pass matched to this theme. */
+  corroborates: z.array(z.number()).default([]),
+});
+export type ReputationTheme = z.infer<typeof reputationThemeSchema>;
+
+export const reputationReportSchema = z.object({
+  /** 0–100, higher is better. */
+  score: z.number(),
+  average_rating: z.number().nullish(),
+  review_count: z.number(),
+  summary: z.string(),
+  sources: z.array(reviewSourceSchema),
+  themes: z.array(reputationThemeSchema),
+  searched_at: z.string(),
+  /** Set when we could not find a credible review footprint. */
+  note: z.string().nullish(),
+});
+export type ReputationReport = z.infer<typeof reputationReportSchema>;
+
 export const auditReportSchema = z.object({
   id: z.string(),
   url: z.string(),
