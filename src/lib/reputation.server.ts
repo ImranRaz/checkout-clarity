@@ -203,7 +203,15 @@ export async function findReviewSources(url: string): Promise<{
     return (ra === -1 ? 99 : ra) - (rb === -1 ? 99 : rb);
   });
 
-  return { brand, domain, hits: hits.slice(0, 8) };
+  // Fetch the top pages in full — snippets alone are too thin to cluster.
+  const top = hits.slice(0, 6);
+  const scraped = await Promise.all(top.map((hit) => scrapePage(hit)));
+
+  return {
+    brand,
+    domain,
+    hits: scraped.filter((hit) => hit.text.length > 120),
+  };
 }
 
 async function askModel(system: string, user: string): Promise<string> {
