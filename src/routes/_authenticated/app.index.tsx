@@ -353,6 +353,8 @@ function Home() {
                     friction: allFrictionPoints(report).length,
                     consoleErrors: totalConsoleErrors(report),
                     createdAt: report.captured_at,
+                    kind: report.reputation ? "full" : "funnel",
+                    reputationScore: report.reputation?.score ?? null,
                     thumbToken: "",
                   }}
                   thumb={report.stages[0]?.screenshot.src}
