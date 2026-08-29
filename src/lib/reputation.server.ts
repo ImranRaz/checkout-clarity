@@ -137,7 +137,7 @@ async function firecrawlSearch(query: string, limit: number): Promise<SourceHit[
         url,
         title: typeof row["title"] === "string" ? row["title"] : url,
         site: siteOf(url),
-        text: text.slice(0, 12_000),
+        text: text.slice(0, 40_000),
       };
     })
     .filter((hit) => hit.url.length > 0);
@@ -174,7 +174,7 @@ async function scrapePage(hit: SourceHit): Promise<SourceHit> {
     const payload = (await response.json()) as Record<string, unknown>;
     const doc = (payload["data"] ?? payload) as Record<string, unknown>;
     const markdown = typeof doc["markdown"] === "string" ? doc["markdown"] : "";
-    return markdown.length > hit.text.length ? { ...hit, text: markdown.slice(0, 12_000) } : hit;
+    return markdown.length > hit.text.length ? { ...hit, text: markdown.slice(0, 40_000) } : hit;
   } catch {
     return hit;
   }
@@ -436,12 +436,12 @@ export async function analyzeReviews(
   }
 
   const corpus = hits
-    .map((hit) => `### ${hit.title}\nSOURCE: ${hit.site}\nURL: ${hit.url}\n\n${hit.text.slice(0, 6000)}`)
+    .map((hit) => `### ${hit.title}\nSOURCE: ${hit.site}\nURL: ${hit.url}\n\n${hit.text.slice(0, 14_000)}`)
     .join("\n\n---\n\n");
 
   const raw = await askModel(
     THEME_SYSTEM,
-    `Brand: ${brand}\n\nScraped review pages:\n\n${corpus.slice(0, 90_000)}`,
+    `Brand: ${brand}\n\nScraped review pages:\n\n${corpus.slice(0, 140_000)}`,
   );
   const parsed = parseJson(raw) as {
     average_rating?: number | null;
