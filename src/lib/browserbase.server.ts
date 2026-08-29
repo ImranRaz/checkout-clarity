@@ -176,7 +176,14 @@ export async function preflightTargetUrl(url: string): Promise<PreflightResult> 
 
 
     const content = page.content ?? "";
-    const blocked = page.statusCode === 403 || page.statusCode === 429 || BLOCK_PATTERNS.test(content);
+    // Real pages routinely mention "captcha" inside inlined scripts or privacy
+    // copy, so pattern matching alone gives false positives on big stores. Only
+    // a short body (an interstitial, not a storefront) counts as a wall.
+    const blocked =
+      page.statusCode === 403 ||
+      page.statusCode === 429 ||
+      (content.length < 4000 && BLOCK_PATTERNS.test(content));
+
 
     return {
       ...base,
