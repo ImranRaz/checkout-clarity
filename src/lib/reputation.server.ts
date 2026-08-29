@@ -26,20 +26,40 @@ export type SourceHit = {
   text: string;
 };
 
-/** Review destinations worth reading, in rough order of signal quality. */
+/**
+ * Review destinations worth reading, in rough order of signal quality. Kept
+ * broad on purpose: a hotel's reviews live on Google/Tripadvisor/Booking, a
+ * DTC brand's on Trustpilot, a SaaS tool's on G2. The profiling pass below
+ * decides which of these actually get searched.
+ */
 const REVIEW_SITES = [
+  "google.com",
+  "tripadvisor.com",
   "trustpilot.com",
+  "yelp.com",
+  "booking.com",
+  "expedia.com",
+  "hotels.com",
   "reddit.com",
+  "opentable.com",
+  "trip.com",
+  "agoda.com",
+  "cruisecritic.com",
   "sitejabber.com",
   "bbb.org",
   "consumeraffairs.com",
+  "g2.com",
+  "capterra.com",
+  "healthgrades.com",
+  "zocdoc.com",
+  "avvo.com",
+  "angi.com",
+  "houzz.com",
+  "facebook.com",
   "resellerratings.com",
   "producthunt.com",
-  "tripadvisor.com",
-  "cruisecritic.com",
-  "yelp.com",
-  "g2.com",
 ];
+
 
 export function brandFromUrl(url: string): { brand: string; domain: string } {
   let domain = url;
