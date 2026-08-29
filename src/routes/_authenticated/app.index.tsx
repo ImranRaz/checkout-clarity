@@ -106,10 +106,14 @@ function Home() {
 
   /**
    * The live run gets its own page, so the agent's activity streams in the same
-   * terminal the recorded runs replay in.
+   * terminal the recorded runs replay in. The selected tracks ride along so the
+   * run page knows how many agents to spin up.
    */
   function runRealAgent() {
-    void navigate({ to: "/app/audit/live", search: { url: normalizeUrl(url) } });
+    void navigate({
+      to: "/app/audit/live",
+      search: { url: normalizeUrl(url), funnel, rep },
+    });
   }
 
 
