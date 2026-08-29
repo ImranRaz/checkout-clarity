@@ -757,7 +757,16 @@ export async function runJourney(entryUrl, { onLog } = {}) {
     const openedProducts = new Set();
 
     for (let step = 0; !wall && step < MAX_STEPS && Date.now() < deadline; step += 1) {
+      // If the cloud tab died (session timeout, remote disconnect), stop here
+      // and keep the stages already captured rather than failing the run.
+      if (page.isClosed()) {
+        status = "partial";
+        blockedReason = humanizeFailure("Target page, context or browser has been closed");
+        emit("system", blockedReason, "warn");
+        break;
+      }
       await withTimeout(clearOverlays(page, { emit }), 12000, "Clearing pop-ups").catch(() => {});
+
 
       // Reading controls is now a DOM scan, so it cannot stall the run; if it
       // ever does, the planner simply works from the screen alone.
