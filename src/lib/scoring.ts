@@ -157,3 +157,39 @@ export function scoreReport(report: ForensicAuditReport): ScoreBreakdown {
 
   return { total, grade: gradeFor(total), components };
 }
+
+/**
+ * A stopped run still measured real pages. Rather than refusing to score it,
+ * we score what was captured and label the number provisional, naming the
+ * stages that were never reached so nobody mistakes it for a full audit.
+ */
+const EXPECTED_COVERAGE: { kinds: StageKind[]; label: string }[] = [
+  { kinds: ["category", "listing"], label: "Browse" },
+  { kinds: ["product", "detail", "variant", "options"], label: "Product" },
+  { kinds: ["cart", "mini-cart"], label: "Cart" },
+  { kinds: ["checkout", "form", "summary"], label: "Checkout" },
+];
+
+export interface ScoreCoverage {
+  /** True when a number can honestly be shown at all. */
+  scorable: boolean;
+  /** True when the number covers only part of the journey. */
+  provisional: boolean;
+  covered: string[];
+  missing: string[];
+}
+
+export function reportCoverage(report: ForensicAuditReport): ScoreCoverage {
+  const kinds = new Set(report.stages.map((s) => s.kind));
+  const covered: string[] = [];
+  const missing: string[] = [];
+  for (const band of EXPECTED_COVERAGE) {
+    (band.kinds.some((k) => kinds.has(k)) ? covered : missing).push(band.label);
+  }
+  return {
+    scorable: report.stages.length > 0,
+    provisional: report.status === "partial" && report.stages.length > 0,
+    covered,
+    missing,
+  };
+}
