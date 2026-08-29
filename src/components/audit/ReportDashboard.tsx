@@ -206,8 +206,9 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
         </div>
       </motion.section>
 
-
+      <div className={cn("space-y-4", view === "funnel" ? "" : "hidden print:block")}>
       {/* Journey strip */}
+
 
       <motion.section
         variants={tileMotion}
