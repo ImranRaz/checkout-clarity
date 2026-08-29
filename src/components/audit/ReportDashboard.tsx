@@ -588,6 +588,34 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
           </a>
         </motion.section>
       </div>
+
+      {report.reputation ? (
+        <motion.section
+          id="reputation"
+          variants={tileMotion}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="scroll-mt-6 space-y-4 border-t border-border pt-8"
+          aria-label="Reputation"
+        >
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="font-display text-2xl tracking-tight">What customers say</h2>
+            <p className="font-mono text-[11px] text-muted-foreground">
+              read from public reviews · no browser needed
+            </p>
+          </div>
+          <ReputationPanel
+            reputation={report.reputation}
+            onSelectFinding={(findingId) => {
+              const stageIdx = report.stages.findIndex((s) =>
+                s.friction_points.some((p) => p.id === findingId),
+              );
+              if (stageIdx === -1) return;
+              select(stageIdx, findingId);
+              document.getElementById("evidence-top")?.scrollIntoView({ behavior: "smooth" });
+            }}
+          />
+        </motion.section>
+      ) : null}
     </motion.div>
   );
 }
