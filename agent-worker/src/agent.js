@@ -47,6 +47,31 @@ function withTimeout(promise, timeoutMs, label) {
 }
 
 /**
+ * A dead browser tab is an infrastructure event, not a finding about the
+ * store. Detect it anywhere in the loop so the run seals what it already
+ * measured instead of throwing a Playwright string at the customer.
+ */
+export function isSessionGone(error) {
+  const message = String(error?.message || error || "");
+  return /has been closed|Target closed|Session closed|browser has disconnected|WebSocket|Connection closed|context or browser/i.test(
+    message,
+  );
+}
+
+/** Turns raw automation errors into something a paying customer can read. */
+export function humanizeFailure(message) {
+  const raw = String(message || "");
+  if (isSessionGone(raw)) {
+    return "The cloud browser session ended before the journey finished, so the run was sealed with everything captured up to that point.";
+  }
+  if (/timed out/i.test(raw)) {
+    return `${raw.replace(/\.$/, "")} — the run was sealed with everything captured up to that point.`;
+  }
+  return raw.slice(0, 240);
+}
+
+
+/**
  * The API key alone identifies the account, so the project id is looked up
  * rather than asked for. Cached per key for the life of the process.
  */
