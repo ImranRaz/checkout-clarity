@@ -341,7 +341,10 @@ function TargetSummary({
   onContinue: () => void;
   onRunLive: () => void;
 }) {
-  const failed = !result.ok;
+  // A bot wall only stops our lightweight HTTP reader. The agent drives a real
+  // browser, so it usually walks straight through — treat it as advisory.
+  const blocked = result.blocked;
+  const failed = !result.ok && !blocked;
   const found = result.signals.filter((s) => s.present);
 
   return (
@@ -352,24 +355,35 @@ function TargetSummary({
       className="mt-6"
     >
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-        {failed ? (
-          <ShieldAlert className="size-4 shrink-0 text-sev-high" aria-hidden />
+        {failed || blocked ? (
+          <ShieldAlert
+            className={cn("size-4 shrink-0", blocked ? "text-sev-med" : "text-sev-high")}
+            aria-hidden
+          />
         ) : (
           <Check className="size-4 shrink-0 text-primary" aria-hidden />
         )}
         <span className="font-medium text-foreground">
-          {failed
-            ? "We couldn't open that page"
-            : `Page opens fine${result.platform ? ` — ${result.platform} store` : ""}`}
+          {blocked
+            ? "This page screens automated readers"
+            : failed
+              ? "We couldn't open that page"
+              : `Page opens fine${result.platform ? ` — ${result.platform} store` : ""}`}
         </span>
-        {result.title && !failed ? (
+        {result.title && !failed && !blocked ? (
           <span className="truncate text-muted-foreground">· {result.title}</span>
         ) : null}
       </div>
 
-      {result.error ? (
+      {blocked ? (
+        <p className="mt-2 text-[13px] text-muted-foreground">
+          Our quick preview reader was shown a bot check. That's normal on larger stores — the
+          agent uses a real browser, so it can usually get through. Send it in and watch the run.
+        </p>
+      ) : result.error ? (
         <p className="mt-2 text-[13px] text-sev-high">{result.error}</p>
       ) : found.length > 0 ? (
+
         <ul className="mt-2.5 flex flex-wrap gap-1.5">
           {found.map((signal) => (
             <li
