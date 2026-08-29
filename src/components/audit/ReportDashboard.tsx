@@ -458,17 +458,21 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
               </h2>
               <p className="mt-2 flex items-baseline gap-2">
                 <span className="font-display text-4xl leading-none tracking-tight tabular-nums">
-                  {partial ? "n/a" : score.total}
+                  {scorable ? score.total : "n/a"}
                 </span>
-                {!partial && <span className="font-mono text-sm text-muted-foreground">/100</span>}
+                {scorable && <span className="font-mono text-sm text-muted-foreground">/100</span>}
               </p>
               <p
                 className={cn(
                   "mt-1 text-sm font-medium",
-                  partial ? "text-sev-medium" : grade[score.grade],
+                  !scorable || provisional ? "text-sev-medium" : grade[score.grade],
                 )}
               >
-                {partial ? "Not scored" : score.grade}
+                {!scorable
+                  ? "Not scored"
+                  : provisional
+                    ? `${score.grade} · provisional`
+                    : score.grade}
               </p>
             </div>
 
@@ -485,13 +489,13 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
           </div>
 
 
-          {partial ? (
+          {!scorable ? (
             <p className="mt-5 border-t border-border pt-4 text-sm leading-relaxed text-muted-foreground">
-              The agent never reached a product page or a cart, so the signals a score depends on
-              were never measured. Scoring the interlock page instead would produce a flattering,
-              meaningless number.
+              The agent never captured a page, so there were no signals to score. The blocked reason
+              above explains where the run stopped.
             </p>
           ) : (
+
             <>
               <ul className="mt-5 space-y-3 border-t border-border pt-4">
                 {report.stages.map((s) => {
