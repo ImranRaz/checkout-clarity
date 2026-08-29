@@ -267,7 +267,7 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
                 stage={s}
                 index={i}
                 selected={i === stageIndex}
-                partial={partial}
+                partial={!scorable}
                 onSelect={() => select(i, null)}
               />
             </li>
@@ -305,7 +305,7 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
                     {i + 1}. {s.label}
                   </span>
                   <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
-                    {partial ? "n/a" : `${scoreStage(s).total}/100`} · {s.friction_points.length}
+                    {scorable ? `${scoreStage(s).total}/100` : "n/a"} · {s.friction_points.length}
                   </span>
                 </button>
                 <ul className="mt-1.5 space-y-1.5">
