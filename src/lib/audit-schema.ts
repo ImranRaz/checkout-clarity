@@ -269,6 +269,8 @@ export const auditReportSchema = z.object({
       ),
     })
     .optional(),
+  /** Produced by the reputation agent, when that track was selected. */
+  reputation: reputationReportSchema.nullish().optional(),
 });
 export type ForensicAuditReport = z.infer<typeof auditReportSchema>;
 
