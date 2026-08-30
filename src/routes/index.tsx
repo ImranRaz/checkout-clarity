@@ -155,12 +155,22 @@ const JOURNEY_STAGES = [
 
 function JourneyLoop() {
   const [active, setActive] = useState(0);
-  const [showReport, setShowReport] = useState(false);
+  const [showReport, setShowReport] = useState(true);
   const [reportHover, setReportHover] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [introPhase, setIntroPhase] = useState(true);
 
   useEffect(() => {
-    if (showReport || paused) return;
+    if (!introPhase || paused) return;
+    const t = setTimeout(() => {
+      setIntroPhase(false);
+      setShowReport(false);
+    }, 5000);
+    return () => clearTimeout(t);
+  }, [introPhase, paused]);
+
+  useEffect(() => {
+    if (showReport || paused || introPhase) return;
     const t = setInterval(() => {
       setActive((i) => {
         const next = (i + 1) % JOURNEY_STAGES.length;
@@ -169,17 +179,18 @@ function JourneyLoop() {
       });
     }, 2400);
     return () => clearInterval(t);
-  }, [showReport, paused]);
+  }, [showReport, paused, introPhase]);
 
   useEffect(() => {
-    if (!showReport || reportHover) return;
+    if (!showReport || reportHover || introPhase) return;
     const t = setTimeout(() => setShowReport(false), 3800);
     return () => clearTimeout(t);
-  }, [showReport, reportHover]);
+  }, [showReport, reportHover, introPhase]);
 
   const dismissReport = () => {
     setReportHover(false);
     setShowReport(false);
+    setIntroPhase(false);
     setActive(0);
   };
 
@@ -206,7 +217,14 @@ function JourneyLoop() {
       <div
         className="relative mx-auto aspect-square w-full max-w-[580px] p-6"
         onMouseEnter={() => setPaused(true)}
-        onMouseLeave={() => setPaused(false)}
+        onMouseLeave={() => {
+          setPaused(false);
+          if (introPhase) {
+            setIntroPhase(false);
+            setShowReport(false);
+            setActive(0);
+          }
+        }}
       >
         <svg viewBox="0 0 100 100" className="absolute inset-0 size-full" aria-hidden>
           {JOURNEY_STAGES.map((s, i) => {
@@ -275,6 +293,7 @@ function JourneyLoop() {
               onClick={() => {
                 setActive(i);
                 setShowReport(false);
+                setIntroPhase(false);
               }}
               style={{ left: `${x}%`, top: `${y}%` }}
               className="absolute flex w-28 -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
@@ -329,7 +348,10 @@ function JourneyLoop() {
               <div className="mt-3">
                 <button
                   type="button"
-                  onClick={() => setShowReport(true)}
+                  onClick={() => {
+                    setShowReport(true);
+                    setPaused(true);
+                  }}
                   className="group inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-foreground transition-colors hover:border-primary hover:text-primary"
                 >
                   <FileText className="size-3" />
