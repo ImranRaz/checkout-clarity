@@ -333,7 +333,7 @@ function EvidenceShowcase({
   return (
     <section className="border-b border-border bg-card" aria-label="What the report looks like">
       <div className="mx-auto w-full max-w-6xl px-6 py-16">
-        <p className="label-caps">What you actually see</p>
+        <p className="label-caps">On your site · the funnel agent</p>
         <h2 className="mt-4 max-w-xl font-display text-2xl tracking-tight sm:text-[1.75rem]">
           Every finding pinned to the pixel that caused it.
         </h2>
@@ -502,6 +502,13 @@ function Marketing() {
   const hero = complete[0] ?? fixtureReports[0]!;
   const heroStage = hero.stages[0]!;
   const heroPins = [...heroStage.friction_points]
+    .sort((a, b) => a.y_percentage - b.y_percentage)
+    .slice(0, 5);
+  // Evidence showcase uses a different brand than the hero so the page doesn't
+  // feel like one report stretched over every section.
+  const showcase = complete[1] ?? hero;
+  const showcaseStage = showcase.stages[0]!;
+  const showcasePins = [...showcaseStage.friction_points]
     .sort((a, b) => a.y_percentage - b.y_percentage)
     .slice(0, 5);
 
