@@ -155,7 +155,6 @@ const JOURNEY_STAGES = [
 function JourneyLoop() {
   const [active, setActive] = useState(0);
   const [showReport, setShowReport] = useState(false);
-  const [hasShownReport, setHasShownReport] = useState(false);
   const [paused, setPaused] = useState(false);
 
   useEffect(() => {
@@ -163,15 +162,12 @@ function JourneyLoop() {
     const t = setInterval(() => {
       setActive((i) => {
         const next = (i + 1) % JOURNEY_STAGES.length;
-        if (next === 0 && !hasShownReport) {
-          setShowReport(true);
-          setHasShownReport(true);
-        }
+        if (next === 0) setShowReport(true);
         return next;
       });
     }, 2400);
     return () => clearInterval(t);
-  }, [showReport, hasShownReport, paused]);
+  }, [showReport, paused]);
 
   useEffect(() => {
     if (!showReport) return;
