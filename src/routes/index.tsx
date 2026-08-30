@@ -182,6 +182,10 @@ function JourneyLoop() {
     return { x: 50 + R * Math.cos(a), y: 50 + R * Math.sin(a) };
   };
 
+  const scrollToReport = () => {
+    document.getElementById("funnel")?.scrollIntoView({ behavior: "smooth" });
+  };
+
   const traveler = pos(active);
   const labelPos = (i: number) => {
     const a = (-90 + i * (360 / JOURNEY_STAGES.length)) * (Math.PI / 180);
@@ -314,6 +318,17 @@ function JourneyLoop() {
               <p className="mt-2 inline-block rounded-full bg-primary/10 px-2 py-0.5 font-mono text-[11px] text-primary">
                 {current.metric}
               </p>
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={scrollToReport}
+                  className="group inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-foreground transition-colors hover:border-primary hover:text-primary"
+                >
+                  <FileText className="size-3" />
+                  see the report
+                  <ArrowDown className="size-3 transition-transform group-hover:translate-y-0.5" />
+                </button>
+              </div>
             </motion.div>
           </AnimatePresence>
         </div>
