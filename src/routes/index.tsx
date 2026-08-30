@@ -217,7 +217,14 @@ function JourneyLoop() {
       <div
         className="relative mx-auto aspect-square w-full max-w-[580px] p-6"
         onMouseEnter={() => setPaused(true)}
-        onMouseLeave={() => setPaused(false)}
+        onMouseLeave={() => {
+          setPaused(false);
+          if (introPhase) {
+            setIntroPhase(false);
+            setShowReport(false);
+            setActive(0);
+          }
+        }}
       >
         <svg viewBox="0 0 100 100" className="absolute inset-0 size-full" aria-hidden>
           {JOURNEY_STAGES.map((s, i) => {
