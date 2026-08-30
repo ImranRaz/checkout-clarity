@@ -234,6 +234,11 @@ function JourneyLoop() {
               style={{ left: `${x}%`, top: `${y}%` }}
               className="absolute flex w-28 -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5"
             >
+              {i === 0 ? (
+                <span className="rounded-full border border-primary/40 bg-background px-1.5 py-px font-mono text-[8px] uppercase tracking-[0.14em] text-primary">
+                  start here
+                </span>
+              ) : null}
               <span className="relative flex items-center justify-center">
                 {isActive ? (
                   <span
