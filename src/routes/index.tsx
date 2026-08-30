@@ -876,7 +876,7 @@ function Marketing() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6, delay: 0.15 }}
           >
-            <AgentScan report={hero} stage={heroStage} pins={heroPins} />
+            <JourneyLoop />
           </motion.div>
         </div>
 
