@@ -86,39 +86,84 @@ function exampleFinding(pillar: string): FrictionPoint | null {
 }
 
 /**
- * The hero visual: a browser window being driven by the agent. A scan sweep
- * runs down a real captured page while the agent narrates what it is checking,
- * then the findings it collected stack up. Loops.
+ * The hero visual: the full 360° customer lifecycle drawn as a loop. A buyer
+ * starts in search or an AI answer, judges you on reviews, walks the funnel,
+ * buys, and then feeds the loop back with a review of their own. The travelling
+ * pulse walks the ring; the centre card narrates who is watching that step.
  */
-const SCAN_PHASES = [
-  { label: "opening the store in a real browser", tag: "navigate" },
-  { label: "reading headlines, buttons and promises", tag: "copy" },
-  { label: "measuring paint, shift and page weight", tag: "speed" },
-  { label: "walking category → product → cart", tag: "journey" },
-  { label: "checking contrast, labels and tap targets", tag: "a11y" },
-  { label: "reaching guest checkout", tag: "checkout" },
+const JOURNEY_STAGES = [
+  {
+    key: "search",
+    label: "Search & AI",
+    agent: "reputation" as const,
+    caption: "Google and ChatGPT decide whether you make the shortlist at all.",
+    metric: "cited in 2 of 6 AI answers",
+  },
+  {
+    key: "reviews",
+    label: "Reviews",
+    agent: "reputation" as const,
+    caption: "They read your reviews before your homepage. So do we.",
+    metric: "2,069 reviews read · 4.0 avg",
+  },
+  {
+    key: "home",
+    label: "Homepage",
+    agent: "funnel" as const,
+    caption: "First paint, the promise above the fold, where the eye lands.",
+    metric: "LCP 2.4s · 1 clarity issue",
+  },
+  {
+    key: "category",
+    label: "Category",
+    agent: "funnel" as const,
+    caption: "Filters, density and dead ends between browsing and a product.",
+    metric: "2 friction points",
+  },
+  {
+    key: "product",
+    label: "Product",
+    agent: "funnel" as const,
+    caption: "Sizing help, delivery promise, add-to-cart states that lie.",
+    metric: "3 friction points",
+  },
+  {
+    key: "cart",
+    label: "Cart",
+    agent: "funnel" as const,
+    caption: "Late shipping cost, pre-ticked extras, tax that appears at step four.",
+    metric: "surprise cost · high",
+  },
+  {
+    key: "checkout",
+    label: "Checkout",
+    agent: "funnel" as const,
+    caption: "Forced accounts, field count, validation that punishes typos.",
+    metric: "guest checkout reached",
+  },
+  {
+    key: "after",
+    label: "Post-purchase",
+    agent: "reputation" as const,
+    caption: "Delivery and support — and the review it turns into. Loop closed.",
+    metric: "feeds tomorrow's reputation",
+  },
 ];
 
-function AgentScan({
-  report,
-  stage,
-  pins,
-}: {
-  report: ForensicAuditReport;
-  stage: ForensicAuditReport["stages"][number];
-  pins: FrictionPoint[];
-}) {
-  const [phase, setPhase] = useState(0);
-  const done = phase >= SCAN_PHASES.length;
-  const foundCount = done ? pins.length : Math.min(pins.length, Math.max(0, phase - 1));
+function JourneyLoop() {
+  const [active, setActive] = useState(0);
 
   useEffect(() => {
-    const t = setTimeout(
-      () => setPhase((p) => (p > SCAN_PHASES.length ? 0 : p + 1)),
-      phase === 0 ? 900 : done ? 3400 : 1500,
-    );
-    return () => clearTimeout(t);
-  }, [phase, done]);
+    const t = setInterval(() => setActive((i) => (i + 1) % JOURNEY_STAGES.length), 2400);
+    return () => clearInterval(t);
+  }, []);
+
+  const current = JOURNEY_STAGES[active]!;
+  const R = 38;
+  const pos = (i: number) => {
+    const a = (-90 + i * (360 / JOURNEY_STAGES.length)) * (Math.PI / 180);
+    return { x: 50 + R * Math.cos(a), y: 50 + R * Math.sin(a) };
+  };
 
   return (
     <div className="tile relative overflow-hidden p-0">
@@ -126,165 +171,152 @@ function AgentScan({
         <span className="size-2 rounded-full bg-sev-high/70" />
         <span className="size-2 rounded-full bg-sev-medium/70" />
         <span className="size-2 rounded-full bg-primary/60" />
-        <span className="ml-2 truncate font-mono text-[11px] text-muted-foreground">
-          {report.domain}
+        <span className="ml-2 font-mono text-[11px] text-muted-foreground">
+          the customer lifecycle
         </span>
         <span className="ml-auto flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
           <motion.span
-            animate={{ opacity: done ? 1 : [1, 0.25, 1] }}
-            transition={{ duration: 1.2, repeat: done ? 0 : Infinity }}
-            className={cn("size-1.5 rounded-full", done ? "bg-primary" : "bg-sev-medium")}
+            animate={{ opacity: [1, 0.25, 1] }}
+            transition={{ duration: 1.4, repeat: Infinity }}
+            className="size-1.5 rounded-full bg-primary"
           />
-          {done ? "run complete" : "agent running"}
+          360° watch
         </span>
       </div>
 
-      <div className="relative h-[380px] overflow-hidden bg-secondary sm:h-[440px]">
-        <motion.img
-          src={stage.screenshot.src}
-          alt={`The agent scanning the ${report.domain} storefront`}
-          className="block w-full opacity-90"
-          loading="eager"
-          decoding="async"
-          animate={{ y: done ? -160 : [0, -80, -160] }}
-          transition={{ duration: done ? 0.8 : SCAN_PHASES.length * 1.5, ease: "linear" }}
-        />
-
-        {!done ? (
-          <>
-            <motion.div
-              className="pointer-events-none absolute inset-x-0 h-28"
-              style={{
-                background:
-                  "linear-gradient(to bottom, transparent, color-mix(in oklab, var(--primary) 18%, transparent))",
-              }}
-              animate={{ top: ["-10%", "88%"] }}
-              transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-            />
-            <motion.div
-              className="pointer-events-none absolute inset-x-0 h-px bg-primary"
-              animate={{ top: ["4%", "96%"] }}
-              transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-            />
-          </>
-        ) : null}
-
-        {pins.slice(0, foundCount).map((point, i) => (
-          <motion.span
-            key={point.id}
-            initial={{ opacity: 0, scale: 0.4 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.35 }}
-            style={{
-              left: `${Math.min(90, Math.max(6, point.x_percentage))}%`,
-              top: `${18 + i * 13}%`,
-            }}
-            className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
+      <div className="relative mx-auto aspect-square w-full max-w-[440px] p-4">
+        <svg viewBox="0 0 100 100" className="absolute inset-0 size-full" aria-hidden>
+          <defs>
+            <linearGradient id="loop-sweep" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="var(--primary)" stopOpacity="0" />
+              <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.9" />
+            </linearGradient>
+          </defs>
+          <circle
+            cx="50"
+            cy="50"
+            r={R}
+            fill="none"
+            stroke="var(--border)"
+            strokeWidth="0.6"
+            strokeDasharray="1.5 2.5"
+          />
+          <motion.g
+            style={{ originX: "50px", originY: "50px" }}
+            animate={{ rotate: 360 }}
+            transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
           >
-            <span
-              className={cn(
-                "absolute -inset-2 animate-ping rounded-full opacity-30",
-                point.severity === "high" ? "bg-sev-high" : "bg-sev-medium",
-              )}
+            <circle
+              cx="50"
+              cy="50"
+              r={R}
+              fill="none"
+              stroke="url(#loop-sweep)"
+              strokeWidth="1.1"
+              strokeLinecap="round"
+              strokeDasharray="60 179"
             />
-            <span
-              className={cn(
-                "relative block size-4 rounded-full border-2 border-background",
-                point.severity === "high" ? "bg-sev-high" : "bg-sev-medium",
-              )}
-            />
-          </motion.span>
-        ))}
-
-        <div className="absolute inset-x-3 bottom-3">
-          <AnimatePresence mode="wait">
-            {done ? (
-              <motion.div
-                key="result"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                className="rounded-lg border border-border bg-background/95 p-3.5 shadow-tile-hover backdrop-blur"
-              >
-                <p className="label-caps">{pins.length} friction points found</p>
-                <ul className="mt-2.5 space-y-1.5">
-                  {pins.map((p, i) => (
-                    <motion.li
-                      key={p.id}
-                      initial={{ opacity: 0, x: -6 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.12 * i }}
-                      className="flex items-center gap-2 text-xs"
-                    >
-                      <span
-                        className={cn(
-                          "size-1.5 shrink-0 rounded-full",
-                          p.severity === "high"
-                            ? "bg-sev-high"
-                            : p.severity === "medium"
-                              ? "bg-sev-medium"
-                              : "bg-sev-low",
-                        )}
-                      />
-                      <span className="truncate">{p.title}</span>
-                      <span className="ml-auto shrink-0 font-mono text-[9px] uppercase tracking-[0.1em] text-muted-foreground">
-                        {categoryLabel[p.category]}
-                      </span>
-                    </motion.li>
-                  ))}
-                </ul>
-              </motion.div>
-            ) : (
-              <motion.div
-                key={phase}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.25 }}
-                className="rounded-lg border border-border bg-background/95 p-3 shadow-tile-hover backdrop-blur"
-              >
-                <p className="flex items-center gap-2 font-mono text-[11px] text-foreground">
-                  <span className="rounded-full border border-border px-2 py-0.5 text-[9px] uppercase tracking-[0.1em] text-muted-foreground">
-                    {SCAN_PHASES[Math.min(phase, SCAN_PHASES.length - 1)]!.tag}
-                  </span>
-                  {SCAN_PHASES[Math.min(phase, SCAN_PHASES.length - 1)]!.label}
-                  <span className="ml-auto text-muted-foreground">{foundCount} found</span>
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <div className="mt-2 flex gap-1.5">
-            {SCAN_PHASES.map((p, i) => (
-              <span
-                key={p.tag}
-                className={cn(
-                  "h-0.5 flex-1 rounded-full transition-colors",
-                  done || i <= phase ? "bg-primary/80" : "bg-foreground/20",
-                )}
+          </motion.g>
+          {JOURNEY_STAGES.map((s, i) => {
+            const from = pos(i);
+            const to = pos((i + 1) % JOURNEY_STAGES.length);
+            return (
+              <line
+                key={`${s.key}-link`}
+                x1={from.x}
+                y1={from.y}
+                x2={to.x}
+                y2={to.y}
+                stroke="var(--border)"
+                strokeWidth="0.3"
               />
-            ))}
-          </div>
+            );
+          })}
+        </svg>
+
+        {JOURNEY_STAGES.map((s, i) => {
+          const { x, y } = pos(i);
+          const isActive = i === active;
+          return (
+            <button
+              key={s.key}
+              type="button"
+              onClick={() => setActive(i)}
+              style={{ left: `${x}%`, top: `${y}%` }}
+              className="absolute flex w-24 -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5"
+            >
+              <span className="relative flex items-center justify-center">
+                {isActive ? (
+                  <span
+                    className={cn(
+                      "absolute -inset-2 animate-ping rounded-full opacity-30",
+                      s.agent === "funnel" ? "bg-primary" : "bg-sev-medium",
+                    )}
+                  />
+                ) : null}
+                <motion.span
+                  animate={{ scale: isActive ? 1.15 : 1, opacity: isActive ? 1 : 0.5 }}
+                  transition={{ duration: 0.3 }}
+                  className={cn(
+                    "relative block size-3 rounded-full border-2 border-background shadow-tile",
+                    s.agent === "funnel" ? "bg-primary" : "bg-sev-medium",
+                  )}
+                />
+              </span>
+              <span
+                className={cn(
+                  "text-center font-mono text-[10px] leading-tight transition-colors",
+                  isActive ? "text-foreground" : "text-muted-foreground",
+                )}
+              >
+                {s.label}
+              </span>
+            </button>
+          );
+        })}
+
+        <div className="absolute left-1/2 top-1/2 w-[52%] -translate-x-1/2 -translate-y-1/2 text-center">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={current.key}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.25 }}
+            >
+              <span
+                className={cn(
+                  "inline-block rounded-full border px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.1em]",
+                  current.agent === "funnel"
+                    ? "border-primary/40 text-primary"
+                    : "border-sev-medium/50 text-sev-medium",
+                )}
+              >
+                {current.agent === "funnel" ? "funnel agent" : "reputation agent"}
+              </span>
+              <p className="mt-2.5 text-[13px] leading-snug text-foreground">{current.caption}</p>
+              <p className="mt-2 font-mono text-[10px] text-muted-foreground">{current.metric}</p>
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border px-4 py-2.5">
-        <span className="label-caps">checked</span>
-        {(["clarity", "trust", "form", "accessibility"] as const).map((key) => (
-          <span key={key} className="font-mono text-[10px] text-muted-foreground">
-            {categoryLabel[key]}
-          </span>
-        ))}
-        <span className="font-mono text-[10px] text-foreground">
-          Speed
-          <span className="ml-1 text-primary">
-            {(stage.technical_metrics.largest_contentful_paint_ms / 1000).toFixed(1)}s
-          </span>
+        <span className="label-caps">watched</span>
+        <span className="flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground">
+          <span className="size-1.5 rounded-full bg-sev-medium" /> before &amp; after · reputation
+        </span>
+        <span className="flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground">
+          <span className="size-1.5 rounded-full bg-primary" /> during · funnel
+        </span>
+        <span className="ml-auto font-mono text-[10px] text-foreground">
+          one loop<span className="ml-1 text-primary">one report</span>
         </span>
       </div>
     </div>
   );
 }
+
 
 /**
  * The pinned-evidence showcase: findings listed on the left, the capture with
