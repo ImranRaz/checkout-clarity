@@ -23,20 +23,20 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "CoherentX — Find the revenue your checkout leaks" },
+      { title: "CoherentX — See your brand the way customers do" },
       {
         name: "description",
         content:
-          "An agent shops your store like a customer — category to guest checkout — and reports the copy, cost surprises, effort and speed problems costing you orders, pinned to the exact pixels.",
+          "Two agents, one 360° picture: one shops your site like a customer — homepage to guest checkout — while the other reads every review the internet has about you and ties complaints to the steps that cause them.",
       },
       {
         property: "og:title",
-        content: "CoherentX — Find the revenue your checkout leaks",
+        content: "CoherentX — See your brand the way customers do",
       },
       {
         property: "og:description",
         content:
-          "An agent shops your store like a customer and shows you exactly where buyers give up — pinned to the pixels.",
+          "A funnel agent walks your buying journey and a reputation agent reads your reviews — one report shows where customers hesitate, on your site and off it.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://www.coherentx.com/" },
@@ -540,7 +540,7 @@ function Marketing() {
               transition={{ duration: 0.4 }}
               className="label-caps"
             >
-              Full-funnel conversion forensics for online stores
+              Conversion forensics + reputation intelligence
             </motion.p>
 
             <motion.h1
@@ -549,7 +549,7 @@ function Marketing() {
               transition={{ duration: 0.5, delay: 0.05 }}
               className="mt-4 max-w-lg font-display text-[2.1rem] leading-[1.04] tracking-tight sm:text-[2.75rem]"
             >
-              Your funnel is leaking revenue. We show you where.
+              Customers judge you before, during, and after the buy. Now you can watch.
             </motion.h1>
 
             <motion.p
@@ -558,9 +558,9 @@ function Marketing() {
               transition={{ duration: 0.5, delay: 0.12 }}
               className="mt-4 max-w-md text-[15px] leading-relaxed text-muted-foreground"
             >
-              An agent shops your store like a customer — homepage, category, product, cart, all the
-              way to guest checkout — and hands back every hesitation it hit, top of funnel to
-              checkout, pinned to the exact pixels that caused it.
+              Two agents, one 360° picture. One shops your site like a customer — homepage,
+              category, product, cart, guest checkout. The other reads what the internet already
+              says about you and ties the complaints to the steps that cause them.
             </motion.p>
 
             <motion.div
