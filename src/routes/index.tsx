@@ -23,20 +23,20 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "CoherentX — Find the revenue your checkout leaks" },
+      { title: "CoherentX — See your brand the way customers do" },
       {
         name: "description",
         content:
-          "An agent shops your store like a customer — category to guest checkout — and reports the copy, cost surprises, effort and speed problems costing you orders, pinned to the exact pixels.",
+          "Two agents, one 360° picture: one shops your site like a customer — homepage to guest checkout — while the other reads every review the internet has about you and ties complaints to the steps that cause them.",
       },
       {
         property: "og:title",
-        content: "CoherentX — Find the revenue your checkout leaks",
+        content: "CoherentX — See your brand the way customers do",
       },
       {
         property: "og:description",
         content:
-          "An agent shops your store like a customer and shows you exactly where buyers give up — pinned to the pixels.",
+          "A funnel agent walks your buying journey and a reputation agent reads your reviews — one report shows where customers hesitate, on your site and off it.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://www.coherentx.com/" },
@@ -331,9 +331,13 @@ function EvidenceShowcase({
       : 0;
 
   return (
-    <section className="border-b border-border bg-card" aria-label="What the report looks like">
+    <section
+      id="funnel"
+      className="border-b border-border bg-card"
+      aria-label="What the report looks like"
+    >
       <div className="mx-auto w-full max-w-6xl px-6 py-16">
-        <p className="label-caps">What you actually see</p>
+        <p className="label-caps">On your site · the funnel agent</p>
         <h2 className="mt-4 max-w-xl font-display text-2xl tracking-tight sm:text-[1.75rem]">
           Every finding pinned to the pixel that caused it.
         </h2>
@@ -496,12 +500,248 @@ function EvidenceShowcase({
   );
 }
 
+/**
+ * Off-site counterpart to the funnel scan: the reputation agent discovers where
+ * a brand is reviewed, reads the reviews, clusters them into themes, and scores
+ * what customers say — no browser, no minutes, just sources in and signal out.
+ */
+const REP_PHASES = [
+  { label: "searching Google, Maps, Tripadvisor, Trustpilot", tag: "discover" },
+  { label: "reading 2,069 reviews across 3 sources", tag: "read" },
+  { label: "clustering complaints and praise into themes", tag: "cluster" },
+  { label: "synthesising what customers actually say", tag: "synthesize" },
+];
+
+const REP_SOURCES = [
+  { name: "Google", rating: 4.1, count: "1,240" },
+  { name: "Tripadvisor", rating: 3.9, count: "620" },
+  { name: "Booking.com", rating: 3.8, count: "209" },
+];
+
+const REP_THEMES = [
+  { kind: "complaint", title: "Surprise resort fee revealed at checkout", mentions: 64, high: true },
+  { kind: "complaint", title: "Check-in queues at peak hours", mentions: 86, high: true },
+  { kind: "praise", title: "Staff go out of their way", mentions: 142, high: false },
+  { kind: "praise", title: "Views and location", mentions: 118, high: false },
+];
+
+function ReputationShowcase() {
+  const [phase, setPhase] = useState(0);
+  const done = phase >= REP_PHASES.length;
+  const sourcesFound = done ? REP_SOURCES.length : Math.max(0, phase - 0);
+
+  useEffect(() => {
+    const t = setTimeout(
+      () => setPhase((p) => (p > REP_PHASES.length ? 0 : p + 1)),
+      phase === 0 ? 1100 : done ? 4600 : 1600,
+    );
+    return () => clearTimeout(t);
+  }, [phase, done]);
+
+  return (
+    <section
+      id="reputation"
+      className="border-b border-border"
+      aria-label="Reputation management"
+    >
+      <div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-6 py-16 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14">
+        <div>
+          <p className="label-caps">Off your site · the reputation agent</p>
+          <h2 className="mt-4 max-w-md font-display text-2xl tracking-tight sm:text-[1.75rem]">
+            The judgment starts on Google, not your homepage.
+          </h2>
+          <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground">
+            Before a buyer ever lands on your site, they've read your reviews. The reputation agent
+            finds where you're being reviewed — Google, Tripadvisor, Trustpilot, Booking, Reddit —
+            reads them, clusters what people repeat, and hands you one score with the themes behind
+            it.
+          </p>
+          <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground">
+            When a complaint matches something the funnel agent saw on your site, we say so —
+            "guests complain about surprise fees" next to the fee that appears at step four is a
+            fix you can't argue with.
+          </p>
+          <ul className="mt-6 space-y-2.5">
+            {[
+              "Runs on its own — no browser session, no minutes burned.",
+              "Catches the same-name business across town so the data stays yours.",
+              "New themes surface on re-run, so it doubles as monitoring.",
+            ].map((line) => (
+              <li key={line} className="flex gap-3 text-sm text-foreground">
+                <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
+                {line}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="tile relative overflow-hidden p-0">
+          <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
+            <span className="size-2 rounded-full bg-sev-high/70" />
+            <span className="size-2 rounded-full bg-sev-medium/70" />
+            <span className="size-2 rounded-full bg-primary/60" />
+            <span className="ml-2 truncate font-mono text-[11px] text-muted-foreground">
+              seaview-hotel.com
+            </span>
+            <span className="ml-auto flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              <motion.span
+                animate={{ opacity: done ? 1 : [1, 0.25, 1] }}
+                transition={{ duration: 1.2, repeat: done ? 0 : Infinity }}
+                className={cn("size-1.5 rounded-full", done ? "bg-primary" : "bg-sev-medium")}
+              />
+              {done ? "run complete" : "agent reading"}
+            </span>
+          </div>
+
+          <div className="p-5">
+            {/* Sources discovered so far */}
+            <p className="label-caps">sources found</p>
+            <ul className="mt-3 grid gap-2 sm:grid-cols-3">
+              {REP_SOURCES.map((s, i) => {
+                const found = i < sourcesFound;
+                return (
+                  <li
+                    key={s.name}
+                    className={cn(
+                      "rounded-lg border p-3 transition-colors",
+                      found ? "border-foreground/20 bg-background" : "border-border opacity-45",
+                    )}
+                  >
+                    <p className="flex items-center gap-1.5 text-xs font-medium">
+                      <span
+                        className={cn(
+                          "size-1.5 rounded-full",
+                          found ? "bg-primary" : "bg-muted-foreground/40",
+                        )}
+                      />
+                      {s.name}
+                    </p>
+                    <p className="mt-1.5 font-mono text-[11px] text-muted-foreground">
+                      {found ? (
+                        <>
+                          <span className="text-foreground">{s.rating.toFixed(1)}</span> ·{" "}
+                          {s.count} reviews
+                        </>
+                      ) : (
+                        "searching…"
+                      )}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+
+            {/* Narration / result */}
+            <div className="mt-4">
+              <AnimatePresence mode="wait">
+                {done ? (
+                  <motion.div
+                    key="rep-result"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    className="rounded-lg border border-border bg-background p-4 shadow-tile"
+                  >
+                    <div className="flex items-baseline justify-between gap-3">
+                      <p className="label-caps">what customers say</p>
+                      <p className="font-display text-2xl leading-none tabular-nums">
+                        78
+                        <span className="ml-1 font-mono text-[10px] text-muted-foreground">
+                          /100 reputation
+                        </span>
+                      </p>
+                    </div>
+                    <ul className="mt-3 space-y-1.5">
+                      {REP_THEMES.map((t, i) => (
+                        <motion.li
+                          key={t.title}
+                          initial={{ opacity: 0, x: -6 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.12 * i }}
+                          className="flex items-center gap-2 text-xs"
+                        >
+                          <span
+                            className={cn(
+                              "size-1.5 shrink-0 rounded-full",
+                              t.kind === "complaint"
+                                ? t.high
+                                  ? "bg-sev-high"
+                                  : "bg-sev-medium"
+                                : "bg-primary",
+                            )}
+                          />
+                          <span className="truncate">{t.title}</span>
+                          <span className="ml-auto shrink-0 font-mono text-[9px] uppercase tracking-[0.1em] text-muted-foreground">
+                            {t.mentions} mentions
+                          </span>
+                        </motion.li>
+                      ))}
+                    </ul>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key={phase}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.25 }}
+                    className="rounded-lg border border-border bg-background p-3 shadow-tile"
+                  >
+                    <p className="flex items-center gap-2 font-mono text-[11px] text-foreground">
+                      <span className="rounded-full border border-border px-2 py-0.5 text-[9px] uppercase tracking-[0.1em] text-muted-foreground">
+                        {REP_PHASES[Math.min(phase, REP_PHASES.length - 1)]!.tag}
+                      </span>
+                      {REP_PHASES[Math.min(phase, REP_PHASES.length - 1)]!.label}
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="mt-2 flex gap-1.5">
+                {REP_PHASES.map((p, i) => (
+                  <span
+                    key={p.tag}
+                    className={cn(
+                      "h-0.5 flex-1 rounded-full transition-colors",
+                      done || i <= phase ? "bg-primary/80" : "bg-foreground/20",
+                    )}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border px-4 py-2.5">
+            <span className="label-caps">coverage</span>
+            {["search", "maps", "travel", "social"].map((k) => (
+              <span key={k} className="font-mono text-[10px] text-muted-foreground">
+                {k}
+              </span>
+            ))}
+            <span className="font-mono text-[10px] text-foreground">
+              reviews read
+              <span className="ml-1 text-primary">2,069</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Marketing() {
   const { featured } = Route.useLoaderData();
   const complete = fixtureReports.filter((r) => r.status === "complete");
   const hero = complete[0] ?? fixtureReports[0]!;
   const heroStage = hero.stages[0]!;
   const heroPins = [...heroStage.friction_points]
+    .sort((a, b) => a.y_percentage - b.y_percentage)
+    .slice(0, 5);
+  // Evidence showcase uses a different brand than the hero so the page doesn't
+  // feel like one report stretched over every section.
+  const showcase = complete[1] ?? hero;
+  const showcaseStage = showcase.stages[0]!;
+  const showcasePins = [...showcaseStage.friction_points]
     .sort((a, b) => a.y_percentage - b.y_percentage)
     .slice(0, 5);
 
@@ -515,8 +755,20 @@ function Marketing() {
           <BrandLockup />
           <div className="flex items-center gap-4">
             <a
-              href="#samples"
+              href="#funnel"
               className="hidden font-mono text-xs text-muted-foreground transition-colors hover:text-foreground sm:inline"
+            >
+              funnel agent
+            </a>
+            <a
+              href="#reputation"
+              className="hidden font-mono text-xs text-muted-foreground transition-colors hover:text-foreground sm:inline"
+            >
+              reputation agent
+            </a>
+            <a
+              href="#samples"
+              className="hidden font-mono text-xs text-muted-foreground transition-colors hover:text-foreground md:inline"
             >
               sample reports
             </a>
@@ -540,7 +792,7 @@ function Marketing() {
               transition={{ duration: 0.4 }}
               className="label-caps"
             >
-              Full-funnel conversion forensics for online stores
+              Conversion forensics + reputation intelligence
             </motion.p>
 
             <motion.h1
@@ -549,7 +801,7 @@ function Marketing() {
               transition={{ duration: 0.5, delay: 0.05 }}
               className="mt-4 max-w-lg font-display text-[2.1rem] leading-[1.04] tracking-tight sm:text-[2.75rem]"
             >
-              Your funnel is leaking revenue. We show you where.
+              Customers judge you before, during, and after the buy. Now you can watch.
             </motion.h1>
 
             <motion.p
@@ -558,9 +810,9 @@ function Marketing() {
               transition={{ duration: 0.5, delay: 0.12 }}
               className="mt-4 max-w-md text-[15px] leading-relaxed text-muted-foreground"
             >
-              An agent shops your store like a customer — homepage, category, product, cart, all the
-              way to guest checkout — and hands back every hesitation it hit, top of funnel to
-              checkout, pinned to the exact pixels that caused it.
+              Two agents, one 360° picture. One shops your site like a customer — homepage,
+              category, product, cart, guest checkout. The other reads what the internet already
+              says about you and ties the complaints to the steps that cause them.
             </motion.p>
 
             <motion.div
@@ -602,7 +854,10 @@ function Marketing() {
       </section>
 
       {/* The report itself: findings left, pinned capture right */}
-      <EvidenceShowcase report={hero} stage={heroStage} pins={heroPins} />
+      <EvidenceShowcase report={showcase} stage={showcaseStage} pins={showcasePins} />
+
+      {/* Off-site: the reputation agent */}
+      <ReputationShowcase />
 
       {/* Value prop + interactive rubric */}
       <ValueProp />
@@ -613,11 +868,11 @@ function Marketing() {
       {/* Pillars */}
       <section className="mx-auto w-full max-w-6xl px-6 py-20">
         <h2 className="font-display text-2xl tracking-tight sm:text-3xl">
-          Four reasons carts die. We check all four, on every page.
+          Inside the funnel: four ways buyers stall. We check all four, on every page.
         </h2>
         <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-          Every finding is measured on the page, then judged against what your business actually
-          sells — a cruise line isn't graded on free shipping.
+          The funnel agent measures every finding on the page, then judges it against what your
+          business actually sells — a cruise line isn't graded on free shipping.
         </p>
 
         <div className="mt-10 grid gap-5 sm:grid-cols-2">
@@ -644,24 +899,24 @@ function Marketing() {
       <section className="border-y border-border bg-card">
         <div className="mx-auto w-full max-w-6xl px-6 py-20">
           <h2 className="font-display text-2xl tracking-tight sm:text-3xl">
-            One URL in. A prioritised teardown out.
+            One URL in. A 360° teardown out.
           </h2>
           <ol className="mt-10 grid gap-8 sm:grid-cols-3">
             {[
               {
                 n: "01",
-                t: "Point us at any page",
-                b: "A product link, a category, your homepage. Anything on the store works.",
+                t: "Point us at your brand",
+                b: "A product link, a category, your homepage — even just a domain. Both agents take it from there.",
               },
               {
                 n: "02",
-                t: "The agent shops it",
-                b: "It picks a variant, adds to cart, and pushes into guest checkout — stopping at any login wall, like a real shopper would.",
+                t: "Two agents run in parallel",
+                b: "One shops the journey to guest checkout like a real buyer. The other reads your reviews across Google, travel sites, and forums.",
               },
               {
                 n: "03",
                 t: "You get the evidence",
-                b: "A scored report where every finding is anchored to the element in the screenshot, ordered by what to fix first.",
+                b: "A scored report — on-site findings pinned to pixels, off-site themes with real quotes — ordered by what to fix first.",
               },
             ].map((step) => (
               <li key={step.n}>
@@ -703,18 +958,19 @@ function Marketing() {
         <div className="mx-auto grid w-full max-w-6xl gap-10 px-6 py-20 lg:grid-cols-2">
           <div>
             <h2 className="font-display text-2xl tracking-tight sm:text-3xl">
-              Speed tools grade a URL. We walk the purchase.
+              Speed tools grade a URL. Review tools count stars. We connect both to revenue.
             </h2>
             <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-              A perfect performance score on a product page tells you nothing about the size picker
-              that traps people, the shipping cost that appears at step four, or the pre-ticked
-              insurance box that erodes trust. Those only show up if something actually tries to
-              buy.
+              A perfect performance score tells you nothing about the size picker that traps
+              people. A 4-star average tells you nothing about which complaint is costing orders.
+              CoherentX walks the purchase, reads the reviews, and shows you where the two stories
+              meet.
             </p>
           </div>
           <ul className="space-y-4 self-center">
             {[
               "Findings anchored to the exact element in the exact screenshot — no guesswork.",
+              "Review themes backed by real quotes, with the source one click away.",
               "Scores from a fixed rubric, not a model's mood.",
               "Judged against your business model, so the advice fits what you sell.",
               "Nothing to install, and nothing touching your production code.",
@@ -731,11 +987,11 @@ function Marketing() {
       {/* CTA */}
       <section className="mx-auto w-full max-w-6xl px-6 py-20 text-center">
         <h2 className="font-display text-3xl tracking-tight sm:text-4xl">
-          Want this run on your store?
+          Want the 360° view of your brand?
         </h2>
         <p className="mx-auto mt-3 max-w-lg text-sm text-muted-foreground">
-          Send us a link. We'll run the full journey and send back a report you can hand straight to
-          your team.
+          Send us a link. We'll walk the funnel, read the reviews, and send back a report you can
+          hand straight to your team.
         </p>
         <a
           href="mailto:hello@coherentx.com?subject=Audit%20my%20store"
