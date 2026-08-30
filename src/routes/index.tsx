@@ -88,8 +88,9 @@ function exampleFinding(pillar: string): FrictionPoint | null {
 /**
  * The hero visual: the full 360° customer lifecycle drawn as a loop. A buyer
  * starts in search or an AI answer, judges you on reviews, walks the funnel,
- * buys, and then feeds the loop back with a review of their own. The travelling
- * pulse walks the ring; the centre card narrates who is watching that step.
+ * buys, and then feeds the loop back with a review of their own. A traveller
+ * dot walks the ring and lights up each segment it has covered; the centre
+ * card narrates who is watching that step and what it found.
  */
 const JOURNEY_STAGES = [
   {
@@ -97,56 +98,56 @@ const JOURNEY_STAGES = [
     label: "Search & AI",
     agent: "reputation" as const,
     caption: "Google and ChatGPT decide whether you make the shortlist at all.",
-    metric: "cited in 2 of 6 AI answers",
+    metric: "cited in 2 of 6 AI answers · 4 gaps found",
   },
   {
     key: "reviews",
     label: "Reviews",
     agent: "reputation" as const,
     caption: "They read your reviews before your homepage. So do we.",
-    metric: "2,069 reviews read · 4.0 avg",
+    metric: "2,069 reviews read · 3 complaint themes",
   },
   {
     key: "home",
     label: "Homepage",
     agent: "funnel" as const,
     caption: "First paint, the promise above the fold, where the eye lands.",
-    metric: "LCP 2.4s · 1 clarity issue",
+    metric: "LCP 2.4s · 1 clarity issue found",
   },
   {
     key: "category",
     label: "Category",
     agent: "funnel" as const,
     caption: "Filters, density and dead ends between browsing and a product.",
-    metric: "2 friction points",
+    metric: "2 friction points found",
   },
   {
     key: "product",
     label: "Product",
     agent: "funnel" as const,
     caption: "Sizing help, delivery promise, add-to-cart states that lie.",
-    metric: "3 friction points",
+    metric: "3 friction points found",
   },
   {
     key: "cart",
     label: "Cart",
     agent: "funnel" as const,
     caption: "Late shipping cost, pre-ticked extras, tax that appears at step four.",
-    metric: "surprise cost · high",
+    metric: "surprise cost found · high severity",
   },
   {
     key: "checkout",
     label: "Checkout",
     agent: "funnel" as const,
     caption: "Forced accounts, field count, validation that punishes typos.",
-    metric: "guest checkout reached",
+    metric: "guest checkout reached · 2 issues found",
   },
   {
     key: "after",
     label: "Post-purchase",
     agent: "reputation" as const,
     caption: "Delivery and support — and the review it turns into. Loop closed.",
-    metric: "feeds tomorrow's reputation",
+    metric: "5 issues found · feeds tomorrow's reviews",
   },
 ];
 
@@ -165,33 +166,12 @@ function JourneyLoop() {
     return { x: 50 + R * Math.cos(a), y: 50 + R * Math.sin(a) };
   };
 
+  const traveler = pos(active);
+
   return (
     <div className="tile relative overflow-hidden p-0">
-      <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
-        <span className="size-2 rounded-full bg-sev-high/70" />
-        <span className="size-2 rounded-full bg-sev-medium/70" />
-        <span className="size-2 rounded-full bg-primary/60" />
-        <span className="ml-2 font-mono text-[11px] text-muted-foreground">
-          the customer lifecycle
-        </span>
-        <span className="ml-auto flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-          <motion.span
-            animate={{ opacity: [1, 0.25, 1] }}
-            transition={{ duration: 1.4, repeat: Infinity }}
-            className="size-1.5 rounded-full bg-primary"
-          />
-          360° watch
-        </span>
-      </div>
-
-      <div className="relative mx-auto aspect-square w-full max-w-[440px] p-4">
+      <div className="relative mx-auto aspect-square w-full max-w-[560px] p-6">
         <svg viewBox="0 0 100 100" className="absolute inset-0 size-full" aria-hidden>
-          <defs>
-            <linearGradient id="loop-sweep" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="var(--primary)" stopOpacity="0" />
-              <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.9" />
-            </linearGradient>
-          </defs>
           <circle
             cx="50"
             cy="50"
@@ -201,25 +181,11 @@ function JourneyLoop() {
             strokeWidth="0.6"
             strokeDasharray="1.5 2.5"
           />
-          <motion.g
-            style={{ originX: "50px", originY: "50px" }}
-            animate={{ rotate: 360 }}
-            transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
-          >
-            <circle
-              cx="50"
-              cy="50"
-              r={R}
-              fill="none"
-              stroke="url(#loop-sweep)"
-              strokeWidth="1.1"
-              strokeLinecap="round"
-              strokeDasharray="60 179"
-            />
-          </motion.g>
           {JOURNEY_STAGES.map((s, i) => {
             const from = pos(i);
             const to = pos((i + 1) % JOURNEY_STAGES.length);
+            const covered = i < active;
+            const closing = active === 0 && i === JOURNEY_STAGES.length - 1;
             return (
               <line
                 key={`${s.key}-link`}
@@ -227,11 +193,22 @@ function JourneyLoop() {
                 y1={from.y}
                 x2={to.x}
                 y2={to.y}
-                stroke="var(--border)"
-                strokeWidth="0.3"
+                stroke={covered && !closing ? "var(--primary)" : "var(--border)"}
+                strokeOpacity={covered && !closing ? 0.85 : 1}
+                strokeWidth={covered && !closing ? 0.9 : 0.3}
+                strokeLinecap="round"
+                style={{ transition: "stroke 0.5s, stroke-width 0.5s" }}
               />
             );
           })}
+          <motion.circle
+            r="1.6"
+            fill="var(--primary)"
+            stroke="var(--background)"
+            strokeWidth="0.4"
+            animate={{ cx: traveler.x, cy: traveler.y }}
+            transition={{ type: "spring", stiffness: 120, damping: 18 }}
+          />
         </svg>
 
         {JOURNEY_STAGES.map((s, i) => {
@@ -243,7 +220,7 @@ function JourneyLoop() {
               type="button"
               onClick={() => setActive(i)}
               style={{ left: `${x}%`, top: `${y}%` }}
-              className="absolute flex w-24 -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5"
+              className="absolute flex w-28 -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5"
             >
               <span className="relative flex items-center justify-center">
                 {isActive ? (
@@ -265,7 +242,7 @@ function JourneyLoop() {
               </span>
               <span
                 className={cn(
-                  "text-center font-mono text-[10px] leading-tight transition-colors",
+                  "text-center font-mono text-[11px] leading-tight transition-colors",
                   isActive ? "text-foreground" : "text-muted-foreground",
                 )}
               >
@@ -275,7 +252,7 @@ function JourneyLoop() {
           );
         })}
 
-        <div className="absolute left-1/2 top-1/2 w-[52%] -translate-x-1/2 -translate-y-1/2 text-center">
+        <div className="absolute left-1/2 top-1/2 w-[56%] -translate-x-1/2 -translate-y-1/2 text-center">
           <AnimatePresence mode="wait">
             <motion.div
               key={current.key}
@@ -294,8 +271,11 @@ function JourneyLoop() {
               >
                 {current.agent === "funnel" ? "funnel agent" : "reputation agent"}
               </span>
-              <p className="mt-2.5 text-[13px] leading-snug text-foreground">{current.caption}</p>
-              <p className="mt-2 font-mono text-[10px] text-muted-foreground">{current.metric}</p>
+              <p className="mt-2 font-mono text-[11px] uppercase tracking-widest text-foreground">
+                {current.label}
+              </p>
+              <p className="mt-1.5 text-[13px] leading-snug text-foreground">{current.caption}</p>
+              <p className="mt-2 font-mono text-[11px] text-primary">{current.metric}</p>
             </motion.div>
           </AnimatePresence>
         </div>
