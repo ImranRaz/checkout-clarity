@@ -293,6 +293,7 @@ function JourneyLoop() {
               onClick={() => {
                 setActive(i);
                 setShowReport(false);
+                setIntroPhase(false);
               }}
               style={{ left: `${x}%`, top: `${y}%` }}
               className="absolute flex w-28 -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
@@ -347,7 +348,10 @@ function JourneyLoop() {
               <div className="mt-3">
                 <button
                   type="button"
-                  onClick={() => setShowReport(true)}
+                  onClick={() => {
+                    setShowReport(true);
+                    setPaused(true);
+                  }}
                   className="group inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-foreground transition-colors hover:border-primary hover:text-primary"
                 >
                   <FileText className="size-3" />
