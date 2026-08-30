@@ -941,18 +941,19 @@ function Marketing() {
         <div className="mx-auto grid w-full max-w-6xl gap-10 px-6 py-20 lg:grid-cols-2">
           <div>
             <h2 className="font-display text-2xl tracking-tight sm:text-3xl">
-              Speed tools grade a URL. We walk the purchase.
+              Speed tools grade a URL. Review tools count stars. We connect both to revenue.
             </h2>
             <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-              A perfect performance score on a product page tells you nothing about the size picker
-              that traps people, the shipping cost that appears at step four, or the pre-ticked
-              insurance box that erodes trust. Those only show up if something actually tries to
-              buy.
+              A perfect performance score tells you nothing about the size picker that traps
+              people. A 4-star average tells you nothing about which complaint is costing orders.
+              CoherentX walks the purchase, reads the reviews, and shows you where the two stories
+              meet.
             </p>
           </div>
           <ul className="space-y-4 self-center">
             {[
               "Findings anchored to the exact element in the exact screenshot — no guesswork.",
+              "Review themes backed by real quotes, with the source one click away.",
               "Scores from a fixed rubric, not a model's mood.",
               "Judged against your business model, so the advice fits what you sell.",
               "Nothing to install, and nothing touching your production code.",
@@ -969,11 +970,11 @@ function Marketing() {
       {/* CTA */}
       <section className="mx-auto w-full max-w-6xl px-6 py-20 text-center">
         <h2 className="font-display text-3xl tracking-tight sm:text-4xl">
-          Want this run on your store?
+          Want the 360° view of your brand?
         </h2>
         <p className="mx-auto mt-3 max-w-lg text-sm text-muted-foreground">
-          Send us a link. We'll run the full journey and send back a report you can hand straight to
-          your team.
+          Send us a link. We'll walk the funnel, read the reviews, and send back a report you can
+          hand straight to your team.
         </p>
         <a
           href="mailto:hello@coherentx.com?subject=Audit%20my%20store"
