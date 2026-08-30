@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
 import {
+  ArrowDown,
   ArrowRight,
   Banknote,
   FileText,
@@ -412,6 +413,14 @@ function JourneyLoop() {
                 <p className="mt-3 text-center font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
                   Ranked by revenue impact
                 </p>
+                <button
+                  type="button"
+                  onClick={scrollToReport}
+                  className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-primary px-4 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-primary-foreground transition-opacity hover:opacity-90"
+                >
+                  view a sample report
+                  <ArrowDown className="size-3" />
+                </button>
               </motion.div>
             </motion.div>
           ) : null}
