@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
 import {
+  ArrowDown,
   ArrowRight,
   Banknote,
   FileText,
@@ -155,7 +156,6 @@ const JOURNEY_STAGES = [
 function JourneyLoop() {
   const [active, setActive] = useState(0);
   const [showReport, setShowReport] = useState(false);
-  const [hasShownReport, setHasShownReport] = useState(false);
   const [paused, setPaused] = useState(false);
 
   useEffect(() => {
@@ -163,15 +163,12 @@ function JourneyLoop() {
     const t = setInterval(() => {
       setActive((i) => {
         const next = (i + 1) % JOURNEY_STAGES.length;
-        if (next === 0 && !hasShownReport) {
-          setShowReport(true);
-          setHasShownReport(true);
-        }
+        if (next === 0) setShowReport(true);
         return next;
       });
     }, 2400);
     return () => clearInterval(t);
-  }, [showReport, hasShownReport, paused]);
+  }, [showReport, paused]);
 
   useEffect(() => {
     if (!showReport) return;
@@ -184,6 +181,10 @@ function JourneyLoop() {
   const pos = (i: number) => {
     const a = (-90 + i * (360 / JOURNEY_STAGES.length)) * (Math.PI / 180);
     return { x: 50 + R * Math.cos(a), y: 50 + R * Math.sin(a) };
+  };
+
+  const scrollToReport = () => {
+    document.getElementById("funnel")?.scrollIntoView({ behavior: "smooth" });
   };
 
   const traveler = pos(active);
@@ -318,6 +319,17 @@ function JourneyLoop() {
               <p className="mt-2 inline-block rounded-full bg-primary/10 px-2 py-0.5 font-mono text-[11px] text-primary">
                 {current.metric}
               </p>
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={scrollToReport}
+                  className="group inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-foreground transition-colors hover:border-primary hover:text-primary"
+                >
+                  <FileText className="size-3" />
+                  see the report
+                  <ArrowDown className="size-3 transition-transform group-hover:translate-y-0.5" />
+                </button>
+              </div>
             </motion.div>
           </AnimatePresence>
         </div>
@@ -401,6 +413,14 @@ function JourneyLoop() {
                 <p className="mt-3 text-center font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
                   Ranked by revenue impact
                 </p>
+                <button
+                  type="button"
+                  onClick={scrollToReport}
+                  className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-primary px-4 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-primary-foreground transition-opacity hover:opacity-90"
+                >
+                  view a sample report
+                  <ArrowDown className="size-3" />
+                </button>
               </motion.div>
             </motion.div>
           ) : null}
