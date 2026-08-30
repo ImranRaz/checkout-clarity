@@ -166,33 +166,12 @@ function JourneyLoop() {
     return { x: 50 + R * Math.cos(a), y: 50 + R * Math.sin(a) };
   };
 
+  const traveler = pos(active);
+
   return (
     <div className="tile relative overflow-hidden p-0">
-      <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
-        <span className="size-2 rounded-full bg-sev-high/70" />
-        <span className="size-2 rounded-full bg-sev-medium/70" />
-        <span className="size-2 rounded-full bg-primary/60" />
-        <span className="ml-2 font-mono text-[11px] text-muted-foreground">
-          the customer lifecycle
-        </span>
-        <span className="ml-auto flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-          <motion.span
-            animate={{ opacity: [1, 0.25, 1] }}
-            transition={{ duration: 1.4, repeat: Infinity }}
-            className="size-1.5 rounded-full bg-primary"
-          />
-          360° watch
-        </span>
-      </div>
-
-      <div className="relative mx-auto aspect-square w-full max-w-[440px] p-4">
+      <div className="relative mx-auto aspect-square w-full max-w-[560px] p-6">
         <svg viewBox="0 0 100 100" className="absolute inset-0 size-full" aria-hidden>
-          <defs>
-            <linearGradient id="loop-sweep" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="var(--primary)" stopOpacity="0" />
-              <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.9" />
-            </linearGradient>
-          </defs>
           <circle
             cx="50"
             cy="50"
@@ -202,25 +181,11 @@ function JourneyLoop() {
             strokeWidth="0.6"
             strokeDasharray="1.5 2.5"
           />
-          <motion.g
-            style={{ originX: "50px", originY: "50px" }}
-            animate={{ rotate: 360 }}
-            transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
-          >
-            <circle
-              cx="50"
-              cy="50"
-              r={R}
-              fill="none"
-              stroke="url(#loop-sweep)"
-              strokeWidth="1.1"
-              strokeLinecap="round"
-              strokeDasharray="60 179"
-            />
-          </motion.g>
           {JOURNEY_STAGES.map((s, i) => {
             const from = pos(i);
             const to = pos((i + 1) % JOURNEY_STAGES.length);
+            const covered = i < active;
+            const closing = active === 0 && i === JOURNEY_STAGES.length - 1;
             return (
               <line
                 key={`${s.key}-link`}
@@ -228,11 +193,22 @@ function JourneyLoop() {
                 y1={from.y}
                 x2={to.x}
                 y2={to.y}
-                stroke="var(--border)"
-                strokeWidth="0.3"
+                stroke={covered && !closing ? "var(--primary)" : "var(--border)"}
+                strokeOpacity={covered && !closing ? 0.85 : 1}
+                strokeWidth={covered && !closing ? 0.9 : 0.3}
+                strokeLinecap="round"
+                style={{ transition: "stroke 0.5s, stroke-width 0.5s" }}
               />
             );
           })}
+          <motion.circle
+            r="1.6"
+            fill="var(--primary)"
+            stroke="var(--background)"
+            strokeWidth="0.4"
+            animate={{ cx: traveler.x, cy: traveler.y }}
+            transition={{ type: "spring", stiffness: 120, damping: 18 }}
+          />
         </svg>
 
         {JOURNEY_STAGES.map((s, i) => {
