@@ -186,19 +186,31 @@ function JourneyLoop() {
             const to = pos((i + 1) % JOURNEY_STAGES.length);
             const covered = i < active;
             const closing = active === 0 && i === JOURNEY_STAGES.length - 1;
+            const lit = covered && !closing;
+            const angle = (Math.atan2(to.y - from.y, to.x - from.x) * 180) / Math.PI;
+            const mx = from.x + (to.x - from.x) * 0.62;
+            const my = from.y + (to.y - from.y) * 0.62;
             return (
-              <line
-                key={`${s.key}-link`}
-                x1={from.x}
-                y1={from.y}
-                x2={to.x}
-                y2={to.y}
-                stroke={covered && !closing ? "var(--primary)" : "var(--border)"}
-                strokeOpacity={covered && !closing ? 0.85 : 1}
-                strokeWidth={covered && !closing ? 0.9 : 0.3}
-                strokeLinecap="round"
-                style={{ transition: "stroke 0.5s, stroke-width 0.5s" }}
-              />
+              <g key={`${s.key}-link`}>
+                <line
+                  x1={from.x}
+                  y1={from.y}
+                  x2={to.x}
+                  y2={to.y}
+                  stroke={lit ? "var(--primary)" : "var(--border)"}
+                  strokeOpacity={lit ? 0.85 : 1}
+                  strokeWidth={lit ? 0.9 : 0.3}
+                  strokeLinecap="round"
+                  style={{ transition: "stroke 0.5s, stroke-width 0.5s" }}
+                />
+                <polygon
+                  points="-1.1,-0.8 0.6,0 -1.1,0.8"
+                  fill={lit ? "var(--primary)" : "var(--muted-foreground)"}
+                  fillOpacity={lit ? 0.9 : 0.45}
+                  transform={`translate(${mx} ${my}) rotate(${angle})`}
+                  style={{ transition: "fill 0.5s" }}
+                />
+              </g>
             );
           })}
           <motion.circle
