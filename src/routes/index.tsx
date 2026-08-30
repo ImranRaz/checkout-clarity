@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowRight,
   Banknote,
+  FileText,
   Gauge as GaugeIcon,
   Linkedin,
   MousePointerClick,
