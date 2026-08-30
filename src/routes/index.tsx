@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowRight,
   Banknote,
+  FileText,
   Gauge as GaugeIcon,
   Linkedin,
   MousePointerClick,
@@ -153,11 +154,29 @@ const JOURNEY_STAGES = [
 
 function JourneyLoop() {
   const [active, setActive] = useState(0);
+  const [showReport, setShowReport] = useState(false);
+  const [hasShownReport, setHasShownReport] = useState(false);
 
   useEffect(() => {
-    const t = setInterval(() => setActive((i) => (i + 1) % JOURNEY_STAGES.length), 2400);
+    if (showReport) return;
+    const t = setInterval(() => {
+      setActive((i) => {
+        const next = (i + 1) % JOURNEY_STAGES.length;
+        if (next === 0 && !hasShownReport) {
+          setShowReport(true);
+          setHasShownReport(true);
+        }
+        return next;
+      });
+    }, 2400);
     return () => clearInterval(t);
-  }, []);
+  }, [showReport, hasShownReport]);
+
+  useEffect(() => {
+    if (!showReport) return;
+    const t = setTimeout(() => setShowReport(false), 3800);
+    return () => clearTimeout(t);
+  }, [showReport]);
 
   const current = JOURNEY_STAGES[active]!;
   const R = 38;
@@ -240,7 +259,10 @@ function JourneyLoop() {
             <button
               key={s.key}
               type="button"
-              onClick={() => setActive(i)}
+              onClick={() => {
+                setActive(i);
+                setShowReport(false);
+              }}
               style={{ left: `${x}%`, top: `${y}%` }}
               className="absolute flex w-28 -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
             >
@@ -294,6 +316,90 @@ function JourneyLoop() {
             </motion.div>
           </AnimatePresence>
         </div>
+
+        <AnimatePresence>
+          {showReport ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-background/30 p-6"
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96, y: 6 }}
+                transition={{ type: "spring", stiffness: 160, damping: 20 }}
+                className="pointer-events-auto w-full max-w-[340px] rounded-2xl border border-border bg-card/95 p-5 shadow-2xl backdrop-blur"
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <FileText className="size-4 text-primary" />
+                  <span className="label-caps">The deliverable</span>
+                </div>
+                <h3 className="mt-3 text-center font-display text-lg tracking-tight">
+                  One report. Every touchpoint.
+                </h3>
+                <p className="mt-1.5 text-center text-[13px] leading-snug text-muted-foreground">
+                  Funnel findings and reputation themes merge into one prioritized action list.
+                </p>
+
+                <div className="mt-5 flex items-center justify-center gap-5">
+                  <div className="relative size-[72px]">
+                    <svg viewBox="0 0 36 36" className="size-full -rotate-90">
+                      <path
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        fill="none"
+                        stroke="var(--border)"
+                        strokeWidth="3"
+                      />
+                      <path
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        fill="none"
+                        stroke="var(--primary)"
+                        strokeWidth="3"
+                        strokeDasharray="72, 100"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="font-display text-lg leading-none">72</span>
+                      <span className="font-mono text-[8px] uppercase tracking-widest text-muted-foreground">
+                        /100
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2 text-left">
+                    <div className="flex items-center gap-2">
+                      <span className="size-2 rounded-full bg-primary" />
+                      <span className="text-[11px] text-muted-foreground">12 on-site findings</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="size-2 rounded-full bg-sev-medium" />
+                      <span className="text-[11px] text-muted-foreground">4 reputation themes</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="size-2 rounded-full bg-sev-high" />
+                      <span className="text-[11px] text-muted-foreground">3 corroborated</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                  <span className="rounded-full bg-primary px-2 py-0.5 font-mono text-[9px] uppercase tracking-widest text-primary-foreground">
+                    funnel agent
+                  </span>
+                  <span className="rounded-full bg-sev-medium px-2 py-0.5 font-mono text-[9px] uppercase tracking-widest text-primary-foreground">
+                    reputation agent
+                  </span>
+                </div>
+                <p className="mt-3 text-center font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                  Ranked by revenue impact
+                </p>
+              </motion.div>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
       </div>
 
       <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 px-4 pb-2 pt-1">
