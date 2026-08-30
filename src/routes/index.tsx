@@ -609,7 +609,10 @@ function Marketing() {
       </section>
 
       {/* The report itself: findings left, pinned capture right */}
-      <EvidenceShowcase report={hero} stage={heroStage} pins={heroPins} />
+      <EvidenceShowcase report={showcase} stage={showcaseStage} pins={showcasePins} />
+
+      {/* Off-site: the reputation agent */}
+      <ReputationShowcase />
 
       {/* Value prop + interactive rubric */}
       <ValueProp />
