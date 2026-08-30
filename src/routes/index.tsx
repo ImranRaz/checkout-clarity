@@ -88,8 +88,9 @@ function exampleFinding(pillar: string): FrictionPoint | null {
 /**
  * The hero visual: the full 360° customer lifecycle drawn as a loop. A buyer
  * starts in search or an AI answer, judges you on reviews, walks the funnel,
- * buys, and then feeds the loop back with a review of their own. The travelling
- * pulse walks the ring; the centre card narrates who is watching that step.
+ * buys, and then feeds the loop back with a review of their own. A traveller
+ * dot walks the ring and lights up each segment it has covered; the centre
+ * card narrates who is watching that step and what it found.
  */
 const JOURNEY_STAGES = [
   {
@@ -97,56 +98,56 @@ const JOURNEY_STAGES = [
     label: "Search & AI",
     agent: "reputation" as const,
     caption: "Google and ChatGPT decide whether you make the shortlist at all.",
-    metric: "cited in 2 of 6 AI answers",
+    metric: "cited in 2 of 6 AI answers · 4 gaps found",
   },
   {
     key: "reviews",
     label: "Reviews",
     agent: "reputation" as const,
     caption: "They read your reviews before your homepage. So do we.",
-    metric: "2,069 reviews read · 4.0 avg",
+    metric: "2,069 reviews read · 3 complaint themes",
   },
   {
     key: "home",
     label: "Homepage",
     agent: "funnel" as const,
     caption: "First paint, the promise above the fold, where the eye lands.",
-    metric: "LCP 2.4s · 1 clarity issue",
+    metric: "LCP 2.4s · 1 clarity issue found",
   },
   {
     key: "category",
     label: "Category",
     agent: "funnel" as const,
     caption: "Filters, density and dead ends between browsing and a product.",
-    metric: "2 friction points",
+    metric: "2 friction points found",
   },
   {
     key: "product",
     label: "Product",
     agent: "funnel" as const,
     caption: "Sizing help, delivery promise, add-to-cart states that lie.",
-    metric: "3 friction points",
+    metric: "3 friction points found",
   },
   {
     key: "cart",
     label: "Cart",
     agent: "funnel" as const,
     caption: "Late shipping cost, pre-ticked extras, tax that appears at step four.",
-    metric: "surprise cost · high",
+    metric: "surprise cost found · high severity",
   },
   {
     key: "checkout",
     label: "Checkout",
     agent: "funnel" as const,
     caption: "Forced accounts, field count, validation that punishes typos.",
-    metric: "guest checkout reached",
+    metric: "guest checkout reached · 2 issues found",
   },
   {
     key: "after",
     label: "Post-purchase",
     agent: "reputation" as const,
     caption: "Delivery and support — and the review it turns into. Loop closed.",
-    metric: "feeds tomorrow's reputation",
+    metric: "5 issues found · feeds tomorrow's reviews",
   },
 ];
 
