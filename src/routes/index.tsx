@@ -156,6 +156,7 @@ const JOURNEY_STAGES = [
 function JourneyLoop() {
   const [active, setActive] = useState(0);
   const [showReport, setShowReport] = useState(false);
+  const [reportHover, setReportHover] = useState(false);
   const [paused, setPaused] = useState(false);
 
   useEffect(() => {
@@ -171,10 +172,16 @@ function JourneyLoop() {
   }, [showReport, paused]);
 
   useEffect(() => {
-    if (!showReport) return;
+    if (!showReport || reportHover) return;
     const t = setTimeout(() => setShowReport(false), 3800);
     return () => clearTimeout(t);
-  }, [showReport]);
+  }, [showReport, reportHover]);
+
+  const dismissReport = () => {
+    setReportHover(false);
+    setShowReport(false);
+    setActive(0);
+  };
 
   const current = JOURNEY_STAGES[active]!;
   const R = 38;
@@ -184,7 +191,7 @@ function JourneyLoop() {
   };
 
   const scrollToReport = () => {
-    document.getElementById("funnel")?.scrollIntoView({ behavior: "smooth" });
+    document.getElementById("samples")?.scrollIntoView({ behavior: "smooth" });
   };
 
   const traveler = pos(active);
@@ -322,7 +329,7 @@ function JourneyLoop() {
               <div className="mt-3">
                 <button
                   type="button"
-                  onClick={scrollToReport}
+                  onClick={() => setShowReport(true)}
                   className="group inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-foreground transition-colors hover:border-primary hover:text-primary"
                 >
                   <FileText className="size-3" />
@@ -348,6 +355,8 @@ function JourneyLoop() {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96, y: 6 }}
                 transition={{ type: "spring", stiffness: 160, damping: 20 }}
+                onMouseEnter={() => setReportHover(true)}
+                onMouseLeave={dismissReport}
                 className="pointer-events-auto w-full max-w-[340px] rounded-2xl border border-border bg-card/95 p-5 shadow-2xl backdrop-blur"
               >
                 <div className="flex items-center justify-center gap-2">
