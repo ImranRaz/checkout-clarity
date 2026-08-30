@@ -156,6 +156,7 @@ const JOURNEY_STAGES = [
 function JourneyLoop() {
   const [active, setActive] = useState(0);
   const [showReport, setShowReport] = useState(false);
+  const [reportHover, setReportHover] = useState(false);
   const [paused, setPaused] = useState(false);
 
   useEffect(() => {
@@ -171,10 +172,16 @@ function JourneyLoop() {
   }, [showReport, paused]);
 
   useEffect(() => {
-    if (!showReport) return;
+    if (!showReport || reportHover) return;
     const t = setTimeout(() => setShowReport(false), 3800);
     return () => clearTimeout(t);
-  }, [showReport]);
+  }, [showReport, reportHover]);
+
+  const dismissReport = () => {
+    setReportHover(false);
+    setShowReport(false);
+    setActive(0);
+  };
 
   const current = JOURNEY_STAGES[active]!;
   const R = 38;
@@ -184,7 +191,7 @@ function JourneyLoop() {
   };
 
   const scrollToReport = () => {
-    document.getElementById("funnel")?.scrollIntoView({ behavior: "smooth" });
+    document.getElementById("samples")?.scrollIntoView({ behavior: "smooth" });
   };
 
   const traveler = pos(active);
