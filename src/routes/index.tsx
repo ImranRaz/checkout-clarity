@@ -220,7 +220,7 @@ function JourneyLoop() {
               type="button"
               onClick={() => setActive(i)}
               style={{ left: `${x}%`, top: `${y}%` }}
-              className="absolute flex w-24 -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5"
+              className="absolute flex w-28 -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5"
             >
               <span className="relative flex items-center justify-center">
                 {isActive ? (
@@ -242,7 +242,7 @@ function JourneyLoop() {
               </span>
               <span
                 className={cn(
-                  "text-center font-mono text-[10px] leading-tight transition-colors",
+                  "text-center font-mono text-[11px] leading-tight transition-colors",
                   isActive ? "text-foreground" : "text-muted-foreground",
                 )}
               >
@@ -252,7 +252,7 @@ function JourneyLoop() {
           );
         })}
 
-        <div className="absolute left-1/2 top-1/2 w-[52%] -translate-x-1/2 -translate-y-1/2 text-center">
+        <div className="absolute left-1/2 top-1/2 w-[56%] -translate-x-1/2 -translate-y-1/2 text-center">
           <AnimatePresence mode="wait">
             <motion.div
               key={current.key}
@@ -271,8 +271,11 @@ function JourneyLoop() {
               >
                 {current.agent === "funnel" ? "funnel agent" : "reputation agent"}
               </span>
-              <p className="mt-2.5 text-[13px] leading-snug text-foreground">{current.caption}</p>
-              <p className="mt-2 font-mono text-[10px] text-muted-foreground">{current.metric}</p>
+              <p className="mt-2 font-mono text-[11px] uppercase tracking-widest text-foreground">
+                {current.label}
+              </p>
+              <p className="mt-1.5 text-[13px] leading-snug text-foreground">{current.caption}</p>
+              <p className="mt-2 font-mono text-[11px] text-primary">{current.metric}</p>
             </motion.div>
           </AnimatePresence>
         </div>
