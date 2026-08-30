@@ -496,6 +496,234 @@ function EvidenceShowcase({
   );
 }
 
+/**
+ * Off-site counterpart to the funnel scan: the reputation agent discovers where
+ * a brand is reviewed, reads the reviews, clusters them into themes, and scores
+ * what customers say — no browser, no minutes, just sources in and signal out.
+ */
+const REP_PHASES = [
+  { label: "searching Google, Maps, Tripadvisor, Trustpilot", tag: "discover" },
+  { label: "reading 2,069 reviews across 3 sources", tag: "read" },
+  { label: "clustering complaints and praise into themes", tag: "cluster" },
+  { label: "synthesising what customers actually say", tag: "synthesize" },
+];
+
+const REP_SOURCES = [
+  { name: "Google", rating: 4.1, count: "1,240" },
+  { name: "Tripadvisor", rating: 3.9, count: "620" },
+  { name: "Booking.com", rating: 3.8, count: "209" },
+];
+
+const REP_THEMES = [
+  { kind: "complaint", title: "Surprise resort fee revealed at checkout", mentions: 64, high: true },
+  { kind: "complaint", title: "Check-in queues at peak hours", mentions: 86, high: true },
+  { kind: "praise", title: "Staff go out of their way", mentions: 142, high: false },
+  { kind: "praise", title: "Views and location", mentions: 118, high: false },
+];
+
+function ReputationShowcase() {
+  const [phase, setPhase] = useState(0);
+  const done = phase >= REP_PHASES.length;
+  const sourcesFound = done ? REP_SOURCES.length : Math.max(0, phase - 0);
+
+  useEffect(() => {
+    const t = setTimeout(
+      () => setPhase((p) => (p > REP_PHASES.length ? 0 : p + 1)),
+      phase === 0 ? 1100 : done ? 4600 : 1600,
+    );
+    return () => clearTimeout(t);
+  }, [phase, done]);
+
+  return (
+    <section
+      className="border-b border-border"
+      aria-label="Reputation management"
+    >
+      <div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-6 py-16 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14">
+        <div>
+          <p className="label-caps">Off your site · the reputation agent</p>
+          <h2 className="mt-4 max-w-md font-display text-2xl tracking-tight sm:text-[1.75rem]">
+            The judgment starts on Google, not your homepage.
+          </h2>
+          <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground">
+            Before a buyer ever lands on your site, they've read your reviews. The reputation agent
+            finds where you're being reviewed — Google, Tripadvisor, Trustpilot, Booking, Reddit —
+            reads them, clusters what people repeat, and hands you one score with the themes behind
+            it.
+          </p>
+          <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground">
+            When a complaint matches something the funnel agent saw on your site, we say so —
+            "guests complain about surprise fees" next to the fee that appears at step four is a
+            fix you can't argue with.
+          </p>
+          <ul className="mt-6 space-y-2.5">
+            {[
+              "Runs on its own — no browser session, no minutes burned.",
+              "Catches the same-name business across town so the data stays yours.",
+              "New themes surface on re-run, so it doubles as monitoring.",
+            ].map((line) => (
+              <li key={line} className="flex gap-3 text-sm text-foreground">
+                <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
+                {line}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="tile relative overflow-hidden p-0">
+          <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
+            <span className="size-2 rounded-full bg-sev-high/70" />
+            <span className="size-2 rounded-full bg-sev-medium/70" />
+            <span className="size-2 rounded-full bg-primary/60" />
+            <span className="ml-2 truncate font-mono text-[11px] text-muted-foreground">
+              seaview-hotel.com
+            </span>
+            <span className="ml-auto flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              <motion.span
+                animate={{ opacity: done ? 1 : [1, 0.25, 1] }}
+                transition={{ duration: 1.2, repeat: done ? 0 : Infinity }}
+                className={cn("size-1.5 rounded-full", done ? "bg-primary" : "bg-sev-medium")}
+              />
+              {done ? "run complete" : "agent reading"}
+            </span>
+          </div>
+
+          <div className="p-5">
+            {/* Sources discovered so far */}
+            <p className="label-caps">sources found</p>
+            <ul className="mt-3 grid gap-2 sm:grid-cols-3">
+              {REP_SOURCES.map((s, i) => {
+                const found = i < sourcesFound;
+                return (
+                  <li
+                    key={s.name}
+                    className={cn(
+                      "rounded-lg border p-3 transition-colors",
+                      found ? "border-foreground/20 bg-background" : "border-border opacity-45",
+                    )}
+                  >
+                    <p className="flex items-center gap-1.5 text-xs font-medium">
+                      <span
+                        className={cn(
+                          "size-1.5 rounded-full",
+                          found ? "bg-primary" : "bg-muted-foreground/40",
+                        )}
+                      />
+                      {s.name}
+                    </p>
+                    <p className="mt-1.5 font-mono text-[11px] text-muted-foreground">
+                      {found ? (
+                        <>
+                          <span className="text-foreground">{s.rating.toFixed(1)}</span> ·{" "}
+                          {s.count} reviews
+                        </>
+                      ) : (
+                        "searching…"
+                      )}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+
+            {/* Narration / result */}
+            <div className="mt-4">
+              <AnimatePresence mode="wait">
+                {done ? (
+                  <motion.div
+                    key="rep-result"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    className="rounded-lg border border-border bg-background p-4 shadow-tile"
+                  >
+                    <div className="flex items-baseline justify-between gap-3">
+                      <p className="label-caps">what customers say</p>
+                      <p className="font-display text-2xl leading-none tabular-nums">
+                        78
+                        <span className="ml-1 font-mono text-[10px] text-muted-foreground">
+                          /100 reputation
+                        </span>
+                      </p>
+                    </div>
+                    <ul className="mt-3 space-y-1.5">
+                      {REP_THEMES.map((t, i) => (
+                        <motion.li
+                          key={t.title}
+                          initial={{ opacity: 0, x: -6 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.12 * i }}
+                          className="flex items-center gap-2 text-xs"
+                        >
+                          <span
+                            className={cn(
+                              "size-1.5 shrink-0 rounded-full",
+                              t.kind === "complaint"
+                                ? t.high
+                                  ? "bg-sev-high"
+                                  : "bg-sev-medium"
+                                : "bg-primary",
+                            )}
+                          />
+                          <span className="truncate">{t.title}</span>
+                          <span className="ml-auto shrink-0 font-mono text-[9px] uppercase tracking-[0.1em] text-muted-foreground">
+                            {t.mentions} mentions
+                          </span>
+                        </motion.li>
+                      ))}
+                    </ul>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key={phase}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.25 }}
+                    className="rounded-lg border border-border bg-background p-3 shadow-tile"
+                  >
+                    <p className="flex items-center gap-2 font-mono text-[11px] text-foreground">
+                      <span className="rounded-full border border-border px-2 py-0.5 text-[9px] uppercase tracking-[0.1em] text-muted-foreground">
+                        {REP_PHASES[Math.min(phase, REP_PHASES.length - 1)]!.tag}
+                      </span>
+                      {REP_PHASES[Math.min(phase, REP_PHASES.length - 1)]!.label}
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="mt-2 flex gap-1.5">
+                {REP_PHASES.map((p, i) => (
+                  <span
+                    key={p.tag}
+                    className={cn(
+                      "h-0.5 flex-1 rounded-full transition-colors",
+                      done || i <= phase ? "bg-primary/80" : "bg-foreground/20",
+                    )}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border px-4 py-2.5">
+            <span className="label-caps">coverage</span>
+            {["search", "maps", "travel", "social"].map((k) => (
+              <span key={k} className="font-mono text-[10px] text-muted-foreground">
+                {k}
+              </span>
+            ))}
+            <span className="font-mono text-[10px] text-foreground">
+              reviews read
+              <span className="ml-1 text-primary">2,069</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Marketing() {
   const { featured } = Route.useLoaderData();
   const complete = fixtureReports.filter((r) => r.status === "complete");
