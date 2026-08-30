@@ -95,10 +95,12 @@ The frontend and worker communicate via a long-poll job API: `POST /run` returns
 
 ```bash
 npm install
+cp .env.example .env
+# fill in .env with your own Lovable Cloud / Supabase project values
 npm run dev
 ```
 
-The app runs on Vite and expects the Supabase environment variables from `.env` (see `.env.example`).
+The app runs on Vite and expects the environment variables in `.env` — copy `.env.example` and fill in your own project ID, URL, and publishable key. `.env` is gitignored, so it will never be committed.
 
 ### Agent worker
 
