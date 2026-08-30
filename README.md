@@ -95,10 +95,12 @@ The frontend and worker communicate via a long-poll job API: `POST /run` returns
 
 ```bash
 npm install
+cp .env.example .env
+# fill in .env with your own Lovable Cloud / Supabase project values
 npm run dev
 ```
 
-The app runs on Vite and expects the Supabase environment variables from `.env` (see `.env.example`).
+The app runs on Vite and expects the environment variables in `.env` — copy `.env.example` and fill in your own project ID, URL, and publishable key. `.env` is gitignored, so it will never be committed.
 
 ### Agent worker
 
@@ -128,14 +130,12 @@ Expose `localhost:3000` through a tunnel (ngrok / Cloudflare Quick Tunnel) and s
 
 - No API keys, bearer tokens, or browser keys are hardcoded in the source.
 - Secrets are stored in **Lovable Cloud secrets** (or Render environment variables for the worker) and read inside server handlers at runtime.
-- Before making the repository public, remove `.env` from git tracking if it exists:
+- `.env` is gitignored and not tracked — only `.env.example` (with placeholder values) is committed.
+- If `.env` was committed to this repository's history at any point, it may still exist in older commits. To scrub it from history before making the repo public, use `git filter-repo` or BFG Repo-Cleaner on a private clone:
 
   ```bash
-  git rm --cached .env
-  git commit -m "chore: remove .env from tracking"
+  git filter-repo --path .env --invert-paths
   ```
-
-  If a project ID or secret has already been pushed and you want to scrub it from history, use `git filter-repo` or BFG Repo-Cleaner on a private clone before switching the repository public.
 
 ---
 
