@@ -331,7 +331,11 @@ function EvidenceShowcase({
       : 0;
 
   return (
-    <section className="border-b border-border bg-card" aria-label="What the report looks like">
+    <section
+      id="funnel"
+      className="border-b border-border bg-card"
+      aria-label="What the report looks like"
+    >
       <div className="mx-auto w-full max-w-6xl px-6 py-16">
         <p className="label-caps">On your site · the funnel agent</p>
         <h2 className="mt-4 max-w-xl font-display text-2xl tracking-tight sm:text-[1.75rem]">
@@ -536,6 +540,7 @@ function ReputationShowcase() {
 
   return (
     <section
+      id="reputation"
       className="border-b border-border"
       aria-label="Reputation management"
     >
@@ -750,8 +755,20 @@ function Marketing() {
           <BrandLockup />
           <div className="flex items-center gap-4">
             <a
-              href="#samples"
+              href="#funnel"
               className="hidden font-mono text-xs text-muted-foreground transition-colors hover:text-foreground sm:inline"
+            >
+              funnel agent
+            </a>
+            <a
+              href="#reputation"
+              className="hidden font-mono text-xs text-muted-foreground transition-colors hover:text-foreground sm:inline"
+            >
+              reputation agent
+            </a>
+            <a
+              href="#samples"
+              className="hidden font-mono text-xs text-muted-foreground transition-colors hover:text-foreground md:inline"
             >
               sample reports
             </a>
