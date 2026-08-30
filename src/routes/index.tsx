@@ -167,20 +167,16 @@ function JourneyLoop() {
   };
 
   const traveler = pos(active);
+  const labelPos = (i: number) => {
+    const a = (-90 + i * (360 / JOURNEY_STAGES.length)) * (Math.PI / 180);
+    const r = R + 8.5;
+    return { x: 50 + r * Math.cos(a), y: 50 + r * Math.sin(a) };
+  };
 
   return (
-    <div className="tile relative overflow-hidden p-0">
-      <div className="relative mx-auto aspect-square w-full max-w-[560px] p-6">
+    <div className="relative">
+      <div className="relative mx-auto aspect-square w-full max-w-[580px] p-6">
         <svg viewBox="0 0 100 100" className="absolute inset-0 size-full" aria-hidden>
-          <circle
-            cx="50"
-            cy="50"
-            r={R}
-            fill="none"
-            stroke="var(--border)"
-            strokeWidth="0.6"
-            strokeDasharray="1.5 2.5"
-          />
           {JOURNEY_STAGES.map((s, i) => {
             const from = pos(i);
             const to = pos((i + 1) % JOURNEY_STAGES.length);
@@ -213,18 +209,32 @@ function JourneyLoop() {
               </g>
             );
           })}
+          {JOURNEY_STAGES.map((s, i) => {
+            const p = pos(i);
+            return (
+              <motion.circle
+                key={`${s.key}-dot`}
+                fill={s.agent === "funnel" ? "var(--primary)" : "var(--sev-medium)"}
+                stroke="var(--background)"
+                strokeWidth="0.4"
+                initial={false}
+                animate={{ cx: p.x, cy: p.y, r: i === active ? 2.1 : 1.2, opacity: i === active ? 1 : 0.55 }}
+                transition={{ duration: 0.3 }}
+              />
+            );
+          })}
           <motion.circle
-            r="1.6"
-            fill="var(--primary)"
-            stroke="var(--background)"
-            strokeWidth="0.4"
+            r="1"
+            fill="var(--background)"
+            stroke="var(--primary)"
+            strokeWidth="0.5"
             animate={{ cx: traveler.x, cy: traveler.y }}
             transition={{ type: "spring", stiffness: 120, damping: 18 }}
           />
         </svg>
 
         {JOURNEY_STAGES.map((s, i) => {
-          const { x, y } = pos(i);
+          const { x, y } = labelPos(i);
           const isActive = i === active;
           return (
             <button
@@ -232,35 +242,21 @@ function JourneyLoop() {
               type="button"
               onClick={() => setActive(i)}
               style={{ left: `${x}%`, top: `${y}%` }}
-              className="absolute flex w-28 -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5"
+              className="absolute flex w-28 -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
             >
               {i === 0 ? (
-                <span className="rounded-full border border-primary/40 bg-background px-1.5 py-px font-mono text-[8px] uppercase tracking-[0.14em] text-primary">
+                <span className="rounded-full bg-primary px-1.5 py-px font-mono text-[8px] uppercase tracking-[0.14em] text-primary-foreground">
                   start here
                 </span>
               ) : null}
-              <span className="relative flex items-center justify-center">
-                {isActive ? (
-                  <span
-                    className={cn(
-                      "absolute -inset-2 animate-ping rounded-full opacity-30",
-                      s.agent === "funnel" ? "bg-primary" : "bg-sev-medium",
-                    )}
-                  />
-                ) : null}
-                <motion.span
-                  animate={{ scale: isActive ? 1.15 : 1, opacity: isActive ? 1 : 0.5 }}
-                  transition={{ duration: 0.3 }}
-                  className={cn(
-                    "relative block size-3 rounded-full border-2 border-background shadow-tile",
-                    s.agent === "funnel" ? "bg-primary" : "bg-sev-medium",
-                  )}
-                />
-              </span>
               <span
                 className={cn(
-                  "text-center font-mono text-[11px] leading-tight transition-colors",
-                  isActive ? "text-foreground" : "text-muted-foreground",
+                  "rounded-full px-2 py-0.5 text-center font-mono text-[11px] leading-tight transition-all duration-300",
+                  isActive
+                    ? s.agent === "funnel"
+                      ? "bg-primary text-primary-foreground shadow-tile"
+                      : "bg-sev-medium text-primary-foreground shadow-tile"
+                    : "text-muted-foreground",
                 )}
               >
                 {s.label}
@@ -280,10 +276,10 @@ function JourneyLoop() {
             >
               <span
                 className={cn(
-                  "inline-block rounded-full border px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.1em]",
+                  "inline-block rounded-full px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.1em]",
                   current.agent === "funnel"
-                    ? "border-primary/40 text-primary"
-                    : "border-sev-medium/50 text-sev-medium",
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-sev-medium text-primary-foreground",
                 )}
               >
                 {current.agent === "funnel" ? "funnel agent" : "reputation agent"}
@@ -292,13 +288,15 @@ function JourneyLoop() {
                 {current.label}
               </p>
               <p className="mt-1.5 text-[13px] leading-snug text-foreground">{current.caption}</p>
-              <p className="mt-2 font-mono text-[11px] text-primary">{current.metric}</p>
+              <p className="mt-2 inline-block rounded-full bg-primary/10 px-2 py-0.5 font-mono text-[11px] text-primary">
+                {current.metric}
+              </p>
             </motion.div>
           </AnimatePresence>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border px-4 py-2.5">
+      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 px-4 pb-2 pt-1">
         <span className="label-caps">watched</span>
         <span className="flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground">
           <span className="size-1.5 rounded-full bg-sev-medium" /> before &amp; after · reputation
@@ -306,7 +304,7 @@ function JourneyLoop() {
         <span className="flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground">
           <span className="size-1.5 rounded-full bg-primary" /> during · funnel
         </span>
-        <span className="ml-auto font-mono text-[10px] text-foreground">
+        <span className="font-mono text-[10px] text-foreground">
           one loop<span className="ml-1 text-primary">one report</span>
         </span>
       </div>
