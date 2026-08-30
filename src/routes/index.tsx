@@ -851,11 +851,11 @@ function Marketing() {
       {/* Pillars */}
       <section className="mx-auto w-full max-w-6xl px-6 py-20">
         <h2 className="font-display text-2xl tracking-tight sm:text-3xl">
-          Four reasons carts die. We check all four, on every page.
+          Inside the funnel: four ways buyers stall. We check all four, on every page.
         </h2>
         <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-          Every finding is measured on the page, then judged against what your business actually
-          sells — a cruise line isn't graded on free shipping.
+          The funnel agent measures every finding on the page, then judges it against what your
+          business actually sells — a cruise line isn't graded on free shipping.
         </p>
 
         <div className="mt-10 grid gap-5 sm:grid-cols-2">
@@ -882,24 +882,24 @@ function Marketing() {
       <section className="border-y border-border bg-card">
         <div className="mx-auto w-full max-w-6xl px-6 py-20">
           <h2 className="font-display text-2xl tracking-tight sm:text-3xl">
-            One URL in. A prioritised teardown out.
+            One URL in. A 360° teardown out.
           </h2>
           <ol className="mt-10 grid gap-8 sm:grid-cols-3">
             {[
               {
                 n: "01",
-                t: "Point us at any page",
-                b: "A product link, a category, your homepage. Anything on the store works.",
+                t: "Point us at your brand",
+                b: "A product link, a category, your homepage — even just a domain. Both agents take it from there.",
               },
               {
                 n: "02",
-                t: "The agent shops it",
-                b: "It picks a variant, adds to cart, and pushes into guest checkout — stopping at any login wall, like a real shopper would.",
+                t: "Two agents run in parallel",
+                b: "One shops the journey to guest checkout like a real buyer. The other reads your reviews across Google, travel sites, and forums.",
               },
               {
                 n: "03",
                 t: "You get the evidence",
-                b: "A scored report where every finding is anchored to the element in the screenshot, ordered by what to fix first.",
+                b: "A scored report — on-site findings pinned to pixels, off-site themes with real quotes — ordered by what to fix first.",
               },
             ].map((step) => (
               <li key={step.n}>
