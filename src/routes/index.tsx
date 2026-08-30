@@ -765,17 +765,14 @@ function Marketing() {
   const { featured } = Route.useLoaderData();
   const complete = fixtureReports.filter((r) => r.status === "complete");
   const hero = complete[0] ?? fixtureReports[0]!;
-  const heroStage = hero.stages[0]!;
-  const heroPins = [...heroStage.friction_points]
-    .sort((a, b) => a.y_percentage - b.y_percentage)
-    .slice(0, 5);
-  // Evidence showcase uses a different brand than the hero so the page doesn't
-  // feel like one report stretched over every section.
-  const showcase = complete[1] ?? hero;
+  // The evidence showcase uses the Wayfarer Outdoor run — a familiar
+  // US outdoor-apparel storefront rather than an unfamiliar marketplace.
+  const showcase = complete.find((r) => r.id === "wayfarer-outdoor") ?? hero;
   const showcaseStage = showcase.stages[0]!;
   const showcasePins = [...showcaseStage.friction_points]
     .sort((a, b) => a.y_percentage - b.y_percentage)
     .slice(0, 5);
+
 
 
 
