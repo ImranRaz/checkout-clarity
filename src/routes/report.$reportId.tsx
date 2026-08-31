@@ -13,8 +13,10 @@ import { scoreReport } from "@/lib/scoring";
 export const Route = createFileRoute("/report/$reportId")({
   loader: async ({ params }) => {
     // Bundled samples first, then any real run we've explicitly featured.
+    const fixture = getReportById(params.reportId);
     const report =
-      getReportById(params.reportId) ?? (await getFeaturedReport({ data: { id: params.reportId } }));
+      fixture ??
+      (await getFeaturedReport({ data: { id: params.reportId } }).catch(() => null));
     if (!report) throw notFound();
     return { report };
   },
