@@ -65,6 +65,13 @@ export const Route = createFileRoute("/report/$reportId")({
   },
   errorComponent: () => <Missing />,
   notFoundComponent: () => <Missing />,
+  pendingComponent: () => (
+    <main className="flex min-h-screen items-center justify-center px-6">
+      <p className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
+        Loading report…
+      </p>
+    </main>
+  ),
   component: SampleReport,
 });
 
