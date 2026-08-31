@@ -25,7 +25,19 @@ const csrfMiddleware = createCsrfMiddleware({
   filter: (ctx) => ctx.handlerType === "serverFn",
 });
 
+// Anonymous visitors must still be able to call public server functions. If the
+// auth client can't initialise (e.g. missing browser env), fall through without
+// a bearer token instead of failing every RPC on the page.
+const safeAttachSupabaseAuth = createMiddleware({ type: "function" }).client(async ({ next }) => {
+  try {
+    return await attachSupabaseAuth.options.client!({ next } as never);
+  } catch (error) {
+    console.warn("[auth] could not attach session token", error);
+    return next();
+  }
+});
+
 export const startInstance = createStart(() => ({
-  functionMiddleware: [attachSupabaseAuth],
+  functionMiddleware: [safeAttachSupabaseAuth],
   requestMiddleware: [errorMiddleware, csrfMiddleware],
 }));
