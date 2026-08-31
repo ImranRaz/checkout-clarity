@@ -40,11 +40,114 @@ export const Route = createFileRoute("/")({
         content:
           "A funnel agent walks your buying journey and a reputation agent reads your reviews — one report shows where customers hesitate, on your site and off it.",
       },
+      {
+        name: "keywords",
+        content:
+          "conversion forensics, checkout audit, customer journey audit, reputation intelligence, review analysis, UX audit agent, ecommerce conversion optimization",
+      },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "https://www.coherentx.com/" },
+      { property: "og:site_name", content: "CoherentX" },
+      { property: "og:url", content: "https://coherentx.com/" },
+      { property: "og:image", content: "https://coherentx.com/og-cover.jpg" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      {
+        property: "og:image:alt",
+        content: "CoherentX — conversion forensics and reputation intelligence report",
+      },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "CoherentX — See your brand the way customers do" },
+      {
+        name: "twitter:description",
+        content:
+          "A funnel agent walks your buying journey and a reputation agent reads your reviews — one report shows where customers hesitate.",
+      },
+      { name: "twitter:image", content: "https://coherentx.com/og-cover.jpg" },
+      { name: "robots", content: "index, follow, max-image-preview:large, max-snippet:-1" },
     ],
-    links: [{ rel: "canonical", href: "https://www.coherentx.com/" }],
+    links: [{ rel: "canonical", href: "https://coherentx.com/" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "SoftwareApplication",
+              name: "CoherentX",
+              applicationCategory: "BusinessApplication",
+              operatingSystem: "Web",
+              url: "https://coherentx.com/",
+              description:
+                "CoherentX runs two agents over your brand: a funnel agent that shops your site like a customer from homepage to guest checkout, and a reputation agent that reads your public reviews — delivering one report that ties customer complaints to the exact on-site steps that cause them.",
+              featureList: [
+                "Agent-driven customer journey audit with pinned screenshot evidence",
+                "Reputation and voice-of-customer analysis across public review sources",
+                "Corroborated findings linking reviews to on-site friction",
+                "Deterministic rubric scoring out of 100",
+                "Shareable read-only reports and PDF export",
+              ],
+              publisher: { "@id": "https://coherentx.com/#org" },
+            },
+            {
+              "@type": "Organization",
+              "@id": "https://coherentx.com/#org",
+              name: "CoherentX",
+              url: "https://coherentx.com/",
+              logo: "https://coherentx.com/og-cover.jpg",
+              description:
+                "Conversion forensics and reputation intelligence for e-commerce, travel, hospitality and subscription brands.",
+              founder: { "@type": "Person", name: "Imran Razaq" },
+              sameAs: ["https://www.linkedin.com/in/imranrazaq/"],
+            },
+            {
+              "@type": "WebSite",
+              "@id": "https://coherentx.com/#website",
+              url: "https://coherentx.com/",
+              name: "CoherentX",
+              publisher: { "@id": "https://coherentx.com/#org" },
+            },
+            {
+              "@type": "FAQPage",
+              mainEntity: [
+                {
+                  "@type": "Question",
+                  name: "What is CoherentX?",
+                  acceptedAnswer: {
+                    "@type": "Answer",
+                    text: "CoherentX is a conversion forensics and reputation intelligence platform. One agent walks your real buying journey in a live browser and pins every friction point to the exact element on screen; a second agent reads your public reviews and clusters what customers actually complain about. The two are cross-referenced in a single report.",
+                  },
+                },
+                {
+                  "@type": "Question",
+                  name: "Does CoherentX need access to my site or a tracking tag?",
+                  acceptedAnswer: {
+                    "@type": "Answer",
+                    text: "No. CoherentX audits any public URL from the outside — no tag, no code, and no access to your systems.",
+                  },
+                },
+                {
+                  "@type": "Question",
+                  name: "How is the score calculated?",
+                  acceptedAnswer: {
+                    "@type": "Answer",
+                    text: "Scores come from a fixed rubric applied to the captured evidence — copy and clarity, cost surprise, effort, speed and stability — not from a model's opinion. Partial runs receive a provisional score based only on the stages actually captured.",
+                  },
+                },
+                {
+                  "@type": "Question",
+                  name: "Which industries does CoherentX support?",
+                  acceptedAnswer: {
+                    "@type": "Answer",
+                    text: "E-commerce, travel and cruise, hospitality, and subscription or SaaS brands. The agent adapts its vocabulary and checks to the vertical it detects, so a cruise line is never judged on shipping costs.",
+                  },
+                },
+              ],
+            },
+          ],
+        }),
+      },
+    ],
   }),
   loader: async () => ({ featured: await listFeaturedReports() }),
   component: Marketing,
