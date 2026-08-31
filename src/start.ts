@@ -1,7 +1,6 @@
 import { createStart, createCsrfMiddleware, createMiddleware } from "@tanstack/react-start";
 
 import { renderErrorPage } from "./lib/error-page";
-import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 
 const errorMiddleware = createMiddleware().server(async ({ next }) => {
   try {
@@ -25,7 +24,22 @@ const csrfMiddleware = createCsrfMiddleware({
   filter: (ctx) => ctx.handlerType === "serverFn",
 });
 
+// Anonymous visitors must still be able to call public server functions. If the
+// auth client can't initialise (e.g. missing browser env), fall through without
+// a bearer token instead of failing every RPC on the page.
+const safeAttachSupabaseAuth = createMiddleware({ type: "function" }).client(async ({ next }) => {
+  let token: string | undefined;
+  try {
+    const { supabase } = await import("@/integrations/supabase/client");
+    const { data } = await supabase.auth.getSession();
+    token = data.session?.access_token;
+  } catch (error) {
+    console.warn("[auth] could not read session", error);
+  }
+  return next(token ? { headers: { Authorization: `Bearer ${token}` } } : {});
+});
+
 export const startInstance = createStart(() => ({
-  functionMiddleware: [attachSupabaseAuth],
+  functionMiddleware: [safeAttachSupabaseAuth],
   requestMiddleware: [errorMiddleware, csrfMiddleware],
 }));

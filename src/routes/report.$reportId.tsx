@@ -13,8 +13,10 @@ import { scoreReport } from "@/lib/scoring";
 export const Route = createFileRoute("/report/$reportId")({
   loader: async ({ params }) => {
     // Bundled samples first, then any real run we've explicitly featured.
+    const fixture = getReportById(params.reportId);
     const report =
-      getReportById(params.reportId) ?? (await getFeaturedReport({ data: { id: params.reportId } }));
+      fixture ??
+      (await getFeaturedReport({ data: { id: params.reportId } }).catch(() => null));
     if (!report) throw notFound();
     return { report };
   },
@@ -38,7 +40,26 @@ export const Route = createFileRoute("/report/$reportId")({
         { property: "og:title", content: title },
         { property: "og:description", content: description },
         { property: "og:type", content: "article" },
+        { property: "og:url", content: `https://coherentx.com/report/${report.id}` },
+        { property: "og:image", content: "https://coherentx.com/og-cover.jpg" },
         { name: "twitter:card", content: "summary_large_image" },
+        { name: "twitter:image", content: "https://coherentx.com/og-cover.jpg" },
+      ],
+      links: [{ rel: "canonical", href: `https://coherentx.com/report/${report.id}` }],
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Report",
+            headline: title,
+            description,
+            about: report.domain,
+            author: { "@type": "Organization", name: "CoherentX" },
+            publisher: { "@type": "Organization", name: "CoherentX" },
+            url: `https://coherentx.com/report/${report.id}`,
+          }),
+        },
       ],
     };
   },

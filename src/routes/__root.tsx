@@ -91,7 +91,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "CoherentX is an autonomous agent that audits the conversion friction of any e-commerce checkout flow — technical and UX, in one run.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:site_name", content: "CoherentX" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "robots", content: "index, follow, max-image-preview:large, max-snippet:-1" },
     ],
     links: [
       {
