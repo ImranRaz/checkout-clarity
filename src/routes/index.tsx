@@ -1226,6 +1226,11 @@ function Marketing() {
           </h2>
           <p className="font-mono text-[11px] text-muted-foreground">no sign-in needed</p>
         </div>
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          Real runs on real brands — starting with one that carries both tracks: the funnel agent's
+          walk to checkout alongside the reputation agent's read of what customers say.
+        </p>
+
 
         <ul className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {featured.length > 0
