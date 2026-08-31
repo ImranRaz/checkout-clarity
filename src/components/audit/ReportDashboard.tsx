@@ -10,6 +10,7 @@ import type { GlossaryKey } from "@/lib/glossary";
 import { Interstitials, ScrollPass } from "./ScrollEvidence";
 import { ReputationPanel } from "./ReputationPanel";
 import { SeverityChip } from "./SeverityChip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 import {
   categoryLabel,
