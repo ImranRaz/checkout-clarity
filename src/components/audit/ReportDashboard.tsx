@@ -197,7 +197,7 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
       transition={{ staggerChildren: 0.07, delayChildren: 0.05 }}
       className="space-y-4"
     >
-      {partial && (
+      {partial && !scorable && (
         <motion.div
           variants={tileMotion}
           transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
@@ -206,17 +206,9 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
           <ShieldAlert className="size-4 shrink-0 text-sev-medium sm:mt-0.5" aria-hidden />
           <div className="min-w-0">
             <p className="text-sm font-medium text-foreground">
-              {scorable
-                ? `Provisional score — the journey stopped at ${reachedStep(report)}`
-                : `Partial audit — the agent was stopped at ${reachedStep(report)}`}
+              Partial audit — the agent was stopped at {reachedStep(report)}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">{report.blocked_reason}</p>
-            {scorable && coverage.missing.length > 0 ? (
-              <p className="mt-1 font-mono text-[11px] text-muted-foreground">
-                scored on {coverage.covered.join(" · ").toLowerCase()} · not measured:{" "}
-                {coverage.missing.join(", ").toLowerCase()}
-              </p>
-            ) : null}
           </div>
         </motion.div>
       )}
@@ -241,11 +233,19 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
           <span className="min-w-0">
             <span
               className={cn(
-                "block text-sm font-medium",
+                "flex items-center gap-1.5 text-sm font-medium",
                 !scorable || provisional ? "text-sev-medium" : grade[score.grade],
               )}
             >
               {!scorable ? "Not scored" : provisional ? `${score.grade} · provisional` : score.grade}
+              {scorable && provisional ? (
+                <ProvisionalNote
+                  reached={reachedStep(report)}
+                  reason={report.blocked_reason}
+                  covered={coverage.covered}
+                  missing={coverage.missing}
+                />
+              ) : null}
             </span>
             <span className="block truncate font-mono text-[11px] text-muted-foreground">
               {report.domain} · {report.stages.length} stages ·{" "}
@@ -254,6 +254,7 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
             </span>
           </span>
         </div>
+
         <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
