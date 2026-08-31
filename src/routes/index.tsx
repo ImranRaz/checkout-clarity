@@ -1226,6 +1226,11 @@ function Marketing() {
           </h2>
           <p className="font-mono text-[11px] text-muted-foreground">no sign-in needed</p>
         </div>
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          Real runs on real brands — starting with one that carries both tracks: the funnel agent's
+          walk to checkout alongside the reputation agent's read of what customers say.
+        </p>
+
 
         <ul className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {featured.length > 0
@@ -1545,7 +1550,16 @@ function ValueProp() {
 
 
 /** A published audit of a real, named store — the strongest proof we have. */
+const SAMPLE_KIND_LABEL = {
+  both: "Funnel + reputation",
+  funnel: "Funnel agent",
+  reputation: "Reputation agent",
+} as const;
+
 function RealSampleCard({ run }: { run: FeaturedSummary }) {
+  const hasFunnel = run.stages > 0;
+  const hasReputation = run.reputationScore !== null;
+
   return (
     <Link
       to="/report/$reportId"
@@ -1553,29 +1567,52 @@ function RealSampleCard({ run }: { run: FeaturedSummary }) {
       className="tile group flex h-full flex-col overflow-hidden p-0 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-tile-hover"
     >
       <span className="relative block h-36 overflow-hidden border-b border-border bg-secondary">
-        <img
-          src={`/api/public/thumb/${run.id}`}
-          alt={`Capture from the ${run.domain} audit`}
-          loading="lazy"
-          decoding="async"
-          className="size-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.03]"
-        />
+        {hasFunnel ? (
+          <img
+            src={`/api/public/thumb/${run.id}`}
+            alt={`Capture from the ${run.domain} audit`}
+            loading="lazy"
+            decoding="async"
+            className="size-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.03]"
+          />
+        ) : (
+          <span className="flex size-full flex-col justify-center gap-2 bg-gradient-to-br from-secondary to-card px-5">
+            <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+              voice of customer
+            </span>
+            <span className="font-display text-2xl leading-none tabular-nums">
+              {run.averageRating !== null ? run.averageRating.toFixed(1) : "—"}
+              <span className="ml-1 font-mono text-xs text-muted-foreground">avg rating</span>
+            </span>
+            <span className="font-mono text-[11px] text-muted-foreground">
+              {run.reviewCount !== null ? run.reviewCount.toLocaleString() : "—"} reviews read
+            </span>
+          </span>
+        )}
+        <span className="absolute left-3 top-3 rounded bg-background/90 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-foreground backdrop-blur">
+          {SAMPLE_KIND_LABEL[run.kind]}
+        </span>
       </span>
       <span className="flex flex-1 flex-col p-5">
         <span className="flex items-baseline justify-between gap-3">
           <span className="truncate font-mono text-xs text-muted-foreground">{run.domain}</span>
           <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-            {run.stages} stages
+            {hasFunnel ? `${run.stages} stages` : `${run.reputationThemes} themes`}
           </span>
         </span>
         <span className="mt-4 flex items-baseline gap-1.5">
-          <span className="font-display text-4xl leading-none tabular-nums">{run.score ?? "—"}</span>
-          {run.score !== null ? (
-            <span className="font-mono text-xs text-muted-foreground">/100</span>
+          <span className="font-display text-4xl leading-none tabular-nums">
+            {run.score ?? run.reputationScore ?? "—"}
+          </span>
+          {run.score !== null || run.reputationScore !== null ? (
+            <span className="font-mono text-xs text-muted-foreground">
+              /100 {run.score === null && hasReputation ? "reputation" : ""}
+            </span>
           ) : null}
         </span>
         <span className="mt-3 flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
-          {run.findings} findings
+          {hasFunnel ? `${run.findings} findings` : `${run.reputationThemes} review themes`}
+          {hasFunnel && hasReputation ? ` · ${run.reputationThemes} themes` : ""}
           <ArrowRight
             className="size-3 transition-transform duration-200 group-hover:translate-x-0.5"
             aria-hidden
@@ -1585,6 +1622,7 @@ function RealSampleCard({ run }: { run: FeaturedSummary }) {
     </Link>
   );
 }
+
 
 function SampleCard({ report }: { report: ForensicAuditReport }) {
   const score = report.stages.length > 0 ? scoreReport(report).total : null;
