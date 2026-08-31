@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { AlertTriangle, ArrowUpRight, Clock, ShieldAlert } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, Clock, Info, ShieldAlert } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ExecutiveSummary } from "./ExecutiveSummary";
@@ -10,6 +10,7 @@ import type { GlossaryKey } from "@/lib/glossary";
 import { Interstitials, ScrollPass } from "./ScrollEvidence";
 import { ReputationPanel } from "./ReputationPanel";
 import { SeverityChip } from "./SeverityChip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 import {
   categoryLabel,
@@ -57,6 +58,69 @@ const contradictedImageFinding = (point: FrictionPoint) => {
       (title.includes("never loaded") || title.includes("still blank")))
   );
 };
+
+/**
+ * A provisional score used to shout from a banner at the top of the report.
+ * It's a footnote, not a headline: a quiet marker beside the grade that
+ * explains itself on hover.
+ */
+function ProvisionalNote({
+  reached,
+  reason,
+  covered,
+  missing,
+}: {
+  reached: string;
+  reason?: string | null;
+  covered: string[];
+  missing: string[];
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label="Why this score is provisional"
+          onMouseEnter={() => setOpen(true)}
+          onMouseLeave={() => setOpen(false)}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setOpen(false)}
+          className="no-print inline-flex shrink-0 items-center text-sev-medium/80 transition-colors hover:text-sev-medium focus-visible:outline-none"
+        >
+          <Info className="size-3.5" aria-hidden />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        side="bottom"
+        sideOffset={6}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        className="no-print w-80 max-w-[calc(100vw-2rem)] p-4 text-left"
+      >
+        <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-sev-medium">
+          Provisional score
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-foreground">
+          The journey stopped at {reached}, so this number reflects only the stages we captured.
+        </p>
+        {reason ? (
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{reason}</p>
+        ) : null}
+        {missing.length > 0 ? (
+          <p className="mt-3 rounded-md bg-secondary px-2.5 py-2 font-mono text-[11px] leading-relaxed text-foreground">
+            scored on {covered.join(" · ").toLowerCase()} · not measured:{" "}
+            {missing.join(", ").toLowerCase()}
+          </p>
+        ) : null}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+
 
 /**
  * Older saved runs predate the strict visual-evidence rules. Repair their
@@ -197,7 +261,7 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
       transition={{ staggerChildren: 0.07, delayChildren: 0.05 }}
       className="space-y-4"
     >
-      {partial && (
+      {partial && !scorable && (
         <motion.div
           variants={tileMotion}
           transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
@@ -206,17 +270,9 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
           <ShieldAlert className="size-4 shrink-0 text-sev-medium sm:mt-0.5" aria-hidden />
           <div className="min-w-0">
             <p className="text-sm font-medium text-foreground">
-              {scorable
-                ? `Provisional score — the journey stopped at ${reachedStep(report)}`
-                : `Partial audit — the agent was stopped at ${reachedStep(report)}`}
+              Partial audit — the agent was stopped at {reachedStep(report)}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">{report.blocked_reason}</p>
-            {scorable && coverage.missing.length > 0 ? (
-              <p className="mt-1 font-mono text-[11px] text-muted-foreground">
-                scored on {coverage.covered.join(" · ").toLowerCase()} · not measured:{" "}
-                {coverage.missing.join(", ").toLowerCase()}
-              </p>
-            ) : null}
           </div>
         </motion.div>
       )}
@@ -241,11 +297,19 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
           <span className="min-w-0">
             <span
               className={cn(
-                "block text-sm font-medium",
+                "flex items-center gap-1.5 text-sm font-medium",
                 !scorable || provisional ? "text-sev-medium" : grade[score.grade],
               )}
             >
               {!scorable ? "Not scored" : provisional ? `${score.grade} · provisional` : score.grade}
+              {scorable && provisional ? (
+                <ProvisionalNote
+                  reached={reachedStep(report)}
+                  reason={report.blocked_reason}
+                  covered={coverage.covered}
+                  missing={coverage.missing}
+                />
+              ) : null}
             </span>
             <span className="block truncate font-mono text-[11px] text-muted-foreground">
               {report.domain} · {report.stages.length} stages ·{" "}
@@ -254,6 +318,7 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
             </span>
           </span>
         </div>
+
         <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
