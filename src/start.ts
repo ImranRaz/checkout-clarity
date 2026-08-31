@@ -29,12 +29,15 @@ const csrfMiddleware = createCsrfMiddleware({
 // auth client can't initialise (e.g. missing browser env), fall through without
 // a bearer token instead of failing every RPC on the page.
 const safeAttachSupabaseAuth = createMiddleware({ type: "function" }).client(async ({ next }) => {
+  let token: string | undefined;
   try {
-    return await attachSupabaseAuth.options.client!({ next } as never);
+    const { supabase } = await import("@/integrations/supabase/client");
+    const { data } = await supabase.auth.getSession();
+    token = data.session?.access_token;
   } catch (error) {
-    console.warn("[auth] could not attach session token", error);
-    return next();
+    console.warn("[auth] could not read session", error);
   }
+  return next(token ? { headers: { Authorization: `Bearer ${token}` } } : {});
 });
 
 export const startInstance = createStart(() => ({
