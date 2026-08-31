@@ -59,6 +59,69 @@ const contradictedImageFinding = (point: FrictionPoint) => {
 };
 
 /**
+ * A provisional score used to shout from a banner at the top of the report.
+ * It's a footnote, not a headline: a quiet marker beside the grade that
+ * explains itself on hover.
+ */
+function ProvisionalNote({
+  reached,
+  reason,
+  covered,
+  missing,
+}: {
+  reached: string;
+  reason?: string | null;
+  covered: string[];
+  missing: string[];
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label="Why this score is provisional"
+          onMouseEnter={() => setOpen(true)}
+          onMouseLeave={() => setOpen(false)}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setOpen(false)}
+          className="no-print inline-flex shrink-0 items-center text-sev-medium/80 transition-colors hover:text-sev-medium focus-visible:outline-none"
+        >
+          <Info className="size-3.5" aria-hidden />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        side="bottom"
+        sideOffset={6}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        className="no-print w-80 max-w-[calc(100vw-2rem)] p-4 text-left"
+      >
+        <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-sev-medium">
+          Provisional score
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-foreground">
+          The journey stopped at {reached}, so this number reflects only the stages we captured.
+        </p>
+        {reason ? (
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{reason}</p>
+        ) : null}
+        {missing.length > 0 ? (
+          <p className="mt-3 rounded-md bg-secondary px-2.5 py-2 font-mono text-[11px] leading-relaxed text-foreground">
+            scored on {covered.join(" · ").toLowerCase()} · not measured:{" "}
+            {missing.join(", ").toLowerCase()}
+          </p>
+        ) : null}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+
+
+/**
  * Older saved runs predate the strict visual-evidence rules. Repair their
  * presentation at the boundary so they get the same top-to-bottom numbering
  * and false lazy-image suppression as newly captured reports.
