@@ -631,7 +631,8 @@ function EvidenceShowcase({
       <div className="mx-auto w-full max-w-6xl px-6 py-16">
         <p className="label-caps">On your site · the funnel agent</p>
         <h2 className="mt-4 max-w-xl font-display text-2xl tracking-tight sm:text-[1.75rem]">
-          Every finding pinned to the pixel that caused it.
+          Every finding pinned to the pixel{" "}
+          <span className="whitespace-nowrap">that caused it.</span>
         </h2>
 
         <div className="mt-10 grid gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:gap-12">
