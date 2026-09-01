@@ -562,12 +562,12 @@ function JourneyLoop() {
       </div>
 
       <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 px-4 pb-2 pt-1">
-        <span className="label-caps">watched</span>
+        <span className="label-caps">two agents</span>
         <span className="flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground">
-          <span className="size-1.5 rounded-full bg-sev-medium" /> before &amp; after · reputation
+          <span className="size-1.5 rounded-full bg-primary" /> funnel agent · shops your site
         </span>
         <span className="flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground">
-          <span className="size-1.5 rounded-full bg-primary" /> during · funnel
+          <span className="size-1.5 rounded-full bg-sev-medium" /> reputation agent · reads reviews
         </span>
         <span className="font-mono text-[10px] text-foreground">
           one loop<span className="ml-1 text-primary">one report</span>
@@ -1090,7 +1090,8 @@ function Marketing() {
               transition={{ duration: 0.5, delay: 0.05 }}
               className="mt-4 max-w-lg font-display text-[2.1rem] leading-[1.04] tracking-tight sm:text-[2.75rem]"
             >
-              Customers judge you before, during, and after the buy. Now you can watch.
+              Customers judge you before, during, and after the buy.{" "}
+              <span className="whitespace-nowrap">Now you can watch.</span>
             </motion.h1>
 
             <motion.p
