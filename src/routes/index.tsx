@@ -1187,43 +1187,7 @@ function Marketing() {
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="border-y border-border bg-card">
-        <div className="mx-auto w-full max-w-6xl px-6 py-20">
-          <h2 className="font-display text-2xl tracking-tight sm:text-3xl">
-            One URL in. A 360° teardown out.
-          </h2>
-          <ol className="mt-10 grid gap-8 sm:grid-cols-3">
-            {[
-              {
-                n: "01",
-                t: "Point us at your brand",
-                b: "A product link, a category, your homepage — even just a domain. Both agents take it from there.",
-                v: <StepPointVisual />,
-              },
-              {
-                n: "02",
-                t: "Two agents run in parallel",
-                b: "One shops the journey to guest checkout like a real buyer. The other reads your reviews across Google, travel sites, and forums.",
-                v: <StepAgentsVisual />,
-              },
-              {
-                n: "03",
-                t: "You get the evidence",
-                b: "A scored report — on-site findings pinned to pixels, off-site themes with real quotes — ordered by what to fix first.",
-                v: <StepReportVisual />,
-              },
-            ].map((step) => (
-              <li key={step.n} className="rounded-xl border border-border bg-background p-5">
-                <div className="rounded-lg border border-border bg-card p-3">{step.v}</div>
-                <p className="mt-4 font-mono text-xs text-primary">{step.n}</p>
-                <h3 className="mt-2 font-display text-lg tracking-tight">{step.t}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.b}</p>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </section>
+
 
       {/* Samples */}
       <section id="samples" className="mx-auto w-full max-w-6xl px-6 py-20">
