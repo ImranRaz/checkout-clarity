@@ -99,9 +99,9 @@ export function StepReportVisual() {
       <rect x="42" y="88" width="30" height="8" rx="4" className="fill-primary/70" />
       {/* pin */}
       <g>
-        <circle cx="112" cy="74" r="8" className="fill-sev-critical" />
+        <circle cx="112" cy="74" r="8" className="fill-sev-high" />
         <text x="112" y="77.5" textAnchor="middle" className="fill-primary-foreground font-mono" fontSize="8" fontWeight="bold">1</text>
-        <path d="M104 82 h-14" className="stroke-sev-critical" strokeWidth="1.4" strokeDasharray="2 2" />
+        <path d="M104 82 h-14" className="stroke-sev-high" strokeWidth="1.4" strokeDasharray="2 2" />
       </g>
 
       {/* corroborating quote */}

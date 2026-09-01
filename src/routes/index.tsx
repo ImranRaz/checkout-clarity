@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { BrandLockup } from "@/components/BrandMark";
+import { StepAgentsVisual, StepPointVisual, StepReportVisual } from "@/components/StepVisuals";
 import { Gauge } from "@/components/audit/Gauge";
 import { allFrictionPoints, categoryLabel } from "@/lib/audit-schema";
 
