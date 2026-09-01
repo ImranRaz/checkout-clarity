@@ -1199,21 +1199,25 @@ function Marketing() {
                 n: "01",
                 t: "Point us at your brand",
                 b: "A product link, a category, your homepage — even just a domain. Both agents take it from there.",
+                v: <StepPointVisual />,
               },
               {
                 n: "02",
                 t: "Two agents run in parallel",
                 b: "One shops the journey to guest checkout like a real buyer. The other reads your reviews across Google, travel sites, and forums.",
+                v: <StepAgentsVisual />,
               },
               {
                 n: "03",
                 t: "You get the evidence",
                 b: "A scored report — on-site findings pinned to pixels, off-site themes with real quotes — ordered by what to fix first.",
+                v: <StepReportVisual />,
               },
             ].map((step) => (
-              <li key={step.n}>
-                <p className="font-mono text-xs text-primary">{step.n}</p>
-                <h3 className="mt-3 font-display text-lg tracking-tight">{step.t}</h3>
+              <li key={step.n} className="rounded-xl border border-border bg-background p-5">
+                <div className="rounded-lg border border-border bg-card p-3">{step.v}</div>
+                <p className="mt-4 font-mono text-xs text-primary">{step.n}</p>
+                <h3 className="mt-2 font-display text-lg tracking-tight">{step.t}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.b}</p>
               </li>
             ))}
