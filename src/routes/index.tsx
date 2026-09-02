@@ -1149,7 +1149,7 @@ function Marketing() {
       <section className="border-y border-border bg-card">
         <div className="mx-auto w-full max-w-6xl px-6 py-20">
           <h2 className="font-display text-2xl tracking-tight sm:text-3xl">
-            One URL in. A 360° teardown out.
+            One URL. We shop your site and read your reviews — then show you exactly what to fix.
           </h2>
           <ol className="mt-10 grid gap-8 sm:grid-cols-3">
             {[
@@ -1172,9 +1172,9 @@ function Marketing() {
                 v: <StepReportVisual />,
               },
             ].map((step) => (
-              <li key={step.n} className="rounded-xl border border-border bg-background p-5">
-                <div className="rounded-lg border border-border bg-card p-3">{step.v}</div>
-                <p className="mt-4 font-mono text-xs text-primary">{step.n}</p>
+               <li key={step.n} className="p-1">
+                 {step.v}
+                 <p className="mt-4 font-mono text-xs text-primary">{step.n}</p>
                 <h3 className="mt-2 font-display text-lg tracking-tight">{step.t}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.b}</p>
               </li>
