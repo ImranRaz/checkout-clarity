@@ -5,7 +5,14 @@
  * reputation agent = sev-medium (amber).
  */
 
+/**
+ * Step 01 — a URL bar that cycles through example domains (any site works),
+ * with the caret pinned to the end of the word being typed.
+ */
 export function StepPointVisual() {
+  const domains = ["yourbrand.com", "nike.com", "allbirds.com", "bombas.com", "amawaterways.com"];
+  const per = 2.4; // seconds per domain
+  const total = per * domains.length;
   return (
     <svg viewBox="0 0 240 120" className="h-auto w-full" role="img" aria-label="A URL being handed to the two agents">
       {/* address bar */}
@@ -13,13 +20,27 @@ export function StepPointVisual() {
       <circle cx="30" cy="31" r="3" className="fill-muted-foreground/40" />
       <circle cx="40" cy="31" r="3" className="fill-muted-foreground/40" />
       <rect x="52" y="22" width="158" height="18" rx="9" className="fill-background stroke-border" />
-      <text x="62" y="35" className="fill-foreground font-mono" fontSize="11">
-        yourbrand.com
-      </text>
-      {/* caret */}
-      <rect x="138" y="25" width="1.5" height="12" className="fill-primary">
-        <animate attributeName="opacity" values="1;0;1" dur="1.1s" repeatCount="indefinite" />
-      </rect>
+      {domains.map((d, i) => {
+        const caretX = 62 + d.length * 6.7 + 2;
+        return (
+          <g key={d} opacity="0">
+            <animate
+              attributeName="opacity"
+              values="0;1;1;0"
+              keyTimes="0;0.06;0.92;1"
+              dur={`${total}s`}
+              begin={`${i * per}s`}
+              repeatCount="indefinite"
+            />
+            <text x="62" y="35" className="fill-foreground font-mono" fontSize="11">
+              {d}
+            </text>
+            <rect x={caretX} y="25" width="1.5" height="12" className="fill-primary">
+              <animate attributeName="opacity" values="1;0;1" dur="1.1s" repeatCount="indefinite" />
+            </rect>
+          </g>
+        );
+      })}
 
       {/* drop line to the two agents */}
       <path d="M120 48 v12" className="stroke-border" strokeWidth="1.5" strokeDasharray="3 3" />
@@ -44,37 +65,19 @@ export function StepPointVisual() {
 }
 
 /**
- * A small octagon node, echoing the journey loop in the hero.
+ * Step 02 — the funnel agent snakes through four small stops on your site
+ * (home, products, product detail, cart) while the reputation agent reads
+ * reviews one by one.
  */
-function OctNode({ x, y, label, tone = "primary" }: { x: number; y: number; label: string; tone?: "primary" | "sev-medium" }) {
-  const r = 11;
-  const k = r * 0.42;
-  const pts = [
-    [x - k, y - r],
-    [x + k, y - r],
-    [x + r, y - k],
-    [x + r, y + k],
-    [x + k, y + r],
-    [x - k, y + r],
-    [x - r, y + k],
-    [x - r, y - k],
-  ]
-    .map(([px, py]) => `${px},${py}`)
-    .join(" ");
-  return (
-    <g>
-      <polygon points={pts} className={`fill-card ${tone === "primary" ? "stroke-primary" : "stroke-sev-medium"}`} strokeWidth="1.6" />
-      <circle cx={x} cy={y} r="3" className={tone === "primary" ? "fill-primary" : "fill-sev-medium"} />
-      <text x={x} y={y + r + 9} textAnchor="middle" className="fill-muted-foreground font-mono" fontSize="6.5">
-        {label}
-      </text>
-    </g>
-  );
-}
-
 export function StepAgentsVisual() {
-  // Snake path through the three funnel stops: home (top-left) → product (right) → cart (bottom-left)
-  const journey = "M30 34 C 60 20, 90 26, 96 40 C 100 52, 60 56, 44 62 C 28 68, 30 82, 52 86";
+  const stops = [
+    { x: 26, y: 42, label: "home" },
+    { x: 96, y: 34, label: "products" },
+    { x: 30, y: 82, label: "detail" },
+    { x: 96, y: 88, label: "cart" },
+  ];
+  const journey =
+    "M26 42 C 55 26, 82 26, 96 34 C 108 42, 60 56, 40 66 C 22 74, 26 82, 30 82 C 40 96, 80 96, 96 88";
   return (
     <svg viewBox="0 0 240 120" className="h-auto w-full" role="img" aria-label="The funnel agent snakes through your site while the reputation agent collects reviews one by one">
       {/* left lane: funnel agent */}
@@ -83,13 +86,19 @@ export function StepAgentsVisual() {
 
       {/* snake path */}
       <path d={journey} className="stroke-primary/40" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeDasharray="3 3" />
-      {/* octagon stops, matching the hero loop */}
-      <OctNode x={30} y={34} label="home" />
-      <OctNode x={96} y={40} label="product" />
-      <OctNode x={52} y={86} label="cart" />
+      {/* small dot stops along the journey */}
+      {stops.map((s) => (
+        <g key={s.label}>
+          <circle cx={s.x} cy={s.y} r="4.5" className="fill-card stroke-primary" strokeWidth="1.6" />
+          <circle cx={s.x} cy={s.y} r="1.6" className="fill-primary" />
+          <text x={s.x} y={s.y + 12} textAnchor="middle" className="fill-muted-foreground font-mono" fontSize="6.5">
+            {s.label}
+          </text>
+        </g>
+      ))}
       {/* the agent travelling the path */}
       <circle r="3.5" className="fill-primary">
-        <animateMotion dur="3.2s" repeatCount="indefinite" path={journey} />
+        <animateMotion dur="4s" repeatCount="indefinite" path={journey} />
       </circle>
 
       {/* divider */}
