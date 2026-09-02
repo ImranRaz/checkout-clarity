@@ -43,39 +43,76 @@ export function StepPointVisual() {
   );
 }
 
-export function StepAgentsVisual() {
+/**
+ * A small octagon node, echoing the journey loop in the hero.
+ */
+function OctNode({ x, y, label, tone = "primary" }: { x: number; y: number; label: string; tone?: "primary" | "sev-medium" }) {
+  const r = 11;
+  const k = r * 0.42;
+  const pts = [
+    [x - k, y - r],
+    [x + k, y - r],
+    [x + r, y - k],
+    [x + r, y + k],
+    [x + k, y + r],
+    [x - k, y + r],
+    [x - r, y + k],
+    [x - r, y - k],
+  ]
+    .map(([px, py]) => `${px},${py}`)
+    .join(" ");
   return (
-    <svg viewBox="0 0 240 120" className="h-auto w-full" role="img" aria-label="Two agents working in parallel — one shopping the site, one reading reviews">
-      {/* left lane: funnel agent shopping */}
-      <rect x="8" y="10" width="110" height="100" rx="10" className="fill-muted/40 stroke-border" />
-      <text x="18" y="26" className="fill-muted-foreground font-mono" fontSize="8">ON YOUR SITE</text>
-      {/* journey dots */}
-      <path d="M26 78 h20 l10 -18 h18 l10 22 h14" className="stroke-primary" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="26" cy="78" r="3.5" className="fill-primary" />
-      <circle cx="56" cy="60" r="3.5" className="fill-primary" />
-      <circle cx="84" cy="82" r="3.5" className="fill-primary" />
-      {/* flag at checkout */}
-      <circle cx="98" cy="82" r="4" className="fill-card stroke-primary" strokeWidth="1.6" />
-      <text x="18" y="102" className="fill-foreground font-mono" fontSize="8">home → product → cart</text>
+    <g>
+      <polygon points={pts} className={`fill-card ${tone === "primary" ? "stroke-primary" : "stroke-sev-medium"}`} strokeWidth="1.6" />
+      <circle cx={x} cy={y} r="3" className={tone === "primary" ? "fill-primary" : "fill-sev-medium"} />
+      <text x={x} y={y + r + 9} textAnchor="middle" className="fill-muted-foreground font-mono" fontSize="6.5">
+        {label}
+      </text>
+    </g>
+  );
+}
 
-      {/* right lane: reputation agent reading reviews */}
-      <rect x="122" y="10" width="110" height="100" rx="10" className="fill-muted/40 stroke-border" />
-      <text x="132" y="26" className="fill-muted-foreground font-mono" fontSize="8">OFF YOUR SITE</text>
-      {/* review cards */}
-      <g>
-        <rect x="132" y="34" width="90" height="20" rx="5" className="fill-card stroke-border" />
-        <text x="138" y="44" className="fill-sev-medium" fontSize="7">★★★★☆</text>
-        <rect x="138" y="47" width="66" height="3" rx="1.5" className="fill-muted-foreground/30" />
-      </g>
-      <g>
-        <rect x="132" y="58" width="90" height="20" rx="5" className="fill-card stroke-border" />
-        <text x="138" y="68" className="fill-sev-medium" fontSize="7">★★☆☆☆</text>
-        <rect x="138" y="71" width="52" height="3" rx="1.5" className="fill-muted-foreground/30" />
-      </g>
-      {/* scanning highlight */}
-      <rect x="132" y="82" width="90" height="20" rx="5" className="fill-card stroke-sev-medium" strokeWidth="1.6" />
-      <text x="138" y="92" className="fill-sev-medium" fontSize="7">★★★☆☆</text>
-      <rect x="138" y="95" width="70" height="3" rx="1.5" className="fill-sev-medium/40" />
+export function StepAgentsVisual() {
+  // Snake path through the three funnel stops: home (top-left) → product (right) → cart (bottom-left)
+  const journey = "M30 34 C 60 20, 90 26, 96 40 C 100 52, 60 56, 44 62 C 28 68, 30 82, 52 86";
+  return (
+    <svg viewBox="0 0 240 120" className="h-auto w-full" role="img" aria-label="The funnel agent snakes through your site while the reputation agent collects reviews one by one">
+      {/* left lane: funnel agent */}
+      <text x="8" y="12" className="fill-primary font-mono" fontSize="8" fontWeight="bold">● FUNNEL AGENT</text>
+      <text x="8" y="22" className="fill-muted-foreground font-mono" fontSize="7">shops your site</text>
+
+      {/* snake path */}
+      <path d={journey} className="stroke-primary/40" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeDasharray="3 3" />
+      {/* octagon stops, matching the hero loop */}
+      <OctNode x={30} y={34} label="home" />
+      <OctNode x={96} y={40} label="product" />
+      <OctNode x={52} y={86} label="cart" />
+      {/* the agent travelling the path */}
+      <circle r="3.5" className="fill-primary">
+        <animateMotion dur="3.2s" repeatCount="indefinite" path={journey} />
+      </circle>
+
+      {/* divider */}
+      <path d="M122 8 v104" className="stroke-border" strokeWidth="1" strokeDasharray="2 3" />
+
+      {/* right lane: reputation agent */}
+      <text x="132" y="12" className="fill-sev-medium font-mono" fontSize="8" fontWeight="bold">● REPUTATION AGENT</text>
+      <text x="132" y="22" className="fill-muted-foreground font-mono" fontSize="7">reads your reviews</text>
+
+      {/* reviews arriving one by one, good and bad */}
+      {[
+        { y: 30, stars: "★★★★★", tone: "fill-primary", w: 62, begin: "0s" },
+        { y: 52, stars: "★★☆☆☆", tone: "fill-sev-high", w: 48, begin: "0.9s" },
+        { y: 74, stars: "★★★☆☆", tone: "fill-sev-medium", w: 56, begin: "1.8s" },
+        { y: 96, stars: "★★★★☆", tone: "fill-primary", w: 40, begin: "2.7s" },
+      ].map((r) => (
+        <g key={r.y} opacity="0">
+          <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.08;0.85;1" dur="4.5s" begin={r.begin} repeatCount="indefinite" />
+          <rect x="132" y={r.y} width="100" height="18" rx="5" className="fill-card stroke-border" />
+          <text x="138" y={r.y + 8} className={r.tone} fontSize="6.5">{r.stars}</text>
+          <rect x="138" y={r.y + 11} width={r.w} height="3" rx="1.5" className="fill-muted-foreground/30" />
+        </g>
+      ))}
     </svg>
   );
 }
