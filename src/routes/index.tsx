@@ -26,20 +26,20 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "CoherentX — See your brand the way customers do" },
+      { title: "CoherentX | See your brand the way customers do" },
       {
         name: "description",
         content:
-          "Two agents, one 360° picture: one shops your site like a customer — homepage to guest checkout — while the other reads every review the internet has about you and ties complaints to the steps that cause them.",
+          "Two agents, one 360° picture. One shops your site like a customer, from homepage to guest checkout, while the other reads every review the internet has about you and ties complaints to the steps that cause them.",
       },
       {
         property: "og:title",
-        content: "CoherentX — See your brand the way customers do",
+        content: "CoherentX | See your brand the way customers do",
       },
       {
         property: "og:description",
         content:
-          "A funnel agent walks your buying journey and a reputation agent reads your reviews — one report shows where customers hesitate, on your site and off it.",
+          "A funnel agent walks your buying journey and a reputation agent reads your reviews. One report shows where customers hesitate, on your site and off it.",
       },
       {
         name: "keywords",
@@ -54,14 +54,14 @@ export const Route = createFileRoute("/")({
       { property: "og:image:height", content: "630" },
       {
         property: "og:image:alt",
-        content: "CoherentX — conversion forensics and reputation intelligence report",
+        content: "CoherentX: conversion forensics and reputation intelligence report",
       },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "CoherentX — See your brand the way customers do" },
+      { name: "twitter:title", content: "CoherentX | See your brand the way customers do" },
       {
         name: "twitter:description",
         content:
-          "A funnel agent walks your buying journey and a reputation agent reads your reviews — one report shows where customers hesitate.",
+          "A funnel agent walks your buying journey and a reputation agent reads your reviews. One report shows where customers hesitate.",
       },
       { name: "twitter:image", content: "https://coherentx.com/og-cover.jpg" },
       { name: "robots", content: "index, follow, max-image-preview:large, max-snippet:-1" },
@@ -80,7 +80,7 @@ export const Route = createFileRoute("/")({
               operatingSystem: "Web",
               url: "https://coherentx.com/",
               description:
-                "CoherentX runs two agents over your brand: a funnel agent that shops your site like a customer from homepage to guest checkout, and a reputation agent that reads your public reviews — delivering one report that ties customer complaints to the exact on-site steps that cause them.",
+                "CoherentX runs two agents over your brand: a funnel agent that shops your site like a customer from homepage to guest checkout, and a reputation agent that reads your public reviews. You get one report that ties customer complaints to the exact on-site steps that cause them.",
               featureList: [
                 "Agent-driven customer journey audit with pinned screenshot evidence",
                 "Reputation and voice-of-customer analysis across public review sources",
@@ -124,7 +124,7 @@ export const Route = createFileRoute("/")({
                   name: "Does CoherentX need access to my site or a tracking tag?",
                   acceptedAnswer: {
                     "@type": "Answer",
-                    text: "No. CoherentX audits any public URL from the outside — no tag, no code, and no access to your systems.",
+                    text: "No. CoherentX audits any public URL from the outside. No tag, no code, and no access to your systems.",
                   },
                 },
                 {
@@ -132,7 +132,7 @@ export const Route = createFileRoute("/")({
                   name: "How is the score calculated?",
                   acceptedAnswer: {
                     "@type": "Answer",
-                    text: "Scores come from a fixed rubric applied to the captured evidence — copy and clarity, cost surprise, effort, speed and stability — not from a model's opinion. Partial runs receive a provisional score based only on the stages actually captured.",
+                    text: "Scores come from a fixed rubric applied to the captured evidence, covering copy and clarity, cost surprise, effort, and speed and stability. Never a model's opinion. Partial runs receive a provisional score based only on the stages actually captured.",
                   },
                 },
                 {
@@ -176,7 +176,7 @@ const PILLAR_CARDS = [
   {
     icon: GaugeIcon,
     title: "Speed & stability",
-    body: "Largest paint, layout shift, console errors on the pages that actually take money — not on your homepage.",
+    body: "Largest paint, layout shift, and console errors on the pages that actually take money, not just your homepage.",
     pillar: "speed" as const,
   },
 ];
@@ -252,7 +252,7 @@ const JOURNEY_STAGES = [
     key: "after",
     label: "Post-purchase",
     agent: "reputation" as const,
-    caption: "Delivery and support — and the review it turns into. Loop closed.",
+    caption: "Delivery and support, and the review it turns into. Loop closed.",
     metric: "5 issues found · feeds tomorrow's reviews",
   },
 ];
@@ -846,18 +846,18 @@ function ReputationShowcase() {
           </h2>
           <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground">
             Before a buyer ever lands on your site, they've read your reviews. The reputation agent
-            finds where you're being reviewed — Google, Tripadvisor, Trustpilot, Booking, Reddit —
-            reads them, clusters what people repeat, and hands you one score with the themes behind
+            finds where you're being reviewed across Google, Tripadvisor, Trustpilot, Booking, and
+            Reddit, reads them, clusters what people repeat, and hands you one score with the themes behind
             it.
           </p>
           <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground">
-            When a complaint matches something the funnel agent saw on your site, we say so —
+            When a complaint matches something the funnel agent saw on your site, we say so.
             "guests complain about surprise fees" next to the fee that appears at step four is a
             fix you can't argue with.
           </p>
           <ul className="mt-6 space-y-2.5">
             {[
-              "Runs on its own — no browser session, no minutes burned.",
+              "Runs on its own. No browser session, no minutes burned.",
               "Catches the same-name business across town so the data stays yours.",
               "New themes surface on re-run, so it doubles as monitoring.",
             ].map((line) => (
@@ -1102,8 +1102,8 @@ function Marketing() {
               transition={{ duration: 0.5, delay: 0.12 }}
               className="mt-4 max-w-md text-[15px] leading-relaxed text-muted-foreground"
             >
-              Two agents, one 360° picture. One shops your site like a customer — homepage,
-              category, product, cart, guest checkout. The other reads what the internet already
+              Two agents, one 360° picture. One shops your site like a customer, from homepage
+              to category, product, cart, and guest checkout. The other reads what the internet already
               says about you and ties the complaints to the steps that cause them.
             </motion.p>
 
@@ -1149,14 +1149,14 @@ function Marketing() {
       <section className="border-y border-border bg-card">
         <div className="mx-auto w-full max-w-6xl px-6 py-20">
           <h2 className="font-display text-2xl tracking-tight sm:text-3xl">
-            One URL. We shop your site and read your reviews — then show you exactly what to fix.
+            One URL. We shop your site, read your reviews, and show you exactly what to fix.
           </h2>
           <ol className="mt-10 grid gap-8 sm:grid-cols-3">
             {[
               {
                 n: "01",
                 t: "Point us at your brand",
-                b: "A product link, a category, your homepage — even just a domain. Both agents take it from there.",
+                b: "A product link, a category, your homepage, even just a domain. Both agents take it from there.",
                 v: <StepPointVisual />,
               },
               {
@@ -1168,7 +1168,7 @@ function Marketing() {
               {
                 n: "03",
                 t: "You get the evidence",
-                b: "A scored report — on-site findings pinned to pixels, off-site themes with real quotes — ordered by what to fix first.",
+                b: "A scored report with on-site findings pinned to pixels and off-site themes backed by real quotes, ordered by what to fix first.",
                 v: <StepReportVisual />,
               },
             ].map((step) => (
@@ -1203,7 +1203,7 @@ function Marketing() {
         </h2>
         <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
           The funnel agent measures every finding on the page, then judges it against what your
-          business actually sells — a cruise line isn't graded on free shipping.
+          business actually sells. A cruise line isn't graded on free shipping.
         </p>
 
         <div className="mt-10 grid gap-5 sm:grid-cols-2">
@@ -1217,7 +1217,7 @@ function Marketing() {
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{card.body}</p>
                 {example ? (
                   <p className="mt-5 border-l-2 border-border pl-3 font-mono text-[11px] leading-relaxed text-muted-foreground">
-                    seen in a real run — “{example.title}”
+                    seen in a real run: “{example.title}”
                   </p>
                 ) : null}
               </div>
@@ -1237,7 +1237,7 @@ function Marketing() {
           <p className="font-mono text-[11px] text-muted-foreground">no sign-in needed</p>
         </div>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Real runs on real brands — starting with one that carries both tracks: the funnel agent's
+          Real runs on real brands, starting with one that carries both tracks: the funnel agent's
           walk to checkout alongside the reputation agent's read of what customers say.
         </p>
 
@@ -1273,7 +1273,7 @@ function Marketing() {
           </div>
           <ul className="space-y-4 self-center">
             {[
-              "Findings anchored to the exact element in the exact screenshot — no guesswork.",
+              "Findings anchored to the exact element in the exact screenshot. No guesswork.",
               "Review themes backed by real quotes, with the source one click away.",
               "Scores from a fixed rubric, not a model's mood.",
               "Judged against your business model, so the advice fits what you sell.",
@@ -1343,7 +1343,7 @@ const VALUE_PROPS = [
   {
     k: "01",
     t: "Find the money you're already losing",
-    b: "Every hesitation between landing and paying — surfaced, ranked, and tied to the revenue step it blocks.",
+    b: "Every hesitation between landing and paying, surfaced, ranked, and tied to the revenue step it blocks.",
   },
   {
     k: "02",
@@ -1410,7 +1410,7 @@ const METRICS = [
     step: 0.01,
     start: 0.18,
     format: (v: number) => v.toFixed(2),
-    blurb: "How much the page jumps around while it settles — the cause of mis-taps on mobile.",
+    blurb: "How much the page jumps around while it settles, the cause of mis-taps on mobile.",
   },
   {
     key: "transferred" as const,
@@ -1462,7 +1462,7 @@ function ValueProp() {
         </div>
 
         <div className="tile p-6">
-          <p className="label-caps">How we grade it — try it</p>
+          <p className="label-caps">How we grade it · try it</p>
 
           {/* Measured metrics: pick one, drag it, watch the threshold verdict move. */}
           <div className="mt-4 flex gap-2">
@@ -1545,7 +1545,7 @@ function ValueProp() {
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{active.body}</p>
                 {example ? (
                   <p className="mt-4 border-l-2 border-border pl-3 font-mono text-[11px] leading-relaxed text-muted-foreground">
-                    from a real run — “{example.title}”
+                    from a real run: “{example.title}”
                   </p>
                 ) : null}
               </motion.div>

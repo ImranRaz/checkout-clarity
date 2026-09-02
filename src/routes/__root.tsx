@@ -81,14 +81,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "CoherentX is an autonomous agent that audits the conversion friction of any e-commerce checkout flow — technical and UX, in one run.",
+          "CoherentX is an autonomous agent that audits the conversion friction of any e-commerce checkout flow, technical and UX, in one run.",
       },
       { name: "author", content: "CoherentX" },
       { property: "og:title", content: "CoherentX" },
       {
         property: "og:description",
         content:
-          "CoherentX is an autonomous agent that audits the conversion friction of any e-commerce checkout flow — technical and UX, in one run.",
+          "CoherentX is an autonomous agent that audits the conversion friction of any e-commerce checkout flow, technical and UX, in one run.",
       },
       { property: "og:type", content: "website" },
       { property: "og:site_name", content: "CoherentX" },

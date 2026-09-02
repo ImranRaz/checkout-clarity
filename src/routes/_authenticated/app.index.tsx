@@ -162,7 +162,7 @@ function Home() {
             className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground"
           >
             Point the agent at any page. It finds its own way to cart and checkout, then reports the
-            copy, costs, and friction costing you orders — pinned to the exact pixels.
+            copy, costs, and friction costing you orders, pinned to the exact pixels.
           </motion.p>
 
           <motion.form

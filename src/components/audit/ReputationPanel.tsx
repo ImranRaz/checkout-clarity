@@ -106,7 +106,7 @@ export function ReputationPanel({
         <section className="space-y-3">
           <h3 className="label-caps flex items-center gap-1.5">
             <ThumbsUp className="size-3.5" aria-hidden />
-            What they love — protect this
+            What they love. Protect this.
           </h3>
           {praise.map((theme, index) => (
             <ThemeCard key={theme.id} theme={theme} index={index} />
@@ -194,14 +194,14 @@ function ThemeCard({
               onClick={() => onSelectFinding(id)}
               className="rounded-full border border-primary/50 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-primary transition-colors hover:bg-primary/10"
             >
-              Seen on site — finding {id} →
+              Seen on site, finding {id} →
             </button>
           ) : (
             <span
               key={id}
               className="rounded-full border border-primary/50 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-primary"
             >
-              Seen on site — finding {id}
+              Seen on site, finding {id}
             </span>
           ),
         )}

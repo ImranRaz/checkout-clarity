@@ -270,7 +270,7 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
           <ShieldAlert className="size-4 shrink-0 text-sev-medium sm:mt-0.5" aria-hidden />
           <div className="min-w-0">
             <p className="text-sm font-medium text-foreground">
-              Partial audit — the agent was stopped at {reachedStep(report)}
+              Partial audit: the agent was stopped at {reachedStep(report)}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">{report.blocked_reason}</p>
           </div>
@@ -505,7 +505,7 @@ export function ReportDashboard({ report: rawReport }: { report: ForensicAuditRe
                                     </span>
                                   )}
                                   <span className="mt-2 block font-mono text-[11px] text-muted-foreground">
-                                    {point.selector} — {point.evidence}
+                                    {point.selector}: {point.evidence}
                                   </span>
                                 </>
                               )}
