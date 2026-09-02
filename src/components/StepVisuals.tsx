@@ -26,8 +26,8 @@ export function StepPointVisual() {
           <g key={d} opacity="0">
             <animate
               attributeName="opacity"
-              values="0;1;1;0"
-              keyTimes="0;0.06;0.92;1"
+              values="0;1;1;0;0"
+              keyTimes={`0;${0.15 / total};${(per - 0.15) / total};${per / total};1`}
               dur={`${total}s`}
               begin={`${i * per}s`}
               repeatCount="indefinite"
