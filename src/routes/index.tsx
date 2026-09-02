@@ -1217,7 +1217,7 @@ function Marketing() {
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{card.body}</p>
                 {example ? (
                   <p className="mt-5 border-l-2 border-border pl-3 font-mono text-[11px] leading-relaxed text-muted-foreground">
-                    seen in a real run — “{example.title}”
+                    seen in a real run: “{example.title}”
                   </p>
                 ) : null}
               </div>
@@ -1237,7 +1237,7 @@ function Marketing() {
           <p className="font-mono text-[11px] text-muted-foreground">no sign-in needed</p>
         </div>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Real runs on real brands — starting with one that carries both tracks: the funnel agent's
+          Real runs on real brands, starting with one that carries both tracks: the funnel agent's
           walk to checkout alongside the reputation agent's read of what customers say.
         </p>
 
@@ -1273,7 +1273,7 @@ function Marketing() {
           </div>
           <ul className="space-y-4 self-center">
             {[
-              "Findings anchored to the exact element in the exact screenshot — no guesswork.",
+              "Findings anchored to the exact element in the exact screenshot. No guesswork.",
               "Review themes backed by real quotes, with the source one click away.",
               "Scores from a fixed rubric, not a model's mood.",
               "Judged against your business model, so the advice fits what you sell.",
@@ -1343,7 +1343,7 @@ const VALUE_PROPS = [
   {
     k: "01",
     t: "Find the money you're already losing",
-    b: "Every hesitation between landing and paying — surfaced, ranked, and tied to the revenue step it blocks.",
+    b: "Every hesitation between landing and paying, surfaced, ranked, and tied to the revenue step it blocks.",
   },
   {
     k: "02",
@@ -1410,7 +1410,7 @@ const METRICS = [
     step: 0.01,
     start: 0.18,
     format: (v: number) => v.toFixed(2),
-    blurb: "How much the page jumps around while it settles — the cause of mis-taps on mobile.",
+    blurb: "How much the page jumps around while it settles, the cause of mis-taps on mobile.",
   },
   {
     key: "transferred" as const,
@@ -1462,7 +1462,7 @@ function ValueProp() {
         </div>
 
         <div className="tile p-6">
-          <p className="label-caps">How we grade it — try it</p>
+          <p className="label-caps">How we grade it · try it</p>
 
           {/* Measured metrics: pick one, drag it, watch the threshold verdict move. */}
           <div className="mt-4 flex gap-2">
@@ -1545,7 +1545,7 @@ function ValueProp() {
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{active.body}</p>
                 {example ? (
                   <p className="mt-4 border-l-2 border-border pl-3 font-mono text-[11px] leading-relaxed text-muted-foreground">
-                    from a real run — “{example.title}”
+                    from a real run: “{example.title}”
                   </p>
                 ) : null}
               </motion.div>
