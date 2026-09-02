@@ -115,7 +115,7 @@ export function LiveTerminal({
           <span className="size-2.5 rounded-full bg-primary/50" />
         </div>
         <p className="truncate font-mono text-xs text-muted-foreground">
-          {label} — {domain}
+          {label} · {domain}
         </p>
         <p className="ml-auto shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
           {formatClock(elapsedMs)} · {steps.length} steps

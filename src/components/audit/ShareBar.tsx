@@ -79,7 +79,7 @@ export function ShareBar({ runId }: { runId: string }) {
             Share this report
           </p>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            A read-only page for the prospect — no console, no rerun, revocable any time.
+            A read-only page for the prospect. No console, no rerun, revocable any time.
           </p>
         </div>
         <button

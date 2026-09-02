@@ -71,7 +71,7 @@ export function SharedReportView({
               Want the same walkthrough on your full funnel?
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              We audit the real purchase path — category to guest checkout — and hand you the fixes
+              We audit the real purchase path, from category to guest checkout, and hand you the fixes
               in priority order.
             </p>
           </div>
