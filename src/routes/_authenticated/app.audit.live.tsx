@@ -45,6 +45,7 @@ function LiveRun() {
   const startLive = useServerFn(startLiveAudit);
   const pollLive = useServerFn(pollLiveAudit);
   const persistRun = useServerFn(saveAuditRun);
+  const meterRun = useServerFn(recordUsageEvents);
 
   const [status, setStatus] = useState<"starting" | "running" | "done" | "error">(
     funnelEnabled ? "starting" : "done",
@@ -66,8 +67,47 @@ function LiveRun() {
   // Server-function wrappers get a fresh identity on every render, so they must
   // stay out of the effect deps — otherwise the effect tears down and its
   // cleanup cancels the poll loop that the guarded re-run never restarts.
-  const fns = useRef({ startLive, pollLive, persistRun });
-  fns.current = { startLive, pollLive, persistRun };
+  const fns = useRef({ startLive, pollLive, persistRun, meterRun });
+  fns.current = { startLive, pollLive, persistRun, meterRun };
+
+  /**
+   * Usage is metered from what the client already knows: funnel wall clock maps
+   * to real browser minutes, the reputation lane is model-side only. No keys or
+   * provider responses are involved.
+   */
+  function meterEvents(runId: string, funnelMs: number, repMs: number) {
+    const events: UsageEventInput[] = [];
+    if (funnelMs > 0) {
+      events.push({
+        provider: "browserbase",
+        agentType: "funnel",
+        metricName: "browser_session",
+        quantity: funnelMs / 60000,
+        unit: "minutes",
+        jobId: jobIdRef.current,
+      });
+      events.push({
+        provider: "browserbase",
+        agentType: "funnel",
+        metricName: "execution_time",
+        quantity: funnelMs,
+        unit: "ms",
+        jobId: jobIdRef.current,
+      });
+    }
+    if (repMs > 0) {
+      events.push({
+        provider: "lovable-ai",
+        agentType: "reputation",
+        metricName: "execution_time",
+        quantity: repMs,
+        unit: "ms",
+      });
+    }
+    if (events.length === 0) return;
+    void fns.current.meterRun({ data: { runId, events } }).catch(() => undefined);
+  }
+
 
   useEffect(() => {
     if (!url || !funnelEnabled) return;
