@@ -56,6 +56,65 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_usage_events: {
+        Row: {
+          agent_type: string
+          created_at: string
+          id: string
+          job_id: string | null
+          metric_name: string
+          model: string | null
+          note: string | null
+          occurred_at: string
+          provider: string
+          quantity: number
+          run_id: string | null
+          status: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          agent_type?: string
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          metric_name: string
+          model?: string | null
+          note?: string | null
+          occurred_at?: string
+          provider: string
+          quantity?: number
+          run_id?: string | null
+          status?: string
+          unit: string
+          updated_at?: string
+        }
+        Update: {
+          agent_type?: string
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          metric_name?: string
+          model?: string | null
+          note?: string | null
+          occurred_at?: string
+          provider?: string
+          quantity?: number
+          run_id?: string | null
+          status?: string
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_usage_events_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "audit_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       share_links: {
         Row: {
           created_at: string
