@@ -143,8 +143,6 @@ export const getUsageOverview = createServerFn({ method: "GET" })
 
     // Worker rows are the real provider numbers; client rows are wall clock
     // estimates. Prefer metered whenever it exists for a run.
-    const estimates = new Map<string, { minutes: number; tokens: number }>();
-
     for (const raw of (events ?? []) as Record<string, unknown>[]) {
       const entry = byRun.get(raw["run_id"] as string);
       if (!entry) continue;
@@ -153,9 +151,6 @@ export const getUsageOverview = createServerFn({ method: "GET" })
       const metric = (raw["metric_name"] as string) ?? "";
       const provider = (raw["provider"] as string) ?? "other";
       const model = (raw["model"] as string | null) ?? null;
-
-      const estimate = estimates.get(entry.runId) ?? { minutes: 0, tokens: 0 };
-      estimates.set(entry.runId, estimate);
 
       if (metric === "browser_session_metered") {
         if (!entry.browserMetered) {
@@ -170,10 +165,8 @@ export const getUsageOverview = createServerFn({ method: "GET" })
         }
         entry.tokens += quantity;
       } else if (unit === "minutes") {
-        estimate.minutes += quantity;
         if (!entry.browserMetered) entry.browserMinutes += quantity;
       } else if (unit === "tokens") {
-        estimate.tokens += quantity;
         if (!entry.tokensMetered) entry.tokens += quantity;
       } else if (unit === "ms") {
         entry.executionMs += quantity;
