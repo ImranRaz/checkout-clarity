@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as RTokenRouteImport } from './routes/r.$token'
 import { Route as ReportReportIdRouteImport } from './routes/report.$reportId'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
+import { Route as AuthenticatedAppUsageRouteImport } from './routes/_authenticated/app.usage'
 import { Route as AuthenticatedAppAuditRunIdRouteImport } from './routes/_authenticated/app.audit.$runId'
 import { Route as AuthenticatedAppAuditLiveRouteImport } from './routes/_authenticated/app.audit.live'
 import { Route as AuthenticatedAppReportReportIdRouteImport } from './routes/_authenticated/app.report.$reportId'
@@ -49,6 +50,11 @@ const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   path: '/app/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAppUsageRoute = AuthenticatedAppUsageRouteImport.update({
+  id: '/app/usage',
+  path: '/app/usage',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAppAuditRunIdRoute =
   AuthenticatedAppAuditRunIdRouteImport.update({
     id: '/app/audit/$runId',
@@ -78,6 +84,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/r/$token': typeof RTokenRoute
   '/report/$reportId': typeof ReportReportIdRoute
+  '/app/usage': typeof AuthenticatedAppUsageRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/audit/$runId': typeof AuthenticatedAppAuditRunIdRoute
   '/app/audit/live': typeof AuthenticatedAppAuditLiveRoute
@@ -89,6 +96,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/r/$token': typeof RTokenRoute
   '/report/$reportId': typeof ReportReportIdRoute
+  '/app/usage': typeof AuthenticatedAppUsageRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/audit/$runId': typeof AuthenticatedAppAuditRunIdRoute
   '/app/audit/live': typeof AuthenticatedAppAuditLiveRoute
@@ -102,6 +110,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/r/$token': typeof RTokenRoute
   '/report/$reportId': typeof ReportReportIdRoute
+  '/_authenticated/app/usage': typeof AuthenticatedAppUsageRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/audit/$runId': typeof AuthenticatedAppAuditRunIdRoute
   '/_authenticated/app/audit/live': typeof AuthenticatedAppAuditLiveRoute
@@ -115,6 +124,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/r/$token'
     | '/report/$reportId'
+    | '/app/usage'
     | '/app/'
     | '/app/audit/$runId'
     | '/app/audit/live'
@@ -126,6 +136,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/r/$token'
     | '/report/$reportId'
+    | '/app/usage'
     | '/app'
     | '/app/audit/$runId'
     | '/app/audit/live'
@@ -138,6 +149,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/r/$token'
     | '/report/$reportId'
+    | '/_authenticated/app/usage'
     | '/_authenticated/app/'
     | '/_authenticated/app/audit/$runId'
     | '/_authenticated/app/audit/live'
@@ -198,6 +210,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/app/usage': {
+      id: '/_authenticated/app/usage'
+      path: '/app/usage'
+      fullPath: '/app/usage'
+      preLoaderRoute: typeof AuthenticatedAppUsageRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/app/audit/$runId': {
       id: '/_authenticated/app/audit/$runId'
       path: '/app/audit/$runId'
@@ -230,6 +249,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAppUsageRoute: typeof AuthenticatedAppUsageRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedAppAuditRunIdRoute: typeof AuthenticatedAppAuditRunIdRoute
   AuthenticatedAppAuditLiveRoute: typeof AuthenticatedAppAuditLiveRoute
@@ -237,6 +257,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAppUsageRoute: AuthenticatedAppUsageRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedAppAuditRunIdRoute: AuthenticatedAppAuditRunIdRoute,
   AuthenticatedAppAuditLiveRoute: AuthenticatedAppAuditLiveRoute,

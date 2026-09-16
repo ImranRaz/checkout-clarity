@@ -13,6 +13,7 @@ import type { ForensicAuditReport } from "@/lib/audit-schema";
 import { saveLiveReport } from "@/lib/live-store";
 import { reputationOnlyReport } from "@/lib/reputation-merge";
 import { saveAuditRun } from "@/lib/reports.functions";
+import { recordUsageEvents, type UsageEventInput } from "@/lib/usage.functions";
 
 export const Route = createFileRoute("/_authenticated/app/audit/live")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -44,6 +45,7 @@ function LiveRun() {
   const startLive = useServerFn(startLiveAudit);
   const pollLive = useServerFn(pollLiveAudit);
   const persistRun = useServerFn(saveAuditRun);
+  const meterRun = useServerFn(recordUsageEvents);
 
   const [status, setStatus] = useState<"starting" | "running" | "done" | "error">(
     funnelEnabled ? "starting" : "done",
@@ -65,8 +67,47 @@ function LiveRun() {
   // Server-function wrappers get a fresh identity on every render, so they must
   // stay out of the effect deps — otherwise the effect tears down and its
   // cleanup cancels the poll loop that the guarded re-run never restarts.
-  const fns = useRef({ startLive, pollLive, persistRun });
-  fns.current = { startLive, pollLive, persistRun };
+  const fns = useRef({ startLive, pollLive, persistRun, meterRun });
+  fns.current = { startLive, pollLive, persistRun, meterRun };
+
+  /**
+   * Usage is metered from what the client already knows: funnel wall clock maps
+   * to real browser minutes, the reputation lane is model-side only. No keys or
+   * provider responses are involved.
+   */
+  function meterEvents(runId: string, funnelMs: number, repMs: number) {
+    const events: UsageEventInput[] = [];
+    if (funnelMs > 0) {
+      events.push({
+        provider: "browserbase",
+        agentType: "funnel",
+        metricName: "browser_session",
+        quantity: funnelMs / 60000,
+        unit: "minutes",
+        jobId: jobIdRef.current,
+      });
+      events.push({
+        provider: "browserbase",
+        agentType: "funnel",
+        metricName: "execution_time",
+        quantity: funnelMs,
+        unit: "ms",
+        jobId: jobIdRef.current,
+      });
+    }
+    if (repMs > 0) {
+      events.push({
+        provider: "lovable-ai",
+        agentType: "reputation",
+        metricName: "execution_time",
+        quantity: repMs,
+        unit: "ms",
+      });
+    }
+    if (events.length === 0) return;
+    void fns.current.meterRun({ data: { runId, events } }).catch(() => undefined);
+  }
+
 
   useEffect(() => {
     if (!url || !funnelEnabled) return;
@@ -165,6 +206,7 @@ function LiveRun() {
             setSaveError(res?.error ?? "Could not save this run.");
             return;
           }
+          meterEvents(merged.id, elapsed, repEnabled ? reputation.elapsed : 0);
           void router.invalidate();
         })
         .catch((err: unknown) => {
@@ -200,6 +242,7 @@ function LiveRun() {
           setSaveError(res?.error ?? "Could not save this run.");
           return;
         }
+        meterEvents(built.id, 0, reputation.elapsed);
         void router.invalidate();
       })
       .catch((err: unknown) => {
