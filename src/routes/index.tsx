@@ -337,9 +337,10 @@ function JourneyLoop() {
             const covered = i < active;
             const closing = active === 0 && i === JOURNEY_STAGES.length - 1;
             const lit = covered && !closing;
-            const angle = (Math.atan2(to.y - from.y, to.x - from.x) * 180) / Math.PI;
-            const mx = from.x + (to.x - from.x) * 0.62;
-            const my = from.y + (to.y - from.y) * 0.62;
+            const round = (n: number) => Math.round(n * 1000) / 1000;
+            const angle = round((Math.atan2(to.y - from.y, to.x - from.x) * 180) / Math.PI);
+            const mx = round(from.x + (to.x - from.x) * 0.62);
+            const my = round(from.y + (to.y - from.y) * 0.62);
             return (
               <g key={`${s.key}-link`}>
                 <line
