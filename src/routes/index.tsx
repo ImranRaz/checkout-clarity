@@ -314,7 +314,7 @@ function JourneyLoop() {
   const labelPos = (i: number) => {
     const a = (-90 + i * (360 / JOURNEY_STAGES.length)) * (Math.PI / 180);
     const r = R + 8.5;
-    return { x: 50 + r * Math.cos(a), y: 50 + r * Math.sin(a) };
+    return { x: round3(50 + r * Math.cos(a)), y: round3(50 + r * Math.sin(a)) };
   };
 
   return (
