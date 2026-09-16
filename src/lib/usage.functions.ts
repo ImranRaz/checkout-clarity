@@ -29,7 +29,9 @@ export type RunUsage = {
   status: string;
   completion: "complete" | "partial" | "failed";
   browserMinutes: number;
+  browserMetered: boolean;
   tokens: number;
+  tokensMetered: boolean;
   executionMs: number;
   providers: string[];
   models: string[];
@@ -80,6 +82,18 @@ export const recordUsageEvents = createServerFn({ method: "POST" })
     const { error } = await context.supabase.from("audit_usage_events").insert(rows);
     // A duplicate just means this run was already accounted for.
     if (error && error.code !== "23505") return { ok: false, error: error.message };
+
+    // The worker posts its own metered rows before the run exists, keyed by
+    // job id only. Now that we have a run id, attach them.
+    const jobIds = [...new Set(rows.map((row) => row.job_id).filter((id): id is string => !!id))];
+    if (jobIds.length > 0) {
+      await context.supabase
+        .from("audit_usage_events")
+        .update({ run_id: data.runId })
+        .is("run_id", null)
+        .in("job_id", jobIds);
+    }
+
     return { ok: true };
   });
 
@@ -117,7 +131,9 @@ export const getUsageOverview = createServerFn({ method: "GET" })
               ? "complete"
               : "partial",
         browserMinutes: 0,
+        browserMetered: false,
         tokens: 0,
+        tokensMetered: false,
         executionMs: 0,
         providers: [],
         models: [],
@@ -125,24 +141,43 @@ export const getUsageOverview = createServerFn({ method: "GET" })
       });
     }
 
+    // Worker rows are the real provider numbers; client rows are wall clock
+    // estimates. Prefer metered whenever it exists for a run.
     for (const raw of (events ?? []) as Record<string, unknown>[]) {
       const entry = byRun.get(raw["run_id"] as string);
       if (!entry) continue;
       const quantity = Number(raw["quantity"] ?? 0);
       const unit = (raw["unit"] as string) ?? "";
+      const metric = (raw["metric_name"] as string) ?? "";
       const provider = (raw["provider"] as string) ?? "other";
       const model = (raw["model"] as string | null) ?? null;
 
-      if (unit === "minutes") entry.browserMinutes += quantity;
-      else if (unit === "tokens") entry.tokens += quantity;
-      else if (unit === "ms") entry.executionMs += quantity;
+      if (metric === "browser_session_metered") {
+        if (!entry.browserMetered) {
+          entry.browserMetered = true;
+          entry.browserMinutes = 0;
+        }
+        entry.browserMinutes += quantity;
+      } else if (metric === "tokens_prompt" || metric === "tokens_completion") {
+        if (!entry.tokensMetered) {
+          entry.tokensMetered = true;
+          entry.tokens = 0;
+        }
+        entry.tokens += quantity;
+      } else if (unit === "minutes") {
+        if (!entry.browserMetered) entry.browserMinutes += quantity;
+      } else if (unit === "tokens") {
+        if (!entry.tokensMetered) entry.tokens += quantity;
+      } else if (unit === "ms") {
+        entry.executionMs += quantity;
+      }
 
       if (!entry.providers.includes(provider)) entry.providers.push(provider);
       if (model && !entry.models.includes(model)) entry.models.push(model);
       entry.lines.push({
         provider,
         agentType: (raw["agent_type"] as string) ?? "funnel",
-        metricName: (raw["metric_name"] as string) ?? "",
+        metricName: metric,
         quantity,
         unit,
         model,
@@ -160,6 +195,7 @@ export const getUsageOverview = createServerFn({ method: "GET" })
       }),
       { browserMinutes: 0, tokens: 0, executionMs: 0, runs: 0 },
     );
+
 
     return { totals, runs: list };
   });

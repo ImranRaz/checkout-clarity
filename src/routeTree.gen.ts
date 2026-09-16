@@ -16,6 +16,7 @@ import { Route as RTokenRouteImport } from './routes/r.$token'
 import { Route as ReportReportIdRouteImport } from './routes/report.$reportId'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
 import { Route as AuthenticatedAppUsageRouteImport } from './routes/_authenticated/app.usage'
+import { Route as ApiPublicUsageRouteImport } from './routes/api/public/usage'
 import { Route as AuthenticatedAppAuditRunIdRouteImport } from './routes/_authenticated/app.audit.$runId'
 import { Route as AuthenticatedAppAuditLiveRouteImport } from './routes/_authenticated/app.audit.live'
 import { Route as AuthenticatedAppReportReportIdRouteImport } from './routes/_authenticated/app.report.$reportId'
@@ -55,6 +56,11 @@ const AuthenticatedAppUsageRoute = AuthenticatedAppUsageRouteImport.update({
   path: '/app/usage',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicUsageRoute = ApiPublicUsageRouteImport.update({
+  id: '/api/public/usage',
+  path: '/api/public/usage',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAppAuditRunIdRoute =
   AuthenticatedAppAuditRunIdRouteImport.update({
     id: '/app/audit/$runId',
@@ -85,6 +91,7 @@ export interface FileRoutesByFullPath {
   '/r/$token': typeof RTokenRoute
   '/report/$reportId': typeof ReportReportIdRoute
   '/app/usage': typeof AuthenticatedAppUsageRoute
+  '/api/public/usage': typeof ApiPublicUsageRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/audit/$runId': typeof AuthenticatedAppAuditRunIdRoute
   '/app/audit/live': typeof AuthenticatedAppAuditLiveRoute
@@ -97,6 +104,7 @@ export interface FileRoutesByTo {
   '/r/$token': typeof RTokenRoute
   '/report/$reportId': typeof ReportReportIdRoute
   '/app/usage': typeof AuthenticatedAppUsageRoute
+  '/api/public/usage': typeof ApiPublicUsageRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/audit/$runId': typeof AuthenticatedAppAuditRunIdRoute
   '/app/audit/live': typeof AuthenticatedAppAuditLiveRoute
@@ -111,6 +119,7 @@ export interface FileRoutesById {
   '/r/$token': typeof RTokenRoute
   '/report/$reportId': typeof ReportReportIdRoute
   '/_authenticated/app/usage': typeof AuthenticatedAppUsageRoute
+  '/api/public/usage': typeof ApiPublicUsageRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/audit/$runId': typeof AuthenticatedAppAuditRunIdRoute
   '/_authenticated/app/audit/live': typeof AuthenticatedAppAuditLiveRoute
@@ -125,6 +134,7 @@ export interface FileRouteTypes {
     | '/r/$token'
     | '/report/$reportId'
     | '/app/usage'
+    | '/api/public/usage'
     | '/app/'
     | '/app/audit/$runId'
     | '/app/audit/live'
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/r/$token'
     | '/report/$reportId'
     | '/app/usage'
+    | '/api/public/usage'
     | '/app'
     | '/app/audit/$runId'
     | '/app/audit/live'
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/r/$token'
     | '/report/$reportId'
     | '/_authenticated/app/usage'
+    | '/api/public/usage'
     | '/_authenticated/app/'
     | '/_authenticated/app/audit/$runId'
     | '/_authenticated/app/audit/live'
@@ -163,6 +175,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   RTokenRoute: typeof RTokenRoute
   ReportReportIdRoute: typeof ReportReportIdRoute
+  ApiPublicUsageRoute: typeof ApiPublicUsageRoute
   ApiPublicThumbIdRoute: typeof ApiPublicThumbIdRoute
 }
 
@@ -216,6 +229,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/usage'
       preLoaderRoute: typeof AuthenticatedAppUsageRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/public/usage': {
+      id: '/api/public/usage'
+      path: '/api/public/usage'
+      fullPath: '/api/public/usage'
+      preLoaderRoute: typeof ApiPublicUsageRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/app/audit/$runId': {
       id: '/_authenticated/app/audit/$runId'
@@ -273,6 +293,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   RTokenRoute: RTokenRoute,
   ReportReportIdRoute: ReportReportIdRoute,
+  ApiPublicUsageRoute: ApiPublicUsageRoute,
   ApiPublicThumbIdRoute: ApiPublicThumbIdRoute,
 }
 export const routeTree = rootRouteImport
