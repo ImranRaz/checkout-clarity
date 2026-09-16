@@ -1,4 +1,6 @@
 import { generateObject, generateText } from "ai";
+
+import { recordModelUsage } from "./usage.js";
 import { z } from "zod";
 
 import { verticalBrief } from "./vertical.js";
@@ -303,6 +305,7 @@ export function createReviewer(provider, { vertical } = {}) {
           messages: [{ role: "user", content }],
         }),
       );
+      recordModelUsage(modelId, result.usage);
       raw = result.object?.findings;
       dismissed = Array.isArray(result.object?.dismissed) ? result.object.dismissed : [];
     } catch (error) {
@@ -317,6 +320,7 @@ export function createReviewer(provider, { vertical } = {}) {
           messages: [{ role: "user", content }],
         }),
       );
+      recordModelUsage(modelId, retry.usage);
       const parsed = parseLoose(retry.text);
       raw = parsed?.findings;
       dismissed = Array.isArray(parsed?.dismissed) ? parsed.dismissed : [];

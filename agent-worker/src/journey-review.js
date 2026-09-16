@@ -1,4 +1,6 @@
 import { generateObject, generateText } from "ai";
+
+import { recordModelUsage } from "./usage.js";
 import { z } from "zod";
 
 import { verticalBrief } from "./vertical.js";
@@ -121,6 +123,7 @@ export async function reviewJourney(provider, { report, vertical, timeoutMs = 90
     const result = await withTimeout(
       generateObject({ model: provider(modelId), schema, system, prompt }),
     );
+    recordModelUsage(modelId, result.usage);
     raw = result.object;
   } catch (error) {
     if (/timed out/i.test(error?.message || "")) return null;
@@ -132,6 +135,7 @@ export async function reviewJourney(provider, { report, vertical, timeoutMs = 90
           prompt,
         }),
       );
+      recordModelUsage(modelId, retry.usage);
       raw = parseLoose(retry.text);
     } catch {
       return null;
