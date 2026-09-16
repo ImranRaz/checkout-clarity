@@ -2,6 +2,7 @@ import express from "express";
 import { randomUUID } from "node:crypto";
 
 import { runJourney } from "./agent.js";
+import { reportUsage } from "./usage.js";
 
 /**
  * Thin HTTP wrapper.
@@ -55,10 +56,13 @@ app.post("/run", (req, res) => {
     .then((report) => {
       job.report = report;
       job.status = "done";
+      void reportUsage(id, "complete");
     })
     .catch((error) => {
       job.error = error?.message || "The agent run failed.";
       job.status = "error";
+      // Failed runs still burned session minutes; record them as measured.
+      void reportUsage(id, "failed");
     });
 
   res.status(202).json({ job_id: id });

@@ -12,6 +12,7 @@ import { dismissOverlays } from "./overlays.js";
 import { scrollBrief, scrollFindings, scrollSweep } from "./scroll.js";
 import { isExhaustedStatus, keyLabel, loadKeys, rotationOrder } from "./keys.js";
 import { checkoutFindings, pushToCheckout } from "./checkout.js";
+import { sessionStarted } from "./usage.js";
 
 /**
  * Drives a real cloud browser from an entry URL through to the cart, emitting
@@ -662,6 +663,7 @@ export async function runJourney(entryUrl, { onLog } = {}) {
   // plan minutes, concurrency limit, bad key). Creating it here surfaces the
   // actual HTTP status and message.
   const { key: browserbaseKey, projectId, sessionId } = await acquireSession(emit);
+  sessionStarted();
 
   const stagehand = new Stagehand({
     env: "BROWSERBASE",

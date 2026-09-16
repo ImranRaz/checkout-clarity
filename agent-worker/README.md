@@ -44,7 +44,7 @@ hard they make saying "no" become part of the audit rather than noise.
 - **Root directory:** `agent-worker`
 - **Build:** `npm install`
 - **Start:** `npm start`
-- **Env vars:** `BROWSERBASE_API_KEY`, `OPENAI_API_KEY`, `AGENT_SHARED_SECRET`
+- **Env vars:** `BROWSERBASE_API_KEY`, `OPENAI_API_KEY`, `AGENT_SHARED_SECRET`, `APP_BASE_URL` (public app URL, no trailing slash, used to post metered usage back to `/api/public/usage`)
 - **Optional:** `BROWSERBASE_PROXIES=true` (paid plan) and `BROWSERBASE_STEALTH=true` (Enterprise "Verified mode"). Leave both unset on the free plan — requesting them there makes session creation fail with 402/403.
 
 Then `POST /run` with `{ "url": "..." }` and an `Authorization: Bearer <AGENT_SHARED_SECRET>` header. It returns `202 { "job_id": "..." }` immediately — a journey takes 1–3 minutes, longer than the 100s edge timeout in front of Render (that's the HTTP 524 the app used to show). Poll `GET /run/:job_id` for `{ status, steps, elapsed_ms, report }`; the `steps` array streams the agent's live log while the run is still going.
