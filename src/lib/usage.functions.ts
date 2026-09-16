@@ -29,7 +29,9 @@ export type RunUsage = {
   status: string;
   completion: "complete" | "partial" | "failed";
   browserMinutes: number;
+  browserMetered: boolean;
   tokens: number;
+  tokensMetered: boolean;
   executionMs: number;
   providers: string[];
   models: string[];
