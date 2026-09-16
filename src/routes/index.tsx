@@ -300,9 +300,10 @@ function JourneyLoop() {
 
   const current = JOURNEY_STAGES[active]!;
   const R = 38;
+  const round3 = (n: number) => Math.round(n * 1000) / 1000;
   const pos = (i: number) => {
     const a = (-90 + i * (360 / JOURNEY_STAGES.length)) * (Math.PI / 180);
-    return { x: 50 + R * Math.cos(a), y: 50 + R * Math.sin(a) };
+    return { x: round3(50 + R * Math.cos(a)), y: round3(50 + R * Math.sin(a)) };
   };
 
   const scrollToReport = () => {
@@ -313,7 +314,7 @@ function JourneyLoop() {
   const labelPos = (i: number) => {
     const a = (-90 + i * (360 / JOURNEY_STAGES.length)) * (Math.PI / 180);
     const r = R + 8.5;
-    return { x: 50 + r * Math.cos(a), y: 50 + r * Math.sin(a) };
+    return { x: round3(50 + r * Math.cos(a)), y: round3(50 + r * Math.sin(a)) };
   };
 
   return (
@@ -337,9 +338,10 @@ function JourneyLoop() {
             const covered = i < active;
             const closing = active === 0 && i === JOURNEY_STAGES.length - 1;
             const lit = covered && !closing;
-            const angle = (Math.atan2(to.y - from.y, to.x - from.x) * 180) / Math.PI;
-            const mx = from.x + (to.x - from.x) * 0.62;
-            const my = from.y + (to.y - from.y) * 0.62;
+            const round = (n: number) => Math.round(n * 1000) / 1000;
+            const angle = round((Math.atan2(to.y - from.y, to.x - from.x) * 180) / Math.PI);
+            const mx = round(from.x + (to.x - from.x) * 0.62);
+            const my = round(from.y + (to.y - from.y) * 0.62);
             return (
               <g key={`${s.key}-link`}>
                 <line
