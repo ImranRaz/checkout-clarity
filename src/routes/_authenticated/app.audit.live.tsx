@@ -242,6 +242,7 @@ function LiveRun() {
           setSaveError(res?.error ?? "Could not save this run.");
           return;
         }
+        meterEvents(built.id, 0, reputation.elapsed);
         void router.invalidate();
       })
       .catch((err: unknown) => {
