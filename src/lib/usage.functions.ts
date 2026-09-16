@@ -82,6 +82,18 @@ export const recordUsageEvents = createServerFn({ method: "POST" })
     const { error } = await context.supabase.from("audit_usage_events").insert(rows);
     // A duplicate just means this run was already accounted for.
     if (error && error.code !== "23505") return { ok: false, error: error.message };
+
+    // The worker posts its own metered rows before the run exists, keyed by
+    // job id only. Now that we have a run id, attach them.
+    const jobIds = [...new Set(rows.map((row) => row.job_id).filter((id): id is string => !!id))];
+    if (jobIds.length > 0) {
+      await context.supabase
+        .from("audit_usage_events")
+        .update({ run_id: data.runId })
+        .is("run_id", null)
+        .in("job_id", jobIds);
+    }
+
     return { ok: true };
   });
 
