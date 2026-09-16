@@ -65,7 +65,19 @@ export const Route = createFileRoute("/api/public/usage")({
           return Response.json({ ok: false, error: "Too many events" }, { status: 400 });
         }
 
-        const rows: Record<string, unknown>[] = [];
+        type UsageRow = {
+          run_id: string | null;
+          job_id: string;
+          provider: string;
+          agent_type: string;
+          metric_name: string;
+          quantity: number;
+          unit: string;
+          model: string | null;
+          status: string;
+          note: string | null;
+        };
+        const rows: UsageRow[] = [];
         for (const raw of payload.events as IncomingEvent[]) {
           if (!raw || typeof raw !== "object") {
             return Response.json({ ok: false, error: "Invalid event" }, { status: 400 });
@@ -108,7 +120,7 @@ export const Route = createFileRoute("/api/public/usage")({
           .not("run_id", "is", null)
           .limit(1);
         const runId = (existing?.[0]?.run_id as string | undefined) ?? null;
-        if (runId) for (const row of rows) row["run_id"] = runId;
+        if (runId) for (const row of rows) row.run_id = runId;
 
         const { error } = await supabaseAdmin.from("audit_usage_events").insert(rows);
         if (error && error.code !== "23505") {
