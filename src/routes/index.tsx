@@ -300,9 +300,10 @@ function JourneyLoop() {
 
   const current = JOURNEY_STAGES[active]!;
   const R = 38;
+  const round3 = (n: number) => Math.round(n * 1000) / 1000;
   const pos = (i: number) => {
     const a = (-90 + i * (360 / JOURNEY_STAGES.length)) * (Math.PI / 180);
-    return { x: 50 + R * Math.cos(a), y: 50 + R * Math.sin(a) };
+    return { x: round3(50 + R * Math.cos(a)), y: round3(50 + R * Math.sin(a)) };
   };
 
   const scrollToReport = () => {
