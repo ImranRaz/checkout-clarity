@@ -9,7 +9,9 @@ export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
     const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) throw redirect({ to: "/auth" });
+    // Full document load: a client-side swap here lands mid-hydration and
+    // React tears the tree down with a blank screen.
+    if (error || !data.user) throw redirect({ to: "/auth", reloadDocument: true });
     return { user: data.user };
   },
   component: ConsoleLayout,
