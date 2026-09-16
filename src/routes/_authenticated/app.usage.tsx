@@ -55,7 +55,7 @@ function duration(ms: number) {
 
 const completionTone: Record<RunUsage["completion"], string> = {
   complete: "border-sev-low/40 text-sev-low",
-  partial: "border-sev-med/40 text-sev-med",
+  partial: "border-sev-medium/40 text-sev-medium",
   failed: "border-sev-high/40 text-sev-high",
 };
 
