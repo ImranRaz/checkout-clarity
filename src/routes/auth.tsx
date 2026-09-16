@@ -9,6 +9,9 @@ import { createFirstAccount, needsFirstAccount } from "@/lib/bootstrap.functions
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/auth")({
+  // Rendered client-only: the /_authenticated guard redirects here during
+  // hydration, and an SSR'd shell for this page mismatches that swap.
+  ssr: false,
   head: () => ({
     meta: [
       { title: "Sign in — CoherentX" },
