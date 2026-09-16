@@ -13,6 +13,7 @@ import type { ForensicAuditReport } from "@/lib/audit-schema";
 import { saveLiveReport } from "@/lib/live-store";
 import { reputationOnlyReport } from "@/lib/reputation-merge";
 import { saveAuditRun } from "@/lib/reports.functions";
+import { recordUsageEvents, type UsageEventInput } from "@/lib/usage.functions";
 
 export const Route = createFileRoute("/_authenticated/app/audit/live")({
   validateSearch: (search: Record<string, unknown>) => ({
