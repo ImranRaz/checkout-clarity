@@ -33,6 +33,12 @@ function ConsoleLayout() {
             <span className="label-caps hidden sm:inline">console</span>
           </Link>
           <div className="flex items-center gap-4">
+            <Link
+              to="/app/usage"
+              className="font-mono text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+            >
+              usage
+            </Link>
             <span className="hidden truncate font-mono text-[11px] text-muted-foreground sm:inline">
               {user.email}
             </span>
