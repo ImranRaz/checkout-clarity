@@ -12,6 +12,7 @@ import { dismissOverlays } from "./overlays.js";
 import { scrollBrief, scrollFindings, scrollSweep } from "./scroll.js";
 import { isExhaustedStatus, keyLabel, loadKeys, rotationOrder } from "./keys.js";
 import { checkoutFindings, pushToCheckout } from "./checkout.js";
+import { sessionStarted } from "./usage.js";
 
 /**
  * Drives a real cloud browser from an entry URL through to the cart, emitting
