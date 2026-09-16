@@ -121,8 +121,18 @@ function UsagePage() {
                       {run.completion}
                     </span>
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs">{minutes(run.browserMinutes)}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{tokens(run.tokens)}</td>
+                  <td className="px-4 py-3 font-mono text-xs">
+                    {minutes(run.browserMinutes)}
+                    <div className="text-[10px] text-muted-foreground">
+                      {run.browserMetered ? "metered" : "estimated"}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 font-mono text-xs">
+                    {tokens(run.tokens)}
+                    <div className="text-[10px] text-muted-foreground">
+                      {run.tokensMetered ? "metered" : "estimated"}
+                    </div>
+                  </td>
                   <td className="px-4 py-3 font-mono text-xs">{duration(run.executionMs)}</td>
                   <td className="px-4 py-3 font-mono text-[10px] text-muted-foreground">
                     {run.lines.length === 0
